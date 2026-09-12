@@ -1,0 +1,109 @@
+/* ===========================================================
+   簡報網站共用樣式（非字型）
+   字型另見 assets/deck-fonts.css（由 publish_slides.py 產生）
+   適用：網站首頁 index.html 與各簡報頁的「回總覽」連結
+   =========================================================== */
+
+:root {
+  --paper:      #F2EEDF;
+  --paper-2:    #ECE6D2;
+  --ink:        #2A241B;
+  --ink-soft:   #5C5345;
+  --pink:       #E1A4C2;
+  --lemon:      #D6DD63;
+  --blush:      #E8C9B6;
+  --sage:       #B7C7A8;
+  --rule-medium: rgba(42, 36, 27, 0.35);
+  --f-display: 'Cormorant Garamond', 'LXGW WenKai TC', 'Noto Serif TC', serif;
+  --f-body:    'Work Sans', 'Noto Serif TC', serif;
+  --f-sans:    'Work Sans', 'Noto Sans TC', sans-serif;
+}
+
+/* ===== 各簡報頁的「回總覽」連結（舞台外的操作介面）
+   置於下方居中：CH1 的鍵盤提示在左下、CH2 的頁碼在右下，此處兩者皆空。
+   舞台是紙色、信箱區是深色，故用半透明深底藥丸確保兩處都看得清。 ===== */
+.deck-backlink {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 12px; z-index: 1001;
+  font-family: var(--f-sans); font-size: 14px; line-height: 1;
+  padding: 7px 16px 8px; border-radius: 999px;
+  background: rgba(26, 23, 19, 0.5);
+  color: rgba(242, 238, 223, 0.82);
+  text-decoration: none;
+  opacity: 0.65; transition: opacity 0.25s ease;
+}
+.deck-backlink:hover, .deck-backlink:focus-visible { opacity: 1; color: var(--paper); }
+
+/* ===== 網站首頁 ===== */
+body.site {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-body);
+  -webkit-font-smoothing: antialiased;
+}
+.site-wrap { max-width: 1100px; margin: 0 auto; padding: 96px 32px 120px; }
+
+.site-kicker {
+  font-family: var(--f-display); font-style: italic;
+  font-size: 24px; color: var(--ink-soft);
+}
+.site-title {
+  margin: 12px 0 0;
+  font-family: var(--f-display); font-weight: 500;
+  font-size: 78px; line-height: 1.16; letter-spacing: 0;
+}
+.site-title::after {
+  content: ''; display: block; width: 160px; height: 1px;
+  background: var(--rule-medium); margin-top: 28px;
+}
+.site-sub {
+  margin: 26px 0 0;
+  font-size: 21px; line-height: 1.75; color: var(--ink-soft);
+}
+
+.site-list { list-style: none; margin: 72px 0 0; padding: 0; }
+.site-item { border-top: 1px dashed var(--rule-medium); }
+.site-item:last-child { border-bottom: 1px dashed var(--rule-medium); }
+
+.site-link {
+  display: grid; grid-template-columns: 96px 1fr auto;
+  gap: 28px; align-items: baseline;
+  padding: 30px 8px; text-decoration: none; color: inherit;
+}
+.site-link:hover { background: var(--paper-2); }
+
+.site-week {
+  font-family: var(--f-display); font-style: italic;
+  font-size: 26px; color: var(--ink-soft);
+}
+.site-name {
+  font-family: var(--f-display); font-weight: 500;
+  font-size: 38px; line-height: 1.3;
+}
+.site-desc {
+  display: block; margin-top: 8px;
+  font-size: 18px; line-height: 1.7; color: var(--ink-soft);
+}
+.site-date {
+  font-family: var(--f-display); font-style: italic;
+  font-size: 22px; color: var(--ink-soft); white-space: nowrap;
+}
+
+.site-foot {
+  margin-top: 80px; padding-top: 22px;
+  border-top: 1px solid var(--rule-medium);
+  font-family: var(--f-display); font-style: italic;
+  font-size: 20px; color: var(--ink-soft);
+}
+
+/* 手機 */
+@media (max-width: 720px) {
+  .site-wrap { padding: 56px 20px 80px; }
+  .site-title { font-size: 46px; }
+  .site-link { grid-template-columns: 1fr; gap: 8px; padding: 24px 4px; }
+  .site-name { font-size: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>互動式網頁設計 CH2｜HTML 基礎與常用標籤</title>
+
+
+<style>
+/* ===========================================================
+   CH2 簡報樣式 — soft-editorial
+   由 output/簡報建置/build.py 內嵌字型後寫入簡報檔案。
+   修改樣式請改本檔，再重跑 build.py。
+   =========================================================== */
+
+/* ===== 內嵌字型子集（離線可用；由 build.py 產生） ===== */
+
+/* ===========================================
+   1. THEME TOKENS
+   =========================================== */
+:root {
+  /* Colors */
+  --paper:        #F2EEDF;
+  --paper-2:      #ECE6D2;
+  --ink:          #2A241B;
+  --ink-soft:     #5C5345;
+  --pink:         #E1A4C2;
+  --lemon:        #D6DD63;
+  --blush:        #E8C9B6;
+  --sage:         #B7C7A8;
+  --lilac:        #C9BEDC;
+  --card:         rgba(255, 255, 255, 0.55);
+  --rule-soft:    rgba(42, 36, 27, 0.18);
+  --rule-medium:  rgba(42, 36, 27, 0.35);
+
+  /* 程式碼語法色（同一色票的加深版） */
+  --code-tag: #8C5A3C;
+  --code-attr: #6E7F45;
+  --code-str: #A64C7C;
+  --code-cmt: #8A8072;
+
+  /* Fonts — 全部內嵌，離線可用 */
+  --f-display: 'Cormorant Garamond', 'LXGW WenKai TC', 'Noto Serif TC', serif;
+  --f-body:    'Work Sans', 'Noto Serif TC', serif;
+  --f-sans:    'Work Sans', 'Noto Sans TC', sans-serif;
+  --f-code:    'JetBrains Mono', 'Noto Sans TC', monospace;
+  --f-icons:   'Material Symbols Outlined';
+
+  /* Type scale（1920×1080 stage；字級下限見 CLAUDE.md 規範） */
+  --t-display:  168px;
+  --t-chapter:  132px;
+  --t-headline: 76px;
+  --t-subhead:  48px;
+  --t-body:     38px;
+  --t-body-sm:  34px;
+  --t-code:     32px;
+  --t-min:      28px;
+  --t-eyebrow:  30px;
+
+  --pad-outer: 80px;
+  --pad-top: 60px;
+  --pad-bottom: 50px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.6s;
+
+  --stage-bg: #1a1713;
+  --slide-bg: var(--paper);
+}
+
+/* ===========================================
+   2. BASE（viewport-base.css 全文強制納入）
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html,
+body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-stage {
+  position: absolute; left: 0; top: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  background: var(--slide-bg, #fff);
+}
+.slide {
+  position: absolute; inset: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  display: block;
+  visibility: hidden; opacity: 0; pointer-events: none;
+  background: var(--slide-bg, #fff);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+
+@media print {
+  html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+  .deck-viewport { position: static; overflow: visible; background: #fff; }
+  .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+  .slide {
+    position: relative; display: block !important; visibility: visible !important;
+    opacity: 1 !important; pointer-events: auto !important;
+    width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   3. SLIDE CHROME
+   =========================================== */
+.eyebrow {
+  position: absolute; top: var(--pad-top); left: var(--pad-outer);
+  font-family: var(--f-sans); font-size: var(--t-eyebrow); font-weight: 400;
+  color: var(--ink);
+}
+.pagedot {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.footer {
+  position: absolute; bottom: var(--pad-bottom); left: var(--pad-outer); right: var(--pad-outer);
+  display: flex; justify-content: space-between;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+
+/* ===========================================
+   4. LAYOUT PRIMITIVES
+   =========================================== */
+.headline {
+  position: absolute; top: 128px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-headline);
+  line-height: 1.24; color: var(--ink);
+}
+.headline em { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+/* 標題下方的極細分隔線（編輯排版手法，非裝飾卡片） */
+.headline::after {
+  content: ''; display: block; width: 160px; height: 1px;
+  background: var(--rule-medium); margin-top: 26px;
+}
+
+.body-split {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; grid-template-columns: 44% 1fr; gap: 44px; align-items: start;
+}
+.body-split--even { grid-template-columns: 1fr 1fr; }
+.body-full {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; gap: 34px; align-content: start;
+}
+
+/* 要點條列 — 單一墨色短橫線標記，不做彩色圓點循環 */
+.points { list-style: none; display: grid; gap: 24px; }
+.points li {
+  position: relative; padding-left: 40px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.62; color: var(--ink);
+}
+.points li::before {
+  content: ''; position: absolute; left: 0; top: 0.74em;
+  width: 22px; height: 2px; background: var(--ink); opacity: 0.34;
+}
+.points b, .points strong { font-weight: 500; }
+.points code {
+  font-family: var(--f-code); font-size: 0.92em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* ===========================================
+   5. CODE PANEL
+   =========================================== */
+.code-label {
+  display: block; margin-bottom: 14px;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.code {
+  font-family: var(--f-code); font-size: var(--t-code); line-height: 1.62;
+  color: var(--ink);
+  background: var(--card); border-radius: 22px;
+  padding: 38px 42px;
+  white-space: pre; overflow: hidden;
+}
+.code .tag  { color: var(--code-tag); }
+.code .attr { color: var(--code-attr); }
+.code .str  { color: var(--code-str); }
+.code .cmt  { color: var(--code-cmt); }
+.code .ok   { color: var(--code-attr); }
+.code .no   { color: var(--code-str); }
+
+/* ===========================================
+   6. 推薦資源 — 編輯式出處行（無外框、無彩色邊條）
+   =========================================== */
+.res {
+  margin-top: 34px; padding-top: 18px;
+  border-top: 1px dashed var(--rule-medium);
+}
+.res__kind {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.res__kind::before {
+  font-family: var(--f-icons); font-size: 30px; font-weight: normal;
+  font-style: normal; line-height: 1; color: var(--ink-soft);
+}
+.res__title {
+  display: block; margin-top: 8px;
+  font-family: var(--f-display); font-size: var(--t-body-sm); font-weight: 500; color: var(--ink);
+}
+.res__desc {
+  font-family: var(--f-body); font-size: 28px; line-height: 1.55;
+  color: var(--ink-soft); margin-top: 4px;
+}
+.res--card   .res__kind::before { content: "\e8e7"; }  /* bookmark */
+.res--video  .res__kind::before { content: "\e1c4"; }  /* play_circle */
+.res--mind   .res__kind::before { content: "\e97a"; }  /* account_tree */
+.res--chart  .res__kind::before { content: "\e26b"; }  /* bar_chart */
+.res--audio  .res__kind::before { content: "\f01f"; }  /* headphones */
+.res--slides .res__kind::before { content: "\e41b"; }  /* slideshow */
+.res--quiz   .res__kind::before { content: "\f04c"; }  /* quiz */
+.res--check  .res__kind::before { content: "\e2e6"; }  /* task_alt */
+
+/* ===========================================
+   7. 行內小圖示與狀態藥丸
+   =========================================== */
+.ic {
+  font-family: var(--f-icons); font-style: normal; font-weight: normal;
+  line-height: 1; vertical-align: -0.14em; display: inline-block;
+}
+.ic--warn::before  { content: "\f083"; }  /* warning */
+.ic--check::before { content: "\e2e6"; }  /* task_alt */
+.ic--no::before    { content: "\e888"; }  /* cancel */
+.ic--tip::before   { content: "\e90f"; }  /* lightbulb */
+.ic--info::before  { content: "\e88e"; }  /* info */
+
+.pill {
+  display: inline-block; border-radius: 999px; padding: 1px 18px 3px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink);
+}
+.pill--yes { background: var(--lemon); }
+.pill--no  { background: var(--pink); }
+
+/* ===========================================
+   8. 章節頁 / 封面 / 收尾
+   =========================================== */
+.chapter-num {
+  position: absolute; top: 250px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-weight: 500;
+  font-size: 120px; color: var(--blush);
+}
+.chapter-title {
+  position: absolute; top: 400px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-chapter);
+  line-height: 1.22; color: var(--ink);
+}
+.chapter-title::after {
+  content: ''; display: block; width: 240px; height: 1px;
+  background: var(--rule-medium); margin-top: 34px;
+}
+.chapter-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink-soft);
+}
+
+.cover-kicker {
+  position: absolute; top: 240px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-subhead);
+  color: var(--ink-soft);
+}
+.cover-title {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-display);
+  line-height: 1.16; color: var(--ink);
+}
+.cover-sub {
+  position: absolute; top: 560px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 64px;
+  line-height: 1.3; color: var(--ink-soft);
+}
+.cover-swatches {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  display: flex; gap: 20px;
+}
+.cover-swatches span { width: 56px; height: 56px; border-radius: 50%; display: block; }
+.cover-swatches span:nth-child(1) { background: var(--pink); }
+.cover-swatches span:nth-child(2) { background: var(--lemon); }
+.cover-swatches span:nth-child(3) { background: var(--sage); }
+
+.slide--accent { background: var(--pink); }
+.closer-title {
+  position: absolute; top: 380px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 140px;
+  line-height: 1.2; color: var(--ink);
+}
+.closer-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink);
+}
+
+/* ===========================================
+   9. ANIMATION
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(28px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal:nth-child(1) { transition-delay: 0.08s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: 0.16s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: 0.24s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: 0.32s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: 0.40s; }
+
+/* ===========================================
+   10. DECK CHROME（舞台外）
+   =========================================== */
+.progress {
+  position: fixed; left: 0; bottom: 0; height: 4px; width: 0;
+  background: var(--pink); z-index: 1001; transition: width 0.3s var(--ease);
+}
+.counter {
+  position: fixed; right: 18px; bottom: 14px; z-index: 1001;
+  font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+  position: fixed; top: 16px; left: 16px; z-index: 10001;
+  font-size: 18px; line-height: 1; padding: 10px 12px; border: 0; border-radius: 12px;
+  background: var(--paper); color: var(--ink); cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); outline-offset: 4px; }
+
+</style>
+<link rel="stylesheet" href="../assets/deck-fonts.css">
+<link rel="stylesheet" href="../assets/deck-site.css">
+</head>
+<body>
+
+<!-- ===========================================
+     DECK
+     =========================================== -->
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ═══════════ 1｜封面 ═══════════ -->
+<section class="slide s-cover active" data-label="封面">
+  <div class="cover-swatches reveal"><span></span><span></span><span></span></div>
+  <p class="cover-kicker reveal">勤益科大進修部 115 學年度第 1 學期</p>
+  <h1 class="cover-title reveal">互動式網頁設計</h1>
+  <p class="cover-sub reveal">CH2｜HTML 基礎與常用標籤<br><em style="font-style:italic">CodePen 線上實作</em></p>
+  <div class="footer"><span>2026.09.17</span><span>CH2 · 51 頁</span></div>
+  <!-- 講述重點：上週講「為什麼要學」；這週開始，每次上課都要帶著能動的東西離開。
+       今天不用裝任何軟體，打開瀏覽器就能開工，下課時你會有一個自己的網址。 -->
+</section>
+
+<!-- ═══════════ 2｜今日目標 ═══════════ -->
+<section class="slide" data-label="今日目標">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">ii</p>
+  <h2 class="headline reveal">今日目標</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal"><b>環境</b>：用 CodePen 線上編輯器，<b>不裝任何軟體</b></li>
+      <li class="reveal"><b>骨架</b>：看懂 DOM 樹狀模型，用 Emmet 生出 HTML 基本結構</li>
+      <li class="reveal"><b>標籤</b>：標題、區塊、段落、行內標記、超連結、圖片、清單</li>
+      <li class="reveal"><b>工具</b>：用開發人員工具檢查自己寫的網頁</li>
+    </ul>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先講清楚「不裝環境」，安撫已經擔心自己電腦不好的同學。
+       今天教的標籤看起來很多，但全部只靠兩條規則長出來（從屬、同層）——最後會回頭驗證這句話。 -->
+</section>
+
+<!-- ═══════════ 3｜銜接上週 ═══════════ -->
+<section class="slide" data-label="銜接上週">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">iii</p>
+  <h2 class="headline reveal">銜接上週</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal"><b>上週</b>：前端是什麼、能怎麼變現、AI 時代的差異化</li>
+      <li class="reveal"><b>本週起</b>：每週一個可展示的產出（MVP 導向）</li>
+      <li class="reveal"><b>本週產出</b>：一個 CodePen 網址</li>
+    </ul>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：提醒這門課的節奏——不深究底層原理，重點是能看懂、能改、能整合。
+       今天寫的每一行，下週都會用 Tailwind 重寫一次，所以現在先理解「結構長什麼樣」。 -->
+</section>
+
+<!-- ═══════════ 4｜Part 1 章節頁 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 1 章節頁">
+  <p class="chapter-num reveal">I.</p>
+  <h2 class="chapter-title reveal">CodePen 線上練習環境</h2>
+  <p class="chapter-sub reveal">註冊 · 介面四個區塊 · 存檔與分享</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 1</span></div>
+  <!-- 講述重點：這一段是今天的入場券，20 分鐘內要讓每個人都有自己的 Pen 網址。 -->
+</section>
+
+<!-- ═══════════ 5｜CodePen 是什麼 ═══════════ -->
+<section class="slide" data-label="CodePen 是什麼">
+  <p class="eyebrow">Part 1｜CodePen 線上練習環境</p>
+  <p class="pagedot">v</p>
+  <h2 class="headline reveal">CodePen 是什麼：註冊與介面四區</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">網址 <b>codepen.io</b>，右上角 <b>Sign Up</b> 註冊免費帳號</li>
+        <li class="reveal">免費帳號即可儲存<b>公開</b>的 Pen</li>
+        <li class="reveal">介面四區：<b>HTML</b>／CSS／JS 窗格＋<b>預覽區</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">在 HTML 窗格輸入，預覽區立即出現</span>
+      <div class="code">我的第一個網頁</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：務必帶全班走一次：註冊 → 開新 Pen → 在 HTML 窗格打幾個字 → 看預覽區。
+       先建立「這裡打的、那裡看到」的因果感。本課不需要付費，公開的 Pen 就夠用。 -->
+</section>
+
+<!-- ═══════════ 6｜存檔、版本與分享 ═══════════ -->
+<section class="slide" data-label="存檔與分享">
+  <p class="eyebrow">Part 1｜CodePen 線上練習環境</p>
+  <p class="pagedot">vi</p>
+  <h2 class="headline reveal">存檔、版本與分享</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><b>存檔</b>：<code>Ctrl/Cmd + S</code>，每存一次留一個版本</li>
+        <li class="reveal"><b>分享</b>：複製網址；別人的 Pen 可用 <b>Fork</b> 複製一份</li>
+        <li class="reveal"><b>Full Page</b> 全螢幕開啟——等一下開 DevTools 要用</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">每次存檔都留下一個版本，網址就是你的作業</span>
+      <div class="code">https://codepen.io/<span class="str">你的帳號</span>/pen/<span class="str">abcdefg</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：今天所有產出都用「一個網址」交付，務必當場確認每個人都拿到網址並貼到聊天室。
+       示範 Fork：把老師的示範 Pen 複製一份變成自己的。 -->
+</section>
+
+<!-- ═══════════ 7｜Part 2 章節頁 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 2 章節頁">
+  <p class="chapter-num reveal">II.</p>
+  <h2 class="chapter-title reveal">HTML 骨架入門</h2>
+  <p class="chapter-sub reveal">DOM 樹狀模型 · 標籤語法 · 開發人員工具 · 屬性</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 2</span></div>
+</section>
+
+<!-- ═══════════ 8｜什麼是 DOM ═══════════ -->
+<section class="slide" data-label="什麼是 DOM">
+  <p class="eyebrow">Part 2｜HTML 骨架入門</p>
+  <p class="pagedot">viii</p>
+  <h2 class="headline reveal">網頁的鋼筋骨架：什麼是 <em>DOM</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">瀏覽器讀取 <code>.html</code> 檔時，<b>不會直接把文字丟上螢幕</b></li>
+        <li class="reveal">它會建立一個樹狀模型：<b>DOM</b>（文件物件模型）</li>
+        <li class="reveal">這棵樹就是網頁的「骨架」</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">左邊是你寫的檔案，右邊是瀏覽器建立的樹</span>
+      <div class="code">index.html          DOM
+                    <span class="tag">html</span>
+                    ├── <span class="tag">head</span>
+                    └── <span class="tag">body</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：用比喻開場——把網頁比喻成一棟大樓，HTML 就是最核心的鋼筋骨架；沒有骨架，網頁無法呈現任何內容。
+       強調「樹」不是抽象概念，等一下開 DevTools 就會看到它長得像一棵樹。 -->
+</section>
+
+<!-- ═══════════ 9｜從屬與同層 ═══════════ -->
+<section class="slide" data-label="從屬與同層">
+  <p class="eyebrow">Part 2｜HTML 骨架入門</p>
+  <p class="pagedot">ix</p>
+  <h2 class="headline reveal">兩種關鍵關係：從屬與同層</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><b>從屬關係</b>（上下層）：元素被包在另一個元素裡面</li>
+        <li class="reveal"><b>同層關係</b>（兄弟關係）：元素並排在同一層級</li>
+        <li class="reveal">釐清上下層，才能精確地用樣式美化它們</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">今天所有標籤，都只是在應用這兩個關係</span>
+      <div class="code"><span class="tag">html</span>
+├── <span class="tag">head</span>          <span class="cmt">← 同層</span>
+└── <span class="tag">body</span>          <span class="cmt">← 從屬 html</span>
+    ├── <span class="tag">a</span>         <span class="cmt">← 同層</span>
+    └── <span class="tag">img</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是 Part 2 最重要的一頁，也是整堂課的地基。用「資料夾」比喻：放進資料夾裡＝從屬；並排放在桌上＝同層。
+       板書：畫出上面的樹狀圖，逐層圈出從屬與同層。 -->
+</section>
+
+<!-- ═══════════ 10｜標籤語法 ═══════════ -->
+<section class="slide" data-label="標籤語法">
+  <p class="eyebrow">Part 2｜HTML 骨架入門</p>
+  <p class="pagedot">x</p>
+  <h2 class="headline reveal">標籤語法：開頭標籤與結尾標籤</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">用大於小於符號包住標籤名稱，通常<b>成雙成對</b></li>
+        <li class="reveal"><b>開頭標籤</b> <code>&lt;a&gt;</code>　<b>結尾標籤</b> <code>&lt;/a&gt;</code>（多一個斜線）</li>
+        <li class="reveal">漏打結尾的斜線，是初學者<b>第一名錯誤</b></li>
+      </ul>
+      <div class="res res--card reveal">
+        <span class="res__kind">推薦 · 學習卡</span>
+        <span class="res__title">HTML 基本語法與結構字卡</span>
+        <div class="res__desc">包含開頭與結尾標籤、從屬與同層編寫規則的字卡。</div>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">成對出現的標籤</span>
+      <div class="code"><span class="tag">&lt;a&gt;</span>這是開頭與結尾成對的標籤<span class="tag">&lt;/a&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先只講「成雙成對」這一件事。漏打斜線今天一定會有人犯，到時候直接回頭看這一頁。 -->
+</section>
+
+<!-- ═══════════ 11｜創造從屬關係 ═══════════ -->
+<section class="slide" data-label="創造從屬關係">
+  <p class="eyebrow">Part 2｜HTML 骨架入門</p>
+  <p class="pagedot">xi</p>
+  <h2 class="headline reveal">編寫規則（一）：創造<em>從屬關係</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">想把元素放在<b>下層</b>，就把子標籤寫在父元素的開頭與結尾標籤<b>中間</b></li>
+        <li class="reveal">好記法：<b>俄羅斯娃娃</b>——小的放進大的裡面</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">p 被 div 包住，所以 p 是 div 的子元素</span>
+      <div class="code"><span class="tag">&lt;div&gt;</span>
+  <span class="tag">&lt;p&gt;</span>我在 div 裡面<span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是「往下長一層」的寫法。請學生用手比出「打開—放入—關閉」的動作，身體記憶比純聽講有效。 -->
+</section>
+
+<!-- ═══════════ 12｜創造同層關係 ═══════════ -->
+<section class="slide" data-label="創造同層關係">
+  <p class="eyebrow">Part 2｜HTML 骨架入門</p>
+  <p class="pagedot">xii</p>
+  <h2 class="headline reveal">編寫規則（二）：創造<em>同層關係</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">想寫<b>同層</b>元素，就把新標籤寫在前一個元素的<b>結尾標籤後面</b></li>
+        <li class="reveal">好記法：<b>並排放在桌上</b></li>
+        <li class="reveal">收斂成一句：<b>寫在中間＝下層，寫在後面＝同層</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">第二個 p 寫在第一個的結尾標籤後面</span>
+      <div class="code"><span class="tag">&lt;p&gt;</span>第一個段落<span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;p&gt;</span>第二個段落<span class="tag">&lt;/p&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：兩條規則講完，收斂成一句「寫在中間＝下層，寫在後面＝同層」。整棵 DOM 樹都靠這八個字長出來。
+       板書：並列寫出「嵌套寫法」與「並排寫法」兩個片段對照。 -->
+</section>
+
+<!-- ═══════════ 13｜換行與縮格 ═══════════ -->
+<section class="slide" data-label="換行與縮格">
+  <p class="eyebrow">Part 2｜HTML 骨架入門</p>
+  <p class="pagedot">xiii</p>
+  <h2 class="headline reveal">排版的小秘訣：<em>換行與縮格</em></h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal">瀏覽器不在乎你寫成幾行，<b>人腦在乎</b>——縮格讓「誰是誰的小孩」一目瞭然</li>
+      <li class="reveal"><span class="ic ic--warn"></span> 這裡的「換行」是<b>程式碼排版</b>；Part 3 的 <code>&lt;br&gt;</code> 是<b>畫面換行</b>，兩者無關</li>
+    </ul>
+    <div class="reveal" style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
+      <div>
+        <span class="code-label"><span class="pill pill--no">錯</span> 全部擠在一行：看不出誰是誰的小孩</span>
+        <div class="code"><span class="no">&lt;div&gt;&lt;h2&gt;</span>標題<span class="no">&lt;/h2&gt;&lt;p&gt;</span>內容<span class="no">&lt;/p&gt;&lt;/div&gt;</span></div>
+      </div>
+      <div>
+        <span class="code-label"><span class="pill pill--yes">對</span> 縮格之後：父子層一眼看得出來</span>
+        <div class="code"><span class="tag">&lt;div&gt;</span>
+  <span class="tag">&lt;h2&gt;</span>標題<span class="tag">&lt;/h2&gt;</span>
+  <span class="tag">&lt;p&gt;</span>內容<span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;/div&gt;</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：要建立的態度是——程式碼是寫給人看的，機器只是順便讀得懂。
+       刻意先預告「兩個換行」的差別，留到第 31 頁會更容易懂。 -->
+</section>
+
+<!-- ═══════════ 14｜開發人員工具 ═══════════ -->
+<section class="slide" data-label="開發人員工具">
+  <p class="eyebrow">Part 2｜HTML 骨架入門</p>
+  <p class="pagedot">xiv</p>
+  <h2 class="headline reveal">開發人員工具：工程師的秘密武器</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><b>Windows</b>：按 <code>F12</code></li>
+        <li class="reveal"><b>Mac</b>：在畫面上按右鍵 → 選「檢查」</li>
+        <li class="reveal">游標移到標籤上，左側畫面會<b>高亮</b>對應區塊</li>
+      </ul>
+      <div class="res res--video reveal">
+        <span class="res__kind">推薦 · 影片</span>
+        <span class="res__title">如何使用開發人員工具檢查網頁</span>
+        <div class="res__desc">示範 F12 與右鍵檢查，並懸停標籤觀察對應結構。</div>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">打開任一網頁後看到的結構</span>
+      <div class="code"><span class="tag">&lt;body&gt;</span>
+  <span class="tag">&lt;header&gt;</span>
+  <span class="tag">&lt;main&gt;</span>
+  <span class="tag">&lt;footer&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是把抽象變具體的關鍵。請學生現在就打開自己的 Pen（Full Page），把游標在 DOM 樹上移動，
+       看左邊畫面跟著亮——「看到的那棵樹，就是你剛剛寫的東西」。影片留給課後複習。 -->
+</section>
+
+<!-- ═══════════ 15｜屬性 ═══════════ -->
+<section class="slide" data-label="屬性">
+  <p class="eyebrow">Part 2｜HTML 骨架入門</p>
+  <p class="pagedot">xv</p>
+  <h2 class="headline reveal">賦予標籤超能力：認識「屬性」</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">屬性寫在<b>開頭標籤內</b>，標籤名稱後空一格再寫</li>
+        <li class="reveal"><b>通用</b>（任何標籤）：<code>style</code>、<code>id</code>、<code>class</code></li>
+        <li class="reveal"><b>特定標籤專用</b>：<code>href</code>、<code>src</code> → Part 3 跟標籤一起講</li>
+      </ul>
+      <div class="res res--mind reveal">
+        <span class="res__kind">推薦 · 心智圖</span>
+        <span class="res__title">HTML 常用屬性地圖</span>
+        <div class="res__desc">href、src、style、id、class 的定義與用途。</div>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">style 讓這一行的文字變紅</span>
+      <div class="code"><span class="tag">&lt;p&gt;</span>這行是普通顏色<span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;p</span> <span class="attr">style</span>=<span class="str">"color: red;"</span><span class="tag">&gt;</span>這行變紅色<span class="tag">&lt;/p&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：比喻——標籤是「這個東西是什麼」，屬性是「它的規格」。
+       這裡刻意不要把 href / src 講完，留到 Part 3 跟著 <a>、<img> 一起講，學生才記得牢。 -->
+</section>
+
+<!-- ═══════════ 16｜Part 3 章節頁 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 3 章節頁">
+  <p class="chapter-num reveal">III.</p>
+  <h2 class="chapter-title reveal">HTML 常用標籤</h2>
+  <p class="chapter-sub reveal">基本結構 · 快速鍵與註解 · 標題／區塊／段落 · 行內標記 · 超連結與圖片 · 清單</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 3</span></div>
+</section>
+
+<!-- ═══════════ 17｜HTML 基本結構總覽 ═══════════ -->
+<section class="slide" data-label="HTML 基本結構">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xvii</p>
+  <h2 class="headline reveal">HTML 基本結構總覽</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">先建立副檔名為 <code>.html</code> 的檔案（例如 <code>index.html</code>）</li>
+        <li class="reveal"><b>Emmet</b>：輸入 <code>!</code> 再按 <code>Tab</code>，一秒生成整份骨架</li>
+        <li class="reveal">四個要素：<code>DOCTYPE</code>、<code>html</code>、<code>head</code>、<code>body</code></li>
+      </ul>
+      <div class="res res--slides reveal">
+        <span class="res__kind">推薦 · 簡報</span>
+        <span class="res__title">HTML 網頁基本結構示範</span>
+        <div class="res__desc">逐步拆解 DOCTYPE、html、head、body 的功能與巢狀關係。</div>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">輸入 ! + Tab 之後長出的樣子</span>
+      <div class="code"><span class="cmt">&lt;!DOCTYPE html&gt;</span>
+<span class="tag">&lt;html</span> <span class="attr">lang</span>=<span class="str">"zh-TW"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;head&gt;</span>
+    <span class="tag">&lt;title&gt;</span>我的第一個網頁<span class="tag">&lt;/title&gt;</span>
+    <span class="tag">&lt;meta</span> <span class="attr">charset</span>=<span class="str">"UTF-8"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;/head&gt;</span>
+  <span class="tag">&lt;body&gt;</span>
+    <span class="cmt">&lt;!-- 之後內容都寫在這裡 --&gt;</span>
+  <span class="tag">&lt;/body&gt;</span>
+<span class="tag">&lt;/html&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁是今天的核心產出。當場示範 ! + Tab 的魔法，讓學生看到一秒長出整份骨架。
+       先給全景，後面三頁再逐一拆解。 -->
+</section>
+
+<!-- ═══════════ 18｜DOCTYPE 與 lang ═══════════ -->
+<section class="slide" data-label="DOCTYPE 與 lang">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xviii</p>
+  <h2 class="headline reveal">向瀏覽器宣告：<em>DOCTYPE</em> 與 <em>lang</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>&lt;!DOCTYPE html&gt;</code>：宣告這是 <b>HTML5</b> 格式的文件</li>
+        <li class="reveal"><code>&lt;html&gt;</code>：整份網頁的<b>根標籤</b></li>
+        <li class="reveal"><code>lang</code> 屬性：告訴瀏覽器語言，<b>避免一直跳出「翻譯網頁」提示</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">lang 是學生最容易忽略、卻最有感的一行</span>
+      <div class="code"><span class="cmt">&lt;!DOCTYPE html&gt;</span>
+<span class="tag">&lt;html</span> <span class="attr">lang</span>=<span class="str">"zh-TW"</span><span class="tag">&gt;</span>
+  ...
+<span class="tag">&lt;/html&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：當場示範把 zh-TW 改成 en，看瀏覽器翻譯提示的變化。 -->
+</section>
+
+<!-- ═══════════ 19｜head ═══════════ -->
+<section class="slide" data-label="head">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xix</p>
+  <h2 class="headline reveal">head：放瀏覽器讀的資訊（畫面看不到）</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>&lt;title&gt;</code>：網頁名稱，顯示在<b>瀏覽器分頁標籤</b>上</li>
+        <li class="reveal"><code>&lt;meta charset="UTF-8"&gt;</code>：確保<b>中文不變亂碼</b></li>
+        <li class="reveal">這一區的內容<b>不會出現在畫面上</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">改 title，分頁標籤立刻跟著變</span>
+      <div class="code"><span class="tag">&lt;head&gt;</span>
+  <span class="tag">&lt;title&gt;</span>王小明｜個人簡歷<span class="tag">&lt;/title&gt;</span>
+  <span class="tag">&lt;meta</span> <span class="attr">charset</span>=<span class="str">"UTF-8"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;/head&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁是「為什麼 title 看不到」的答案。示範改 title 看分頁標籤變化；
+       示範把 charset 改成 Big5 讓中文變亂碼，學生會很有感。 -->
+</section>
+
+<!-- ═══════════ 20｜body ═══════════ -->
+<section class="slide" data-label="body">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xx</p>
+  <h2 class="headline reveal">body：畫面看得到的都寫在這裡</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">你在畫面上看到的所有可見物件<b>通通寫在 body 裡</b></li>
+        <li class="reveal">寫在 body 外面的內容，<b>畫面不會顯示</b></li>
+        <li class="reveal">一句口訣：<b>設定寫 head、內容寫 body</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">看得見的東西都在這裡</span>
+      <div class="code"><span class="tag">&lt;body&gt;</span>
+  <span class="tag">&lt;h1&gt;</span>王小明<span class="tag">&lt;/h1&gt;</span>
+  <span class="tag">&lt;p&gt;</span>這是我的個人網頁<span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;/body&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：把 head 與 body 的分工講死。這是後面所有標籤的放置依據，
+       講錯位置就會出現「明明寫了卻看不到」的挫折。 -->
+</section>
+
+<!-- ═══════════ 21｜註解 ═══════════ -->
+<section class="slide" data-label="註解">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxi</p>
+  <h2 class="headline reveal">寫下隱形筆記：<em>註解</em>（Comments）</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">語法：<code>&lt;!-- 註解內容 --&gt;</code></li>
+        <li class="reveal">註解是<b>寫給開發者看的</b>，瀏覽器直接忽略，不會顯示</li>
+        <li class="reveal"><code>Ctrl/Cmd + /</code> 可切換註解，把程式碼<b>暫時失效</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">找出程式碼兇手的好工具</span>
+      <div class="code"><span class="cmt">&lt;!-- 這行是給人看的筆記 --&gt;</span>
+<span class="tag">&lt;h1&gt;</span>王小明<span class="tag">&lt;/h1&gt;</span>
+
+<span class="cmt">&lt;!-- 暫時把這段關掉，之後再打開</span>
+<span class="cmt">&lt;p&gt;這行不會出現在畫面上&lt;/p&gt;</span>
+<span class="cmt">--&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：「暫時失效」是註解最實用的場景——程式碼出錯時，用註解一段一段關掉來找兇手，
+       這招會一路用到期末專案。 -->
+</section>
+
+<!-- ═══════════ 22｜Emmet ═══════════ -->
+<section class="slide" data-label="Emmet">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxii</p>
+  <h2 class="headline reveal">Emmet 快速展開</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">CodePen 的 HTML 窗格<b>內建 Emmet</b></li>
+        <li class="reveal"><code>!</code> → 完整 HTML5 骨架</li>
+        <li class="reveal"><code>lorem</code> / <code>lorem20</code> → 假字</li>
+        <li class="reveal"><code>ul&gt;li*3</code> → 三個清單項目</li>
+      </ul>
+      <div class="res res--card reveal">
+        <span class="res__kind">推薦 · 學習卡</span>
+        <span class="res__title">編輯器開發必備快速鍵</span>
+        <div class="res__desc">Emmet 與編輯器必學快速鍵，用主動召回快速記住操作。</div>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">左邊是你打的，右邊是展開結果</span>
+      <div class="code"><span class="str">!</span>          → <span class="cmt">整份骨架</span>
+<span class="str">lorem20</span>    → <span class="tag">&lt;p&gt;</span>Lorem ipsum...<span class="tag">&lt;/p&gt;</span>
+<span class="str">ul&gt;li*3</span>    → <span class="tag">&lt;ul&gt;</span>
+                <span class="tag">&lt;li&gt;&lt;/li&gt;</span>
+                <span class="tag">&lt;li&gt;&lt;/li&gt;</span>
+                <span class="tag">&lt;li&gt;&lt;/li&gt;</span>
+              <span class="tag">&lt;/ul&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：今天最省時間的一招。lorem20 對沒內容可寫的學生是救星——Part 4 寫自我介紹頁時一定用得到。
+       ul>li*3 先示範就好，講解留到清單那幾頁。 -->
+</section>
+
+<!-- ═══════════ 23｜編輯器通用技巧 ═══════════ -->
+<section class="slide" data-label="編輯器通用技巧">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxiii</p>
+  <h2 class="headline reveal">編輯器通用技巧：<em>一次改很多地方</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">重點不是背按鍵，是知道<b>有這些技巧存在</b></li>
+        <li class="reveal">游標停在任何位置，直接跳下一行</li>
+        <li class="reveal">不必選取，整行複製貼上</li>
+        <li class="reveal"><b>多重游標</b>：一次修改畫面上多處相同的字</li>
+        <li class="reveal">按鍵依編輯器而異，換工具就要重新找</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">想同時把三個 class 從 card 改成 item</span>
+      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"card"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;span</span> <span class="attr">class</span>=<span class="str">"card"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;p</span> <span class="attr">class</span>=<span class="str">"card"</span><span class="tag">&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：原教材這段是 Sublime Text 的按鍵，本課已改以 CodePen 為場域。
+       不綁定特定編輯器——換了工具，技巧的「目標」還在，按鍵再找就有。
+       注意（上課前須驗證）：CodePen 對應快速鍵務必先實測，不支援的改以手動操作示範。 -->
+</section>
+
+<!-- ═══════════ 24｜標題標籤 ═══════════ -->
+<section class="slide" data-label="標題標籤">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxiv</p>
+  <h2 class="headline reveal">標題標籤 <em>h1</em> ~ <em>h6</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>h1</code> 最大最醒目，依序遞減到最小的 <code>h6</code></li>
+        <li class="reveal">這些標籤<b>自帶字型放大與加粗</b>，不用自己調字級</li>
+      </ul>
+      <div class="res res--chart reveal">
+        <span class="res__kind">推薦 · 資訊圖表</span>
+        <span class="res__title">常用結構性標籤對比</span>
+        <div class="res__desc">h1~h6 的預設字型大小差異，以及 div 與 p 的分佈關係。</div>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">全部打出來看差異，比講一百遍有用</span>
+      <div class="code"><span class="tag">&lt;h1&gt;</span>我是 h1，最大的主標題<span class="tag">&lt;/h1&gt;</span>
+<span class="tag">&lt;h2&gt;</span>我是 h2<span class="tag">&lt;/h2&gt;</span>
+<span class="tag">&lt;h3&gt;</span>我是 h3<span class="tag">&lt;/h3&gt;</span>
+<span class="tag">&lt;h4&gt;</span>我是 h4<span class="tag">&lt;/h4&gt;</span>
+<span class="tag">&lt;h5&gt;</span>我是 h5<span class="tag">&lt;/h5&gt;</span>
+<span class="tag">&lt;h6&gt;</span>我是 h6，最小的標題<span class="tag">&lt;/h6&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：讓學生在 Pen 上把 h1~h6 全打出來看差異。 -->
+</section>
+
+<!-- ═══════════ 25｜h1 只寫一個 ═══════════ -->
+<section class="slide" data-label="h1 只寫一個">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxv</p>
+  <h2 class="headline reveal">h1 一個網頁只寫一個</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal">一個網頁通常建議<b>只有一個 h1</b> 作為核心主題</li>
+      <li class="reveal">h1 不只是「最大的字」，它是這個頁面的<b>主題</b></li>
+    </ul>
+    <div class="reveal" style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
+      <div>
+        <span class="code-label"><span class="pill pill--yes">對</span> 一個 h1 當主題，其餘往下分層</span>
+        <div class="code"><span class="tag">&lt;h1&gt;</span>王小明｜個人簡歷<span class="tag">&lt;/h1&gt;</span>
+  <span class="tag">&lt;h2&gt;</span>關於我<span class="tag">&lt;/h2&gt;</span>
+  <span class="tag">&lt;h2&gt;</span>技能<span class="tag">&lt;/h2&gt;</span>
+    <span class="tag">&lt;h3&gt;</span>前端<span class="tag">&lt;/h3&gt;</span></div>
+      </div>
+      <div>
+        <span class="code-label"><span class="pill pill--no">錯</span> 好幾個 h1，等於宣告了好幾個主題</span>
+        <div class="code"><span class="no">&lt;h1&gt;</span>王小明<span class="no">&lt;/h1&gt;</span>
+<span class="no">&lt;h1&gt;</span>關於我<span class="no">&lt;/h1&gt;</span>
+<span class="no">&lt;h1&gt;</span>技能<span class="no">&lt;/h1&gt;</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：把「只有一個 h1」的理由講清楚——它是頁面的主題，不只是最大的字。
+       這與第 14 週的 SEO 課程直接相關，先埋一個伏筆。 -->
+</section>
+
+<!-- ═══════════ 26｜div ═══════════ -->
+<section class="slide" data-label="div">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxvi</p>
+  <h2 class="headline reveal">區塊標籤 <em>div</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">英文全名 <b>division</b>，是一個<b>無任何預設樣式</b>的容器</li>
+        <li class="reveal">它什麼都不做，只負責<b>打包</b></li>
+        <li class="reveal">把內容打包成獨立區塊，方便後續用 CSS 排版</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">一個商品卡片的最小結構</span>
+      <div class="code"><span class="tag">&lt;div&gt;</span>
+  <span class="tag">&lt;h2&gt;</span>商品名稱<span class="tag">&lt;/h2&gt;</span>
+  <span class="tag">&lt;p&gt;</span>商品說明<span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：div 的「無預設樣式」是重點——它不改變外觀，只劃出範圍。
+       這正是它下週會被 Tailwind 大量使用的原因：先有區塊，才有版面。 -->
+</section>
+
+<!-- ═══════════ 27｜p 與 lorem ═══════════ -->
+<section class="slide" data-label="p 與假字">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxvii</p>
+  <h2 class="headline reveal">文字段落標籤 <em>p</em> 與假字技巧</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>p</code>（paragraph）：專門存放<b>一整段文字</b></li>
+        <li class="reveal">技巧：在 <code>p</code> 內輸入 <code>lorem</code> 再按 <code>Tab</code></li>
+        <li class="reveal"><code>lorem20</code> + <code>Tab</code> → 生出 20 個字的假字</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">還沒想好要寫什麼，不該是卡住的理由</span>
+      <div class="code"><span class="tag">&lt;p&gt;</span>這是一段用 p 包起來的文字。<span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;p&gt;</span><span class="str">lorem20</span><span class="tag">&lt;/p&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：lorem 這個技巧要當場示範，因為 Part 4 寫自我介紹頁時一定會用到。 -->
+</section>
+
+<!-- ═══════════ 28｜div 包 h+p ═══════════ -->
+<section class="slide" data-label="div 包標題與段落">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxviii</p>
+  <h2 class="headline reveal">組合應用：<em>div</em> 包住標題與段落</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">單一標籤只是零件，實務上是<b>層層組合</b></li>
+        <li class="reveal">慣用組合：外層 div 當容器，內層放 h2 與 p</li>
+        <li class="reveal">這正是「創造從屬關係」的實際應用</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">下週卡片版面的最小單位</span>
+      <div class="code"><span class="tag">&lt;div&gt;</span>
+  <span class="tag">&lt;h2&gt;</span>關於我<span class="tag">&lt;/h2&gt;</span>
+  <span class="tag">&lt;p&gt;</span><span class="str">lorem20</span><span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：把兩個標籤合起來，讓學生看到「一組內容」長什麼樣。 -->
+</section>
+
+<!-- ═══════════ 29｜b / i / u ═══════════ -->
+<section class="slide" data-label="文字標記">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxix</p>
+  <h2 class="headline reveal">文字標記標籤：<em>b</em>　<em>i</em>　<em>u</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>b</code> 加粗（Bold）、<code>i</code> 斜體（Italic）、<code>u</code> 底線（Underline）</li>
+        <li class="reveal"><span class="ic ic--warn"></span> 針對<b>特定英文字</b>套用時，Emmet 可能無法辨識，<b>手動打完整標籤</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">三種效果一次看</span>
+      <div class="code"><span class="tag">&lt;p&gt;</span>這段話裡有
+  <span class="tag">&lt;b&gt;</span>加粗<span class="tag">&lt;/b&gt;</span>、
+  <span class="tag">&lt;i&gt;</span>斜體<span class="tag">&lt;/i&gt;</span>、
+  <span class="tag">&lt;u&gt;</span>底線<span class="tag">&lt;/u&gt;</span>。
+<span class="tag">&lt;/p&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：提示「Emmet 在英文字中間會失效」是實務踩雷點——學生若發現 Tab 沒反應，不是壞掉，手動打就好。 -->
+</section>
+
+<!-- ═══════════ 30｜span ═══════════ -->
+<section class="slide" data-label="span">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxx</p>
+  <h2 class="headline reveal">行內容器 <em>span</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>span</code> 是<b>沒有預設樣式的行內容器</b></li>
+        <li class="reveal">只想改變段落中<b>某幾個字</b>的樣式時，用它包裹最完美</li>
+        <li class="reveal">對照：<b>div 是區塊</b>（獨占一行），<b>span 是行內</b>（跟著文字排）</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">只有「這幾個字」變紅，其餘不受影響</span>
+      <div class="code"><span class="tag">&lt;p&gt;</span>這段話裡，
+  <span class="tag">&lt;span</span> <span class="attr">style</span>=<span class="str">"color: red;"</span><span class="tag">&gt;</span>這幾個字<span class="tag">&lt;/span&gt;</span>
+  會變紅色。
+<span class="tag">&lt;/p&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：現場把 span 換成 div，讓學生看到紅色那幾個字突然換行——反差印象最深。 -->
+</section>
+
+<!-- ═══════════ 31｜br ═══════════ -->
+<section class="slide" data-label="br 換行">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxxi</p>
+  <h2 class="headline reveal">強制換行 <em>br</em></h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal">在程式碼中按十次 Enter，瀏覽器<b>也只顯示一個空白</b>——必須用 <code>&lt;br&gt;</code> 才會真的換行</li>
+      <li class="reveal"><span class="ic ic--warn"></span> <b>回收第 13 頁的預告</b>：程式碼排版 ≠ 畫面換行</li>
+    </ul>
+    <div class="reveal" style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
+      <div>
+        <span class="code-label"><span class="pill pill--no">錯</span> 在程式碼裡按 Enter，畫面不會換行</span>
+        <div class="code"><span class="tag">&lt;p&gt;</span>第一行
+第二行<span class="tag">&lt;/p&gt;</span></div>
+      </div>
+      <div>
+        <span class="code-label"><span class="pill pill--yes">對</span> 用 br 才會真的換行</span>
+        <div class="code"><span class="tag">&lt;p&gt;</span>第一行<span class="ok">&lt;br&gt;</span>第二行<span class="tag">&lt;/p&gt;</span></div>
+      </div>
+    </div>
+    <div class="res res--audio reveal">
+      <span class="res__kind">推薦 · 音訊</span>
+      <span class="res__title">文字修飾與排版微調技巧</span>
+      <div class="res__desc">為何 Enter 換行無效，以及 span、br 與 b/i/u 的實務應用。</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是學生第一個「明明我按了卻沒反應」的挫折點。當場示範：在 p 內按多次 Enter → 畫面沒變；
+       改用 br → 換行成功。講破就不會卡住。 -->
+</section>
+
+<!-- ═══════════ 32｜hr ═══════════ -->
+<section class="slide" data-label="hr 水平線">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxxii</p>
+  <h2 class="headline reveal">水平分割線 <em>hr</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>hr</code>（Horizontal Rule）：在網頁上畫出一條<b>橫線</b></li>
+        <li class="reveal">常用於<b>分隔不同的章節</b></li>
+        <li class="reveal">不需要任何屬性，也不需要結尾標籤</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">兩個章節之間的那條線</span>
+      <div class="code"><span class="tag">&lt;h2&gt;</span>第一章<span class="tag">&lt;/h2&gt;</span>
+<span class="tag">&lt;p&gt;</span>第一章的內容<span class="tag">&lt;/p&gt;</span>
+
+<span class="ok">&lt;hr&gt;</span>
+
+<span class="tag">&lt;h2&gt;</span>第二章<span class="tag">&lt;/h2&gt;</span>
+<span class="tag">&lt;p&gt;</span>第二章的內容<span class="tag">&lt;/p&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：hr 是最單純的標籤，拿來當「分隔也可以用標籤做」的例子。順帶預告下一頁的 void elements 整理。 -->
+</section>
+
+<!-- ═══════════ 33｜Void Elements ═══════════ -->
+<section class="slide" data-label="Void Elements">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxxiii</p>
+  <h2 class="headline reveal">沒有結尾的單一標籤（<em>Void Elements</em>）</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal"><code>br</code>、<code>hr</code>、<code>img</code> 都<b>沒有結尾標籤</b>——因為它們不包裹任何文字內容</li>
+      <li class="reveal">這是「成雙成對」規則的<b>例外</b>；一句話收斂：<b>要包內容的才需要結尾標籤</b></li>
+    </ul>
+    <div class="reveal">
+      <div class="code"><span class="ok">&lt;br&gt;</span>                              <span class="cmt">沒有 &lt;/br&gt;</span>
+<span class="ok">&lt;hr&gt;</span>                              <span class="cmt">沒有 &lt;/hr&gt;</span>
+<span class="ok">&lt;img</span> <span class="attr">src</span>=<span class="str">"photo.jpg"</span> <span class="attr">alt</span>=<span class="str">"照片"</span><span class="ok">&gt;</span>  <span class="cmt">沒有 &lt;/img&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁要把「例外」講明白，否則學生會硬寫 </br>。
+       示範：故意寫 </br> 讓學生看瀏覽器怎麼處理。 -->
+</section>
+
+<!-- ═══════════ 34｜a 與 href ═══════════ -->
+<section class="slide" data-label="超連結與 href">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxxiv</p>
+  <h2 class="headline reveal">超連結標籤 <em>a</em> 與 <em>href</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>a</code> 英文全名 <b>anchor</b>（錨）</li>
+        <li class="reveal">必須搭配 <code>href</code> 屬性指定跳轉的<b>網址</b></li>
+        <li class="reveal">回收伏筆：<code>href</code> 是<b>只對 a 有意義</b>的專用屬性</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">記法：href 是「你要去哪裡」</span>
+      <div class="code"><span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="str">"https://google.com"</span><span class="tag">&gt;</span>連到 Google<span class="tag">&lt;/a&gt;</span>
+
+<span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="str">"about.html"</span><span class="tag">&gt;</span>站內的另一頁<span class="tag">&lt;/a&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：href 與 src 最容易搞混——記法：href 是「你要去哪裡」（超連結），src 是「東西從哪裡來」（資源）。
+       示範：做一個連到學校首頁的連結，當場點下去。 -->
+</section>
+
+<!-- ═══════════ 35｜target ═══════════ -->
+<section class="slide" data-label="target 開新分頁">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxxv</p>
+  <h2 class="headline reveal">target="<em>_blank</em>"：開啟新分頁</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal">預設行為：點連結會在<b>原本的頁面</b>直接跳轉</li>
+      <li class="reveal">加上 <code>target="_blank"</code> → <b>開啟新分頁</b>，原頁面留著</li>
+    </ul>
+    <div class="reveal" style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
+      <div>
+        <span class="code-label">原本的頁面直接跳走</span>
+        <div class="code"><span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="str">"https://google.com"</span><span class="tag">&gt;</span>
+  連到 Google
+<span class="tag">&lt;/a&gt;</span></div>
+      </div>
+      <div>
+        <span class="code-label">開啟新分頁，原頁面留著</span>
+        <div class="code"><span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="str">"https://google.com"</span>
+   <span class="attr">target</span>=<span class="str">"_blank"</span><span class="tag">&gt;</span>
+  連到 Google
+<span class="tag">&lt;/a&gt;</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：讓學生兩種都做一次、都點一次，親眼看到差別。
+       順帶說明實務理由：連外連結另開分頁，是為了不讓使用者離開自己的網站。 -->
+</section>
+
+<!-- ═══════════ 36｜img 與 src ═══════════ -->
+<section class="slide" data-label="圖片與 src">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxxvi</p>
+  <h2 class="headline reveal">圖片標籤 <em>img</em> 與 <em>src</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>img</code> 是<b>沒有結尾標籤</b>的單一元素</li>
+        <li class="reveal"><code>src</code>（Source）：圖片的網址或相對路徑</li>
+        <li class="reveal"><span class="ic ic--warn"></span> <b>一定要包含副檔名</b>，如 <code>.jpg</code>、<code>.png</code></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">記法：src 是「東西從哪裡來」</span>
+      <div class="code"><span class="tag">&lt;img</span> <span class="attr">src</span>=<span class="str">"photo.jpg"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;img</span> <span class="attr">src</span>=<span class="str">"images/cat.png"</span><span class="tag">&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：src 打錯是今天圖片不出現的唯一原因（副檔名漏打、路徑錯、圖片不存在）。
+       請學生先確認圖片「本身打得開」，再放進 src。 -->
+</section>
+
+<!-- ═══════════ 37｜alt 與 title ═══════════ -->
+<section class="slide" data-label="alt 與 title">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxxvii</p>
+  <h2 class="headline reveal">圖片的兩種文字：<em>alt</em> 與 <em>title</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>alt</code>：圖片無法顯示時呈現的<b>替代文字</b>，也幫助<b>視障人士與搜尋引擎</b>理解圖片</li>
+        <li class="reveal"><code>title</code>：滑鼠<b>懸停</b>時出現的說明小框</li>
+        <li class="reveal">差別：alt 是圖片壞掉時給人看的，title 是滑鼠移過去才出現的</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">alt 不只是備案，更是無障礙設計</span>
+      <div class="code"><span class="tag">&lt;img</span>
+  <span class="attr">src</span>=<span class="str">"photo.jpg"</span>
+  <span class="attr">alt</span>=<span class="str">"王小明的大頭照"</span>
+  <span class="attr">title</span>=<span class="str">"滑鼠移過來會看到我"</span><span class="tag">&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：alt 的無障礙意義要講到——這不只是「圖片壞掉時的備案」，而是讓看不見圖片的人也能理解內容。
+       示範：把 src 改成錯的路徑，alt 的文字就會跑出來。 -->
+</section>
+
+<!-- ═══════════ 38｜圖片連結 ═══════════ -->
+<section class="slide" data-label="圖片連結">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxxviii</p>
+  <h2 class="headline reveal">進階應用：<em>點擊圖片</em>觸發超連結</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">作法：把整個 <code>img</code> 塞在 <code>a</code> 的<b>開始與結束標籤中間</b></li>
+        <li class="reveal">效果：點「文字」跳轉 → 變成點「<b>整張圖片</b>」跳轉</li>
+        <li class="reveal">這正是「創造從屬關係」的直接應用</li>
+      </ul>
+      <div class="res res--chart reveal">
+        <span class="res__kind">推薦 · 資訊圖表</span>
+        <span class="res__title">超連結與圖片標籤結構圖解</span>
+        <div class="res__desc">href、target、src、alt、title 與圖片連結的嵌套關係。</div>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">img 寫在 a 的中間，圖片就能點</span>
+      <div class="code"><span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="str">"https://google.com"</span> <span class="attr">target</span>=<span class="str">"_blank"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;img</span> <span class="attr">src</span>=<span class="str">"photo.jpg"</span> <span class="attr">alt</span>=<span class="str">"點我會開新分頁"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;/a&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：不要直接給答案——先問「要讓圖片可以點，該怎麼寫？」讓學生自己講出「就是把 img 寫在 a 的中間」。
+       答對的那一刻，就代表前一頁的規則真的學會了。 -->
+</section>
+
+<!-- ═══════════ 39｜ul ═══════════ -->
+<section class="slide" data-label="無序清單">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xxxix</p>
+  <h2 class="headline reveal">無序清單 <em>ul</em> + <em>li</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>ul</code>（Unordered List）：清單<b>沒有先後順序關係</b></li>
+        <li class="reveal">瀏覽器預設在每個項目前顯示一個<b>圓點（•）</b></li>
+        <li class="reveal">由<b>外層容器</b> ul 與<b>內層項目</b> li 共同組成</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">外層包內層，又是一次從屬關係</span>
+      <div class="code"><span class="tag">&lt;ul&gt;</span>
+  <span class="tag">&lt;li&gt;</span>首頁<span class="tag">&lt;/li&gt;</span>
+  <span class="tag">&lt;li&gt;</span>關於我們<span class="tag">&lt;/li&gt;</span>
+  <span class="tag">&lt;li&gt;</span>聯絡資訊<span class="tag">&lt;/li&gt;</span>
+<span class="tag">&lt;/ul&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：可以先用 Emmet 的 ul>li*3 + Tab 生出骨架再填字，複習 Emmet 那一頁。 -->
+</section>
+
+<!-- ═══════════ 40｜ol ═══════════ -->
+<section class="slide" data-label="有序清單">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xl</p>
+  <h2 class="headline reveal">有序清單 <em>ol</em> + <em>li</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>ol</code>（Ordered List）：清單<b>有順序關係</b></li>
+        <li class="reveal">瀏覽器自動在每個項目最前方標上 <b>1, 2, 3...</b></li>
+        <li class="reveal">想改成無序，只要把外層的 <code>ol</code> 換成 <code>ul</code></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">差別只在「有沒有順序」</span>
+      <div class="code"><span class="tag">&lt;ol&gt;</span>
+  <span class="tag">&lt;li&gt;</span>建立骨架<span class="tag">&lt;/li&gt;</span>
+  <span class="tag">&lt;li&gt;</span>填入內容<span class="tag">&lt;/li&gt;</span>
+  <span class="tag">&lt;li&gt;</span>檢查結構<span class="tag">&lt;/li&gt;</span>
+<span class="tag">&lt;/ol&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：請學生自己想例子——購物流程用 ol、導覽選單用 ul。
+       選錯不影響畫面，但語意會錯。 -->
+</section>
+
+<!-- ═══════════ 41｜li 嵌套 ═══════════ -->
+<section class="slide" data-label="清單嵌套">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xli</p>
+  <h2 class="headline reveal">清單項目 <em>li</em> 與嵌套</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>li</code>（list item）：無論 ul 或 ol，內層都用它包項目</li>
+        <li class="reveal"><code>li</code> 裡面可以再放清單，形成<b>嵌套清單</b></li>
+        <li class="reveal">下拉式選單的骨架就是這樣做的</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">縮格要對齊，否則自己都會看錯層級</span>
+      <div class="code"><span class="tag">&lt;ul&gt;</span>
+  <span class="tag">&lt;li&gt;</span>產品
+    <span class="tag">&lt;ul&gt;</span>
+      <span class="tag">&lt;li&gt;</span>筆記型電腦<span class="tag">&lt;/li&gt;</span>
+      <span class="tag">&lt;li&gt;</span>桌上型電腦<span class="tag">&lt;/li&gt;</span>
+    <span class="tag">&lt;/ul&gt;</span>
+  <span class="tag">&lt;/li&gt;</span>
+  <span class="tag">&lt;li&gt;</span>聯絡我們<span class="tag">&lt;/li&gt;</span>
+<span class="tag">&lt;/ul&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：嵌套清單是「從屬關係」的又一次應用，也是下拉式選單的骨架。 -->
+</section>
+
+<!-- ═══════════ 42｜業界秘密 ═══════════ -->
+<section class="slide" data-label="導覽列就是清單">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xlii</p>
+  <h2 class="headline reveal">業界秘密：導覽列就是 <em>ul</em> + <em>li</em></h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">打開各大網站的開發人員工具</li>
+        <li class="reveal">上方精美的選單／導覽列，骨架上<b>幾乎全是 ul + li</b></li>
+        <li class="reveal">再透過 <b>CSS</b> 橫向排列與美化——這就是下週要做的事</li>
+      </ul>
+      <div class="res res--slides reveal">
+        <span class="res__kind">推薦 · 簡報</span>
+        <span class="res__title">網頁清單語法與實務選單應用</span>
+        <div class="res__desc">真實網站案例：ul/li 如何靠 CSS 變成現代化導覽選單。</div>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">真實網站選單的骨架長相</span>
+      <div class="code"><span class="tag">&lt;nav&gt;</span>
+  <span class="tag">&lt;ul&gt;</span>
+    <span class="tag">&lt;li&gt;&lt;a</span> <span class="attr">href</span>=<span class="str">"#"</span><span class="tag">&gt;</span>首頁<span class="tag">&lt;/a&gt;&lt;/li&gt;</span>
+    <span class="tag">&lt;li&gt;&lt;a</span> <span class="attr">href</span>=<span class="str">"#"</span><span class="tag">&gt;</span>商品<span class="tag">&lt;/a&gt;&lt;/li&gt;</span>
+    <span class="tag">&lt;li&gt;&lt;a</span> <span class="attr">href</span>=<span class="str">"#"</span><span class="tag">&gt;</span>聯絡我們<span class="tag">&lt;/a&gt;&lt;/li&gt;</span>
+  <span class="tag">&lt;/ul&gt;</span>
+<span class="tag">&lt;/nav&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是 Part 3 的高潮——現場打開一個電商網站，用 DevTools 展開它的導覽列，讓學生看到 <ul><li>。
+       這一刻把「我學的東西是真的在用的」講清楚，也順便複習前面學的 DevTools 操作。 -->
+</section>
+
+<!-- ═══════════ 43｜Part 4 章節頁 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 4 章節頁">
+  <p class="chapter-num reveal">IV.</p>
+  <h2 class="chapter-title reveal">CodePen 動手實作</h2>
+  <p class="chapter-sub reveal">生骨架 · 檢驗結構 · 填內容 · 做導覽與圖片連結</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 4</span></div>
+  <!-- 講述重點：這 35 分鐘放手讓學生做，教師逐桌走動。做成什麼樣不重要，重點是結構正確。 -->
+</section>
+
+<!-- ═══════════ 44｜實作一 ═══════════ -->
+<section class="slide" data-label="實作一 用 Emmet 打骨架">
+  <p class="eyebrow">Part 4｜CodePen 動手實作</p>
+  <p class="pagedot">xliv</p>
+  <h2 class="headline reveal">實作一：用 Emmet 打出骨架</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">建立新的 Pen → HTML 窗格輸入 <code>!</code> + <code>Tab</code></li>
+        <li class="reveal"><code>title</code> 改成自己的名字</li>
+        <li class="reveal"><code>html lang</code> 確認為 <code>zh-TW</code></li>
+        <li class="reveal">存檔，記下 Pen 網址</li>
+      </ul>
+      <div class="res res--check reveal">
+        <span class="res__kind">檢查點</span>
+        <span class="res__title">分頁標籤顯示你的 title；中文不亂碼</span>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">做完應該長這樣</span>
+      <div class="code"><span class="cmt">&lt;!DOCTYPE html&gt;</span>
+<span class="tag">&lt;html</span> <span class="attr">lang</span>=<span class="str">"zh-TW"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;head&gt;</span>
+    <span class="tag">&lt;title&gt;</span>王小明<span class="tag">&lt;/title&gt;</span>
+    <span class="tag">&lt;meta</span> <span class="attr">charset</span>=<span class="str">"UTF-8"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;/head&gt;</span>
+  <span class="tag">&lt;body&gt;</span>
+  <span class="tag">&lt;/body&gt;</span>
+<span class="tag">&lt;/html&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：第一輪只求「生出來、存下去」。逐桌確認每個人都拿到網址並存了第一個版本。 -->
+</section>
+
+<!-- ═══════════ 45｜實作二 ═══════════ -->
+<section class="slide" data-label="實作二 DevTools 檢驗">
+  <p class="eyebrow">Part 4｜CodePen 動手實作</p>
+  <p class="pagedot">xlv</p>
+  <h2 class="headline reveal">實作二：用開發人員工具檢驗</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">預覽區點 <b>Full Page</b>，把 Pen 當成真正的網頁開啟</li>
+        <li class="reveal"><code>F12</code>（Windows）或右鍵「檢查」（Mac）</li>
+        <li class="reveal">找到 <code>html</code> → <code>head</code> / <code>body</code>，再往下找各標籤</li>
+        <li class="reveal">游標移到標籤上看左側哪裡高亮</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">你應該在 Elements 面板看到這棵樹</span>
+      <div class="code"><span class="tag">html</span>
+├── <span class="tag">head</span>
+│   ├── <span class="tag">title</span>
+│   └── <span class="tag">meta</span>
+└── <span class="tag">body</span></div>
+      <div class="res res--check" style="margin-top:26px">
+        <span class="res__kind">檢查點</span>
+        <span class="res__title">能指出誰是誰的從屬、誰跟誰同層</span>
+        <div class="res__desc">並能說明 <code>title</code> 為什麼不在畫面上。</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：請學生互相檢查——指著同學的畫面問「這個 p 的爸爸是誰」。
+       做不出來的，代表前面「從屬與同層」那一頁需要回頭複習。 -->
+</section>
+
+<!-- ═══════════ 46｜實作三 ═══════════ -->
+<section class="slide" data-label="實作三 標題段落連結圖片">
+  <p class="eyebrow">Part 4｜CodePen 動手實作</p>
+  <p class="pagedot">xlvi</p>
+  <h2 class="headline reveal">實作三：加上標題、段落、連結與圖片</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>h1</code> 當主標題，下面用 <code>h2</code> 分節</li>
+        <li class="reveal"><code>p</code> 放說明文字（沒內容就 <code>lorem</code> + <code>Tab</code>）</li>
+        <li class="reveal"><code>a href</code> 連到自己的社群或作品</li>
+        <li class="reveal"><code>img src alt title</code> 放一張代表自己的圖片</li>
+        <li class="reveal"><code>span style</code> 把幾個字變紅；<code>br</code> 換行、<code>hr</code> 分隔章節</li>
+      </ul>
+      <div class="res res--check reveal">
+        <span class="res__kind">檢查點</span>
+        <span class="res__title">br、hr、img 都沒有寫結尾標籤</span>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">今天的目標畫面</span>
+      <div class="code"><span class="tag">&lt;h1&gt;</span>王小明<span class="tag">&lt;/h1&gt;</span>
+<span class="ok">&lt;hr&gt;</span>
+<span class="tag">&lt;h2&gt;</span>關於我<span class="tag">&lt;/h2&gt;</span>
+<span class="tag">&lt;p&gt;</span><span class="str">lorem20</span><span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;p&gt;</span>我的作品在
+  <span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="str">"..."</span> <span class="attr">target</span>=<span class="str">"_blank"</span><span class="tag">&gt;</span>這裡<span class="tag">&lt;/a&gt;</span>
+<span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;img</span> <span class="attr">src</span>=<span class="str">"photo.jpg"</span> <span class="attr">alt</span>=<span class="str">"我的照片"</span><span class="tag">&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：分量最重的一段實作，逐桌走動。三個最常見卡點：src 路徑錯、br 寫成 </br>、span 忘了包住文字。
+       允許做得醜——今天的標準是「結構正確」。 -->
+</section>
+
+<!-- ═══════════ 47｜實作四 ═══════════ -->
+<section class="slide" data-label="實作四 導覽清單與圖片連結">
+  <p class="eyebrow">Part 4｜CodePen 動手實作</p>
+  <p class="pagedot">xlvii</p>
+  <h2 class="headline reveal">實作四：加上導覽清單與圖片連結</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">用 <code>ul</code> + <code>li</code> 做一組選單</li>
+        <li class="reveal">把 <code>img</code> 塞進 <code>a</code> 裡，做成「點圖片開新分頁」</li>
+        <li class="reveal">兩件事都在回收同一條規則：<b>外層包內層</b></li>
+      </ul>
+      <div class="res res--check reveal">
+        <span class="res__kind">檢查點</span>
+        <span class="res__title">用 DevTools 數你的 ul 有幾個 li</span>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">做完這一輪，作業已經完成八成</span>
+      <div class="code"><span class="tag">&lt;ul&gt;</span>
+  <span class="tag">&lt;li&gt;&lt;a</span> <span class="attr">href</span>=<span class="str">"#"</span><span class="tag">&gt;</span>首頁<span class="tag">&lt;/a&gt;&lt;/li&gt;</span>
+  <span class="tag">&lt;li&gt;&lt;a</span> <span class="attr">href</span>=<span class="str">"#"</span><span class="tag">&gt;</span>關於我們<span class="tag">&lt;/a&gt;&lt;/li&gt;</span>
+<span class="tag">&lt;/ul&gt;</span>
+
+<span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="str">"..."</span> <span class="attr">target</span>=<span class="str">"_blank"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;img</span> <span class="attr">src</span>=<span class="str">"photo.jpg"</span> <span class="attr">alt</span>=<span class="str">"點我"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;/a&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：讓學生自己說出「外層包內層」這句話，比老師再講一次有效。 -->
+</section>
+
+<!-- ═══════════ 48｜小測驗 ═══════════ -->
+<section class="slide" data-label="小測驗">
+  <p class="eyebrow">收尾</p>
+  <p class="pagedot">xlviii</p>
+  <h2 class="headline reveal">小測驗：快問快答</h2>
+  <div class="body-split body-split--even">
+    <div>
+      <ul class="points">
+        <li class="reveal">DOM 是什麼？瀏覽器何時建立它？</li>
+        <li class="reveal">如何創造從屬關係？如何創造同層關係？</li>
+        <li class="reveal">Windows / Mac 分別如何開啟開發人員工具？</li>
+        <li class="reveal"><code>title</code> 寫在哪裡？為什麼畫面上看不到？</li>
+        <li class="reveal"><code>br</code>、<code>hr</code>、<code>img</code> 有什麼共同點？</li>
+        <li class="reveal"><code>a</code> 和 <code>img</code> 分別用哪個屬性？<code>alt</code> 做什麼用？</li>
+      </ul>
+    </div>
+    <div>
+      <div class="res res--quiz reveal">
+        <span class="res__kind">推薦 · 測驗</span>
+        <span class="res__title">HTML 基礎知識驗收</span>
+        <div class="res__desc">DOM 結構、標籤嵌套規則、開發人員工具快捷鍵與常用屬性。</div>
+      </div>
+      <div class="res res--quiz reveal">
+        <span class="res__kind">推薦 · 測驗</span>
+        <span class="res__title">HTML 常用標籤基礎實力檢測</span>
+        <div class="res__desc">共 5 題，檢驗基本結構、連結、圖片及清單標籤的掌握度。</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：用舉手或點答快速跑一輪，不超過 5 分鐘。答不出來的可對應回前面的頁次複習。
+       完整版測驗請學生課後自行做完。 -->
+</section>
+
+<!-- ═══════════ 49｜今日重點回顧 ═══════════ -->
+<section class="slide" data-label="今日重點回顧">
+  <p class="eyebrow">收尾</p>
+  <p class="pagedot">xlix</p>
+  <h2 class="headline reveal">今日重點回顧</h2>
+  <div class="body-split body-split--even">
+    <div>
+      <span class="code-label">Part 2｜骨架與觀念</span>
+      <ul class="points">
+        <li class="reveal">DOM 是瀏覽器解析 HTML 後建立的樹狀骨架，決定<b>從屬與同層</b></li>
+        <li class="reveal">標籤由開頭與結尾<b>成對</b>組成，善用換行與縮格</li>
+        <li class="reveal">開發人員工具：<code>F12</code> / 右鍵「檢查」</li>
+        <li class="reveal">屬性寫在開頭標籤中，賦予元素功能與外觀</li>
+      </ul>
+    </div>
+    <div>
+      <span class="code-label">Part 3｜結構與標籤</span>
+      <ul class="points">
+        <li class="reveal">設定寫 <code>head</code>、內容寫 <code>body</code></li>
+        <li class="reveal"><code>h1~h6</code> 標題、<code>div</code> 區塊、<code>p</code> 段落</li>
+        <li class="reveal"><code>br</code> / <code>hr</code> / <code>img</code> 是<b>單一標籤</b></li>
+        <li class="reveal"><code>a</code> 用 href、<code>img</code> 用 src 與 alt</li>
+        <li class="reveal"><code>ul</code> / <code>ol</code> + <code>li</code> 是選單的基石</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：請學生截圖存下來當複習清單。最後回收開場的伏筆：
+       今天這麼多標籤，全部只靠「從屬」與「同層」兩條規則長出來。 -->
+</section>
+
+<!-- ═══════════ 50｜作業與下週預告 ═══════════ -->
+<section class="slide" data-label="作業與下週預告">
+  <p class="eyebrow">收尾</p>
+  <p class="pagedot">l</p>
+  <h2 class="headline reveal">作業與下週預告</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">用 CodePen 完成<b>個人技能簡歷頁</b>（純結構，不需美化）</li>
+        <li class="reveal">需含：完整結構、<code>h1</code>／<code>h2</code>／<code>p</code>、<code>a href</code>、<code>img src alt</code></li>
+        <li class="reveal">需含：一組 <code>ul</code> + <code>li</code> 清單、至少一處 <code>style</code></li>
+        <li class="reveal">繳交：貼上 CodePen 的 Pen 網址</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">下週：Tailwind CSS 快速上手、UI/UX 設計規範與 RWD</span>
+      <div class="code"><span class="cmt">今天的樣子</span>
+<span class="tag">&lt;div</span> <span class="attr">style</span>=<span class="str">"color: red;"</span><span class="tag">&gt;</span>卡片<span class="tag">&lt;/div&gt;</span>
+
+<span class="cmt">下週的樣子</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"text-red-500"</span><span class="tag">&gt;</span>卡片<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：評分重點在「結構層級是否清楚」與「縮格是否整齊」，不是視覺美感。
+       預告下週會用 Tailwind 把今天的樣式換成 class，讓學生知道今天的苦工是為了理解後面的捷徑。 -->
+</section>
+
+<!-- ═══════════ 51｜Q&A ═══════════ -->
+<section class="slide slide--accent" data-label="Q&A">
+  <p class="eyebrow">收尾</p>
+  <p class="pagedot">li</p>
+  <h2 class="closer-title reveal">Q &amp; A</h2>
+  <p class="closer-sub reveal">CodePen 帳號或存檔仍有問題的同學，留下來現場處理。</p>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：預留時間讓卡關的同學舉手，現場排除。
+       第一堂動手課的卡關如果沒清掉，會直接影響後面十七週的出席與投入。 -->
+</section>
+
+</main>
+</div>
+
+<a class="deck-backlink" href="../">← 回簡報總覽</a>
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter">1 / 51</div>
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編輯模式（E）">編輯</button>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   =========================================== */
+class SlidePresentation {
+  constructor() {
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.total = this.slides.length;
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.progress = document.getElementById('progress');
+    this.counter = document.getElementById('counter');
+    this.setupStageScale();
+    this.setupNav();
+    this.show(0);
+  }
+
+  /* 固定 16:9：整個 stage 等比縮放並置中，不重排內容 */
+  setupStageScale() {
+    const scale = () => {
+      const f = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      const x = (window.innerWidth - 1920 * f) / 2;
+      const y = (window.innerHeight - 1080 * f) / 2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale();
+    window.addEventListener('resize', scale);
+  }
+
+  setupNav() {
+    document.addEventListener('keydown', (e) => {
+      if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown':
+          e.preventDefault(); this.next(); break;
+        case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+          e.preventDefault(); this.prev(); break;
+        case 'Home': e.preventDefault(); this.show(0); break;
+        case 'End': e.preventDefault(); this.show(this.total - 1); break;
+        case 'f': case 'F':
+          if (document.fullscreenElement) document.exitFullscreen();
+          else document.documentElement.requestFullscreen();
+          break;
+      }
+    });
+
+    /* 觸控滑動 */
+    let sx = 0, sy = 0;
+    document.addEventListener('touchstart', (e) => {
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    }, { passive: true });
+    document.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) dx < 0 ? this.next() : this.prev();
+    }, { passive: true });
+
+    /* 滾輪（節流） */
+    let lock = false;
+    document.addEventListener('wheel', (e) => {
+      if (lock) return;
+      if (Math.abs(e.deltaY) < 24) return;
+      lock = true;
+      e.deltaY > 0 ? this.next() : this.prev();
+      setTimeout(() => { lock = false; }, 650);
+    }, { passive: true });
+  }
+
+  next() { this.show(this.current + 1); }
+  prev() { this.show(this.current - 1); }
+
+  show(i) {
+    this.current = Math.max(0, Math.min(i, this.total - 1));
+    this.slides.forEach((s, n) => {
+      s.classList.toggle('active', n === this.current);
+      s.classList.toggle('visible', n === this.current);
+    });
+    if (this.progress) this.progress.style.width = ((this.current + 1) / this.total * 100) + '%';
+    if (this.counter) this.counter.textContent = (this.current + 1) + ' / ' + this.total;
+  }
+}
+
+/* ===========================================
+   INLINE EDITING（草稿後的微調用；E 鍵或左上角熱區）
+   =========================================== */
+class InlineEditor {
+  constructor() {
+    this.isActive = false;
+    this.toggle = document.getElementById('editToggle');
+    this.hotzone = document.querySelector('.edit-hotzone');
+    this.editableSelector = '.headline, .chapter-title, .chapter-sub, .cover-title, .cover-sub, .cover-kicker, .closer-title, .closer-sub, .points li, .code, .res__title, .res__desc, .res__kind, .eyebrow, .pagedot';
+    this.restore();
+    this.bind();
+  }
+  bind() {
+    this.toggle.addEventListener('click', () => this.toggleMode());
+    this.hotzone.addEventListener('click', () => this.toggleMode());
+    let t = null;
+    const show = () => { clearTimeout(t); this.toggle.classList.add('show'); };
+    const hide = () => { t = setTimeout(() => { if (!this.isActive) this.toggle.classList.remove('show'); }, 400); };
+    this.hotzone.addEventListener('mouseenter', show);
+    this.hotzone.addEventListener('mouseleave', hide);
+    this.toggle.addEventListener('mouseenter', show);
+    this.toggle.addEventListener('mouseleave', hide);
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'e' || e.key === 'E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable'))) {
+        this.toggleMode();
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S') && this.isActive) {
+        e.preventDefault(); this.save();
+      }
+    });
+  }
+  toggleMode() {
+    this.isActive = !this.isActive;
+    document.body.classList.toggle('editing', this.isActive);
+    this.toggle.classList.toggle('active', this.isActive);
+    this.toggle.classList.toggle('show', true);
+    document.querySelectorAll(this.editableSelector).forEach((el) => {
+      if (this.isActive) el.setAttribute('contenteditable', 'true');
+      else el.removeAttribute('contenteditable');
+    });
+    if (!this.isActive) this.save();
+  }
+  save() {
+    try { localStorage.setItem('ch2-deck-html', document.querySelector('.deck-stage').innerHTML); } catch (err) {}
+  }
+  restore() {
+    try {
+      const saved = localStorage.getItem('ch2-deck-html');
+      if (saved) document.querySelector('.deck-stage').innerHTML = saved;
+    } catch (err) {}
+  }
+}
+
+new SlidePresentation();
+new InlineEditor();
+</script>
+</body>
+</html>
