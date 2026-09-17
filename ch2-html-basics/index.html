@@ -397,10 +397,10 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 }
 
 /* 頁尾備注：佔用固定底槽，主體區域讓出空間 */
-.body-split--note, .body-full--note { bottom: 240px; }
+.body-split--note, .body-full--note { bottom: 232px; }
 .note--bottom {
   position: absolute; left: var(--pad-outer); right: var(--pad-outer); bottom: 120px;
-  margin-top: 0;
+  margin: 0;
 }
 
 </style>
@@ -771,14 +771,14 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <div class="body-split body-split--note">
     <div>
       <ul class="points">
-        <li class="reveal">先建立副檔名為 <code>.html</code> 的檔案（例如 <code>index.html</code>）</li>
-        <li class="reveal"><b>Emmet</b>：輸入 <code>!</code> 再按 <code>Tab</code>，一秒生成整份骨架</li>
+        <li class="reveal">先建立 <code>.html</code> 檔（例如 <code>index.html</code>）</li>
+        <li class="reveal"><b>Emmet</b>：輸入 <code>!</code> 再按 <code>Tab</code> 生出骨架</li>
         <li class="reveal">四個要素：<code>DOCTYPE</code>、<code>html</code>、<code>head</code>、<code>body</code></li>
       </ul>
       <div class="res res--slides reveal">
         <span class="res__kind">推薦 · 簡報</span>
         <span class="res__title">HTML 網頁基本結構示範</span>
-        <div class="res__desc">逐步拆解 DOCTYPE、html、head、body 的功能與巢狀關係。</div>
+        <div class="res__desc">逐步拆解四個要素的功能與巢狀關係。</div>
       </div>
     </div>
     <div class="reveal">
@@ -788,9 +788,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <span class="tag">&lt;head&gt;</span>
     <span class="tag">&lt;title&gt;</span>我的第一個網頁<span class="tag">&lt;/title&gt;</span>
   <span class="tag">&lt;/head&gt;</span>
-  <span class="tag">&lt;body&gt;</span>
-    <span class="cmt">&lt;!-- 之後內容都寫在這裡 --&gt;</span>
-  <span class="tag">&lt;/body&gt;</span>
+  <span class="tag">&lt;body&gt;</span>內容寫在這裡<span class="tag">&lt;/body&gt;</span>
 <span class="tag">&lt;/html&gt;</span></div>
     </div>
   </div>
