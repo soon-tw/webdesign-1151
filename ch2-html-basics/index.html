@@ -753,10 +753,13 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <div class="body-split">
     <div>
       <ul class="points">
-        <li class="reveal">屬性寫在<b>開頭標籤內</b>，標籤名稱後空一格再寫</li>
-        <li class="reveal"><b>通用</b>（任何標籤）：<code>style</code>、<code>id</code>、<code>class</code></li>
-        <li class="reveal"><b>特定標籤專用</b>：<code>href</code>、<code>src</code> → Part 3 跟標籤一起講</li>
+        <li class="reveal">屬性寫在<b>開頭標籤內</b>，名稱後空一格</li>
+        <li class="reveal"><b>通用</b>：<code>id</code>、<code>class</code>——替標籤取名字</li>
+        <li class="reveal"><b>專用</b>：<code>href</code>、<code>src</code> → Part 3 講</li>
       </ul>
+      <div class="note reveal">
+        <code>style</code> 屬 <b>CSS</b>，<b>第 3 週才教</b>；本週不使用 CSS。
+      </div>
       <div class="res res--mind reveal">
         <span class="res__kind">推薦 · 心智圖</span>
         <span class="res__title">HTML 常用屬性地圖</span>
@@ -764,14 +767,15 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
       </div>
     </div>
     <div class="reveal">
-      <span class="code-label">style 讓這一行的文字變紅</span>
-      <div class="code"><span class="tag">&lt;p&gt;</span>這行是普通顏色<span class="tag">&lt;/p&gt;</span>
-<span class="tag">&lt;p</span> <span class="attr">style</span>=<span class="str">"color: red;"</span><span class="tag">&gt;</span>這行變紅色<span class="tag">&lt;/p&gt;</span></div>
+      <span class="code-label">名字現在看不出效果，之後 CSS 會用到</span>
+      <div class="code"><span class="tag">&lt;p&gt;</span>這行沒有屬性<span class="tag">&lt;/p&gt;</span>
+<span class="tag">&lt;p</span> <span class="attr">id</span>=<span class="str">"intro"</span><span class="tag">&gt;</span>這行有 id 屬性<span class="tag">&lt;/p&gt;</span></div>
     </div>
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
   <!-- 講述重點：比喻——標籤是「這個東西是什麼」，屬性是「它的規格」。
-       這裡刻意不要把 href / src 講完，留到 Part 3 跟著 <a>、<img> 一起講，學生才記得牢。 -->
+       這裡刻意不要把 href / src 講完，留到 Part 3 跟著 <a>、<img> 一起講，學生才記得牢。
+       style 要明講「第 3 週才教」，否則學生會問「那上週說的 style 呢？」。 -->
 </section>
 
 <!-- ═══════════ 16｜Part 3 章節頁 ═══════════ -->
@@ -1178,20 +1182,21 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
     <div>
       <ul class="points">
         <li class="reveal"><code>span</code> 是<b>沒有預設樣式的行內容器</b></li>
-        <li class="reveal">只想改變段落中<b>某幾個字</b>的樣式時，用它包裹最完美</li>
+        <li class="reveal">用途：把之後想特別處理的<b>某幾個字</b>先圈出來（<b>第 3 週有 CSS 才會顯現</b>）</li>
         <li class="reveal">對照：<b>div 是區塊</b>（獨占一行），<b>span 是行內</b>（跟著文字排）</li>
       </ul>
     </div>
     <div class="reveal">
-      <span class="code-label">只有「這幾個字」變紅，其餘不受影響</span>
+      <span class="code-label">先把這幾個字圈出來，第 3 週 CSS 才會顯現效果</span>
       <div class="code"><span class="tag">&lt;p&gt;</span>這段話裡，
-  <span class="tag">&lt;span</span> <span class="attr">style</span>=<span class="str">"color: red;"</span><span class="tag">&gt;</span>這幾個字<span class="tag">&lt;/span&gt;</span>
-  會變紅色。
+  <span class="tag">&lt;span&gt;</span>這幾個字<span class="tag">&lt;/span&gt;</span>
+  被獨立圈出來了。
 <span class="tag">&lt;/p&gt;</span></div>
     </div>
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
-  <!-- 講述重點：現場把 span 換成 div，讓學生看到紅色那幾個字突然換行——反差印象最深。 -->
+  <!-- 講述重點：現場把 span 換成 div，讓學生看到那幾個字突然換行——反差印象最深。
+       提醒：現在 span 在畫面上看不出差別是正常的，它只負責把位置標出來，第 3 週有了 CSS 才會顯現。 -->
 </section>
 
 <!-- ═══════════ 31｜br 換行 ═══════════ -->
@@ -1677,7 +1682,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
         <li class="reveal"><code>p</code> 放說明文字（沒內容就 <code>lorem</code> + <code>Tab</code>）</li>
         <li class="reveal"><code>a href</code> 連到自己的社群或作品</li>
         <li class="reveal"><code>img src alt title</code> 放一張代表自己的圖片</li>
-        <li class="reveal"><code>span style</code> 把幾個字變紅；<code>br</code> 換行、<code>hr</code> 分隔章節</li>
+        <li class="reveal">用 <code>b</code> 或 <code>i</code> 強調幾個關鍵字；<code>br</code> 換行、<code>hr</code> 分隔章節</li>
       </ul>
       <div class="res res--check reveal">
         <span class="res__kind">檢查點</span>
@@ -1697,7 +1702,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
     </div>
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
-  <!-- 講述重點：分量最重的一段實作，逐桌走動。三個最常見卡點：src 路徑錯、br 寫成 </br>、span 忘了包住文字。
+  <!-- 講述重點：分量最重的一段實作，逐桌走動。三個最常見卡點：src 路徑錯、br 寫成 </br>、alt 忘了填。
        允許做得醜——今天的標準是「結構正確」。 -->
 </section>
 
@@ -1748,7 +1753,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
         <li>放一個 <code>h1</code>、兩個 <code>p</code>，其中一段用 <code>lorem</code> 生假字</li>
         <li>加一組 <code>a href</code> 與一個 <code>img src alt</code></li>
         <li>用 <code>ul</code> + <code>li</code> 做三個項目的清單</li>
-        <li>用 <code>span style</code> 把其中幾個字變紅</li>
+        <li>用 <code>b</code> 把其中一個關鍵字加粗，並用 <code>hr</code> 分隔兩個段落</li>
       </ol>
     </div>
     <div>
@@ -1806,16 +1811,16 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <div class="body-split body-split--note">
     <div>
       <ul class="points">
-        <li class="reveal">用 CodePen 完成<b>個人技能簡歷頁</b>（純結構，不需美化）</li>
-        <li class="reveal">需含完整結構，<code>&lt;head&gt;</code> 內有 <code>title</code> 與 <code>meta charset</code></li>
-        <li class="reveal">需含 <code>h1</code>／<code>h2</code>／<code>p</code>、<code>a href</code>、<code>img src alt</code></li>
-        <li class="reveal">需含一組 <code>ul</code> + <code>li</code> 清單、至少一處 <code>style</code></li>
+        <li class="reveal"><b>六選一</b>，純 HTML 完成、<b>不使用 CSS</b></li>
+        <li class="reveal"><b>A 組（基礎，及格線）</b>：追劇排行、收藏介紹頁、午餐價目表</li>
+        <li class="reveal"><b>B 組（挑戰，做完 A 組再做）</b>：家常食譜、旅遊行程表、品牌報價頁</li>
+        <li class="reveal">共同必要條件：每張 <code>img</code> 都要 <code>alt</code>、至少一組 <code>target="_blank"</code></li>
       </ul>
     </div>
     <div class="reveal">
       <span class="code-label">繳交步驟</span>
       <ol class="steps">
-        <li>把今天的練習頁補完，存檔</li>
+        <li>完成你的 Pen 並存檔（<b>重整後內容還在</b>才算存到）</li>
         <li>複製你自己的 Pen 網址</li>
         <li>到數位學習平台貼上網址並送出</li>
       </ol>
@@ -1830,8 +1835,9 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
     作業一律上傳<b>數位學習平台</b>：<a href="https://elearn.ncut.edu.tw" target="_blank">https://elearn.ncut.edu.tw</a>
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
-  <!-- 講述重點：把繳交動作講死——上平台、貼網址、送出。評分重點在「結構層級是否清楚」與
-       「縮格是否整齊」，不是視覺美感。今天做不完的，正好就是作業的起點。 -->
+  <!-- 講述重點：把繳交動作講死——上平台、貼網址、送出。六題只要選一題做，難度自己挑：
+       A 組是及格線、B 組是挑戰。評分重點在「結構層級是否清楚」與「縮格是否整齊」，不是視覺美感。
+       今天做不完的，正好就是作業的起點。 -->
 </section>
 
 <!-- ═══════════ 53｜Q&A ═══════════ -->
