@@ -403,6 +403,25 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   margin: 0;
 }
 
+/* ===========================================
+   12. 內容表格（常用元素速查）
+   =========================================== */
+.tbl { display: grid; }
+.tbl__row {
+  display: grid; grid-template-columns: 420px 1fr 1.3fr; gap: 28px;
+  align-items: baseline; padding: 15px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-min);
+}
+.tbl__row:last-child { border-bottom: 0; }
+.tbl__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); color: var(--ink-soft);
+}
+.tbl__el { font-family: var(--f-code); color: var(--code-tag); }
+.tbl__use { font-family: var(--f-body); font-size: 30px; line-height: 1.45; color: var(--ink); }
+.tbl__row--head .tbl__el { color: var(--ink-soft); }
+
 </style>
 <link rel="stylesheet" href="../assets/deck-fonts.css">
 <link rel="stylesheet" href="../assets/deck-site.css">
@@ -763,7 +782,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <div class="footer"><span>互動式網頁設計</span><span>Part 3</span></div>
 </section>
 
-<!-- ═══════════ 17｜HTML 基本結構總覽 ═══════════ -->
+<!-- ═══════════ 17｜HTML 基本結構 ═══════════ -->
 <section class="slide" data-label="HTML 基本結構">
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xvii</p>
@@ -1071,7 +1090,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        這正是它下週會被 Tailwind 大量使用的原因：先有區塊，才有版面。 -->
 </section>
 
-<!-- ═══════════ 27｜p 與 lorem ═══════════ -->
+<!-- ═══════════ 27｜p 與假字 ═══════════ -->
 <section class="slide" data-label="p 與假字">
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xxvii</p>
@@ -1094,7 +1113,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <!-- 講述重點：lorem 這個技巧要當場示範，因為 Part 4 寫自我介紹頁時一定會用到。 -->
 </section>
 
-<!-- ═══════════ 28｜div 包 h+p ═══════════ -->
+<!-- ═══════════ 28｜div 包標題與段落 ═══════════ -->
 <section class="slide" data-label="div 包標題與段落">
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xxviii</p>
@@ -1119,7 +1138,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <!-- 講述重點：把兩個標籤合起來，讓學生看到「一組內容」長什麼樣。 -->
 </section>
 
-<!-- ═══════════ 29｜b / i / u ═══════════ -->
+<!-- ═══════════ 29｜文字標記 ═══════════ -->
 <section class="slide" data-label="文字標記">
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xxix</p>
@@ -1254,7 +1273,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        示範：故意寫 </br> 讓學生看瀏覽器怎麼處理。 -->
 </section>
 
-<!-- ═══════════ 34｜a 與 href ═══════════ -->
+<!-- ═══════════ 34｜超連結與 href ═══════════ -->
 <section class="slide" data-label="超連結與 href">
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xxxiv</p>
@@ -1310,7 +1329,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        順帶說明實務理由：連外連結另開分頁，是為了不讓使用者離開自己的網站。 -->
 </section>
 
-<!-- ═══════════ 36｜img 與 src ═══════════ -->
+<!-- ═══════════ 36｜圖片與 src ═══════════ -->
 <section class="slide" data-label="圖片與 src">
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xxxvi</p>
@@ -1444,7 +1463,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        選錯不影響畫面，但語意會錯。 -->
 </section>
 
-<!-- ═══════════ 41｜li 嵌套 ═══════════ -->
+<!-- ═══════════ 41｜清單嵌套 ═══════════ -->
 <section class="slide" data-label="清單嵌套">
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xli</p>
@@ -1508,7 +1527,68 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        這一刻把「我學的東西是真的在用的」講清楚，也順便複習前面學的 DevTools 操作。 -->
 </section>
 
-<!-- ═══════════ 43｜Part 4 章節頁 ═══════════ -->
+<!-- ═══════════ 43｜常用元素速查 ═══════════ -->
+<section class="slide" data-label="常用元素速查">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xliii</p>
+  <h2 class="headline reveal">其他常用元素速查</h2>
+  <div class="body-full">
+    <div class="tbl reveal">
+      <div class="tbl__row tbl__row--head"><span>元素</span><span>用途</span><span>什麼時候用</span></div>
+      <div class="tbl__row"><span class="tbl__el">&lt;table&gt; tr th td</span><span class="tbl__use">表格</span><span class="tbl__use">價格表、規格比較、課表</span></div>
+      <div class="tbl__row"><span class="tbl__el">&lt;video&gt; source</span><span class="tbl__use">影片播放</span><span class="tbl__use">產品示範、課程影片</span></div>
+      <div class="tbl__row"><span class="tbl__el">&lt;audio&gt;</span><span class="tbl__use">音訊播放</span><span class="tbl__use">語音內容、podcast</span></div>
+      <div class="tbl__row"><span class="tbl__el">&lt;iframe&gt;</span><span class="tbl__use">嵌入外部頁面</span><span class="tbl__use">嵌入 YouTube、Google 地圖</span></div>
+      <div class="tbl__row"><span class="tbl__el">&lt;form&gt; input</span><span class="tbl__use">表單輸入</span><span class="tbl__use">登入、報名、搜尋</span></div>
+      <div class="tbl__row"><span class="tbl__el">&lt;button&gt;</span><span class="tbl__use">按鈕</span><span class="tbl__use">送出、切換、開關</span></div>
+      <div class="tbl__row"><span class="tbl__el">&lt;select&gt; option</span><span class="tbl__use">下拉選單</span><span class="tbl__use">表單欄位、篩選器</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是「還有這些」的導覽，不是要學生今天全部學會。逐列唸過去、各舉一個生活例子即可：
+       表格像課表或規格比較、video 像產品示範、iframe 像嵌入 YouTube 或地圖、form 像報名表。
+       強調共同點——它們全都還是「外層包內層」，今天學的兩條規則一樣適用。 -->
+</section>
+
+<!-- ═══════════ 44｜表格與影音實作 ═══════════ -->
+<section class="slide" data-label="表格與影音實作">
+  <p class="eyebrow">Part 3｜HTML 常用標籤</p>
+  <p class="pagedot">xliv</p>
+  <h2 class="headline reveal">兩個實用範例：<em>表格</em>與<em>影音</em></h2>
+  <div class="body-split body-split--even">
+    <div class="reveal">
+      <span class="code-label">表格：價格表、規格比較</span>
+      <div class="code"><span class="tag">&lt;table&gt;</span>
+  <span class="tag">&lt;tr&gt;</span>
+    <span class="tag">&lt;th&gt;</span>方案<span class="tag">&lt;/th&gt;&lt;th&gt;</span>價格<span class="tag">&lt;/th&gt;</span>
+  <span class="tag">&lt;/tr&gt;</span>
+  <span class="tag">&lt;tr&gt;&lt;td&gt;</span>個人版<span class="tag">&lt;/td&gt;&lt;td&gt;</span>$300<span class="tag">&lt;/td&gt;&lt;/tr&gt;</span>
+<span class="tag">&lt;/table&gt;</span></div>
+      <div class="note">
+        <code>&lt;tr&gt;</code> 是一列、<code>&lt;th&gt;</code> 是標題格、<code>&lt;td&gt;</code> 是資料格，全都包在 <code>&lt;table&gt;</code> 裡。
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">影音：自己的影片檔與 YouTube 嵌入</span>
+      <div class="code"><span class="tag">&lt;video</span> <span class="attr">src</span>=<span class="str">"demo.mp4"</span>
+       <span class="attr">controls</span><span class="tag">&gt;</span>
+<span class="tag">&lt;/video&gt;</span>
+
+<span class="tag">&lt;iframe</span> <span class="attr">src</span>=<span class="str">"youtube.com/embed/xxx"</span>
+        <span class="attr">width</span>=<span class="str">"640"</span> <span class="attr">height</span>=<span class="str">"360"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;/iframe&gt;</span></div>
+      <div class="note">
+        <code>controls</code> 一定要加，否則不會出現播放列；<code>poster</code> 可指定播放前的封面圖。實務上更常直接嵌入 YouTube。
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：兩張都是「貼上去就有畫面」的元素，學生很有感。表格務必提「不要用表格排版」——
+       早期常用 table 切版，現在那是過時做法，表格只拿來放真正的表格資料。
+       video 的 controls 是最常見的漏寫；iframe 則提醒嵌入碼是 YouTube 給的，不用自己背。 -->
+</section>
+
+<!-- ═══════════ 45｜Part 4 章節頁 ═══════════ -->
 <section class="slide slide--chapter" data-label="Part 4 章節頁">
   <p class="chapter-num reveal">IV.</p>
   <h2 class="chapter-title reveal">CodePen 動手實作</h2>
@@ -1517,10 +1597,10 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <!-- 講述重點：這 35 分鐘放手讓學生做，教師逐桌走動。做成什麼樣不重要，重點是結構正確。 -->
 </section>
 
-<!-- ═══════════ 44｜實作一 用 Emmet 打骨架 ═══════════ -->
+<!-- ═══════════ 46｜實作一 用 Emmet 打骨架 ═══════════ -->
 <section class="slide" data-label="實作一 用 Emmet 打骨架">
   <p class="eyebrow">Part 4｜CodePen 動手實作</p>
-  <p class="pagedot">xliv</p>
+  <p class="pagedot">xlvi</p>
   <h2 class="headline reveal">實作一：用 Emmet 打出骨架</h2>
   <div class="body-split">
     <div>
@@ -1552,10 +1632,10 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <!-- 講述重點：第一輪只求「生出來、存下去」。逐桌確認每個人都拿到網址並存了第一個版本。 -->
 </section>
 
-<!-- ═══════════ 45｜實作二 DevTools 檢驗 ═══════════ -->
+<!-- ═══════════ 47｜實作二 DevTools 檢驗 ═══════════ -->
 <section class="slide" data-label="實作二 DevTools 檢驗">
   <p class="eyebrow">Part 4｜CodePen 動手實作</p>
-  <p class="pagedot">xlv</p>
+  <p class="pagedot">xlvii</p>
   <h2 class="headline reveal">實作二：用開發人員工具檢驗</h2>
   <div class="body-split">
     <div>
@@ -1585,10 +1665,10 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        做不出來的，代表前面「從屬與同層」那一頁需要回頭複習。 -->
 </section>
 
-<!-- ═══════════ 46｜實作三 標題段落連結圖片 ═══════════ -->
+<!-- ═══════════ 48｜實作三 標題段落連結圖片 ═══════════ -->
 <section class="slide" data-label="實作三 標題段落連結圖片">
   <p class="eyebrow">Part 4｜CodePen 動手實作</p>
-  <p class="pagedot">xlvi</p>
+  <p class="pagedot">xlviii</p>
   <h2 class="headline reveal">實作三：加上標題、段落、連結與圖片</h2>
   <div class="body-split">
     <div>
@@ -1621,10 +1701,10 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        允許做得醜——今天的標準是「結構正確」。 -->
 </section>
 
-<!-- ═══════════ 47｜實作四 導覽清單與圖片連結 ═══════════ -->
+<!-- ═══════════ 49｜實作四 導覽清單與圖片連結 ═══════════ -->
 <section class="slide" data-label="實作四 導覽清單與圖片連結">
   <p class="eyebrow">Part 4｜CodePen 動手實作</p>
-  <p class="pagedot">xlvii</p>
+  <p class="pagedot">xlix</p>
   <h2 class="headline reveal">實作四：加上導覽清單與圖片連結</h2>
   <div class="body-split">
     <div>
@@ -1654,10 +1734,10 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <!-- 講述重點：讓學生自己說出「外層包內層」這句話，比老師再講一次有效。 -->
 </section>
 
-<!-- ═══════════ 48｜隨堂練習 ═══════════ -->
+<!-- ═══════════ 50｜隨堂練習 ═══════════ -->
 <section class="slide" data-label="隨堂練習">
   <p class="eyebrow">收尾</p>
-  <p class="pagedot">xlviii</p>
+  <p class="pagedot">l</p>
   <h2 class="headline reveal">隨堂練習：把今天學的串起來</h2>
   <div class="body-split body-split--even">
     <div>
@@ -1687,10 +1767,10 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        做不完的，正好就是今天的作業起點。 -->
 </section>
 
-<!-- ═══════════ 49｜今日重點回顧 ═══════════ -->
+<!-- ═══════════ 51｜今日重點回顧 ═══════════ -->
 <section class="slide" data-label="今日重點回顧">
   <p class="eyebrow">收尾</p>
-  <p class="pagedot">xlix</p>
+  <p class="pagedot">li</p>
   <h2 class="headline reveal">今日重點回顧</h2>
   <div class="body-split body-split--even">
     <div>
@@ -1718,10 +1798,10 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        今天這麼多標籤，全部只靠「從屬」與「同層」兩條規則長出來。 -->
 </section>
 
-<!-- ═══════════ 50｜作業繳交 ═══════════ -->
+<!-- ═══════════ 52｜作業繳交 ═══════════ -->
 <section class="slide" data-label="作業繳交">
   <p class="eyebrow">收尾</p>
-  <p class="pagedot">l</p>
+  <p class="pagedot">lii</p>
   <h2 class="headline reveal">作業繳交</h2>
   <div class="body-split body-split--note">
     <div>
@@ -1754,10 +1834,10 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
        「縮格是否整齊」，不是視覺美感。今天做不完的，正好就是作業的起點。 -->
 </section>
 
-<!-- ═══════════ 51｜Q&A ═══════════ -->
+<!-- ═══════════ 53｜Q&A ═══════════ -->
 <section class="slide slide--accent" data-label="Q&A">
   <p class="eyebrow">收尾</p>
-  <p class="pagedot">li</p>
+  <p class="pagedot">liii</p>
   <h2 class="closer-title reveal">Q &amp; A</h2>
   <p class="closer-sub reveal">CodePen 帳號或存檔仍有問題的同學，留下來現場處理。</p>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
