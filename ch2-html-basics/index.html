@@ -340,6 +340,69 @@ img, video, canvas, svg { max-width: 100%; max-height: 100%; }
 .edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
 body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); outline-offset: 4px; }
 
+/* ===========================================
+   11. 補充元件（備注／步驟／雙平台快捷鍵表）
+   =========================================== */
+/* 頁尾備注：虛線細規 + 小字，用於補充說明 */
+.note {
+  margin-top: 28px; padding-top: 16px;
+  border-top: 1px dashed var(--rule-medium);
+  font-family: var(--f-body); font-size: var(--t-min); line-height: 1.6;
+  color: var(--ink-soft);
+}
+.note b { color: var(--ink); font-weight: 500; }
+.note code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 編號步驟：斜體羅馬數字，符合 soft-editorial 的步驟記號 */
+.steps { list-style: none; counter-reset: step; display: grid; gap: 18px; }
+.steps li {
+  position: relative; padding-left: 76px;
+  font-family: var(--f-body); font-size: var(--t-min); line-height: 1.6; color: var(--ink);
+}
+.steps li::before {
+  counter-increment: step; content: counter(step, lower-roman) ".";
+  position: absolute; left: 0; top: 0;
+  font-family: var(--f-display); font-style: italic; font-size: 32px; color: var(--ink-soft);
+}
+.steps code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 雙平台快速鍵表 */
+.keys { display: grid; gap: 0; }
+.keys__row {
+  display: grid; grid-template-columns: 1fr 300px 300px; gap: 18px;
+  align-items: baseline; padding: 13px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-min);
+}
+.keys__row:last-child { border-bottom: 0; }
+.keys__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.keys__fn { font-family: var(--f-body); color: var(--ink); }
+.keys__k  { font-family: var(--f-code); font-size: var(--t-min); color: var(--code-tag); }
+
+/* 行內連結（CodePen、數位學習平台等） */
+.points a, .note a, .res__desc a, .code a {
+  color: var(--code-tag);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+/* 頁尾備注：佔用固定底槽，主體區域讓出空間 */
+.body-split--note, .body-full--note { bottom: 240px; }
+.note--bottom {
+  position: absolute; left: var(--pad-outer); right: var(--pad-outer); bottom: 120px;
+  margin-top: 0;
+}
+
 </style>
 <link rel="stylesheet" href="../assets/deck-fonts.css">
 <link rel="stylesheet" href="../assets/deck-site.css">
@@ -382,20 +445,26 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 </section>
 
 <!-- ═══════════ 3｜銜接上週 ═══════════ -->
-<section class="slide" data-label="銜接上週">
+<section class="slide" data-label="回顧上週">
   <p class="eyebrow">開場</p>
   <p class="pagedot">iii</p>
-  <h2 class="headline reveal">銜接上週</h2>
-  <div class="body-full">
+  <h2 class="headline reveal">回顧上週：這門課怎麼進行</h2>
+  <div class="body-full body-full--note">
     <ul class="points">
-      <li class="reveal"><b>上週</b>：前端是什麼、能怎麼變現、AI 時代的差異化</li>
-      <li class="reveal"><b>本週起</b>：每週一個可展示的產出（MVP 導向）</li>
-      <li class="reveal"><b>本週產出</b>：一個 CodePen 網址</li>
+      <li class="reveal"><b>課程大綱</b>：七個模組、十八週，從前端基礎一路做到期末 MVP 發表</li>
+      <li class="reveal"><b>評分配比</b>：出席與參與 30%　作業 20%　期中 25%　期末 25%</li>
+      <li class="reveal"><b>上課時間</b>：20:00 上課、21:00 中場休息 5 分鐘、21:30 下課</li>
+      <li class="reveal"><b>作業與報告</b>：一律上傳數位學習平台，檔名依規定格式</li>
+      <li class="reveal"><b>學術倫理</b>：AI 可以輔助，但引用要標註、內容要自己理解</li>
     </ul>
   </div>
+  <div class="note note--bottom reveal">
+    這門課的節奏是<b>每週帶走一個能展示的產出</b>。今天的第一個產出很簡單——一個屬於你自己的 CodePen 網址。
+  </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
-  <!-- 講述重點：提醒這門課的節奏——不深究底層原理，重點是能看懂、能改、能整合。
-       今天寫的每一行，下週都會用 Tailwind 重寫一次，所以現在先理解「結構長什麼樣」。 -->
+  <!-- 講述重點：這一頁不是複習，是把「遊戲規則」再對齊一次。評分配比唸過去就好，重點放在
+       「每週都有產出」與「作業一律上平台」，這兩件事會決定學生後續的出席與投入。
+       提醒：不深究底層原理，重點是能看懂、能改、能整合。 -->
 </section>
 
 <!-- ═══════════ 4｜Part 1 章節頁 ═══════════ -->
@@ -415,19 +484,28 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <div class="body-split">
     <div>
       <ul class="points">
-        <li class="reveal">網址 <b>codepen.io</b>，右上角 <b>Sign Up</b> 註冊免費帳號</li>
+        <li class="reveal">網址 <a href="https://codepen.io/" target="_blank">codepen.io</a>，右上角 <b>Sign Up</b> 註冊免費帳號</li>
         <li class="reveal">免費帳號即可儲存<b>公開</b>的 Pen</li>
         <li class="reveal">介面四區：<b>HTML</b>／CSS／JS 窗格＋<b>預覽區</b></li>
       </ul>
+      <div class="note reveal">
+        直接在 HTML 窗格輸入文字，預覽區就會立即出現——<b>你打什麼、它就長什麼</b>。
+      </div>
     </div>
     <div class="reveal">
-      <span class="code-label">在 HTML 窗格輸入，預覽區立即出現</span>
-      <div class="code">我的第一個網頁</div>
+      <span class="code-label">開啟新專案（new pen）</span>
+      <ol class="steps">
+        <li>登入後點右上角 <b>Create</b> → 選 <b>Pen</b></li>
+        <li>或直接開啟 <a href="https://codepen.io/pen/" target="_blank">codepen.io/pen</a> 開一個新的</li>
+        <li>畫面會出現四個區塊，游標停在 <b>HTML</b> 窗格</li>
+        <li>存檔後複製網址，那就是你的作業</li>
+      </ol>
     </div>
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
   <!-- 講述重點：務必帶全班走一次：註冊 → 開新 Pen → 在 HTML 窗格打幾個字 → 看預覽區。
-       先建立「這裡打的、那裡看到」的因果感。本課不需要付費，公開的 Pen 就夠用。 -->
+       先建立「這裡打的、那裡看到」的因果感。本課不需要付費，公開的 Pen 就夠用。
+       先確認每個人都拿到自己的 Pen 網址，後面的實作才有依附。 -->
 </section>
 
 <!-- ═══════════ 6｜存檔、版本與分享 ═══════════ -->
@@ -690,7 +768,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xvii</p>
   <h2 class="headline reveal">HTML 基本結構總覽</h2>
-  <div class="body-split">
+  <div class="body-split body-split--note">
     <div>
       <ul class="points">
         <li class="reveal">先建立副檔名為 <code>.html</code> 的檔案（例如 <code>index.html</code>）</li>
@@ -709,13 +787,15 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 <span class="tag">&lt;html</span> <span class="attr">lang</span>=<span class="str">"zh-TW"</span><span class="tag">&gt;</span>
   <span class="tag">&lt;head&gt;</span>
     <span class="tag">&lt;title&gt;</span>我的第一個網頁<span class="tag">&lt;/title&gt;</span>
-    <span class="tag">&lt;meta</span> <span class="attr">charset</span>=<span class="str">"UTF-8"</span><span class="tag">&gt;</span>
   <span class="tag">&lt;/head&gt;</span>
   <span class="tag">&lt;body&gt;</span>
     <span class="cmt">&lt;!-- 之後內容都寫在這裡 --&gt;</span>
   <span class="tag">&lt;/body&gt;</span>
 <span class="tag">&lt;/html&gt;</span></div>
     </div>
+  </div>
+  <div class="note note--bottom reveal">
+    <b>Emmet 和 CodePen 的關係</b>：CodePen 提供的是「線上編輯器＋即時預覽」的環境，Emmet 則是它 <b>HTML 窗格內建的快速輸入工具</b>。所以 <code>!</code> + <code>Tab</code> 不是 HTML 語法，而是 Emmet 的縮寫展開——同一招在 VS Code、Sublime 也通用，只是要另外安裝。
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
   <!-- 講述重點：這一頁是今天的核心產出。當場示範 ! + Tab 的魔法，讓學生看到一秒長出整份骨架。
@@ -752,7 +832,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xix</p>
   <h2 class="headline reveal">head：放瀏覽器讀的資訊（畫面看不到）</h2>
-  <div class="body-split">
+  <div class="body-split body-split--note">
     <div>
       <ul class="points">
         <li class="reveal"><code>&lt;title&gt;</code>：網頁名稱，顯示在<b>瀏覽器分頁標籤</b>上</li>
@@ -767,6 +847,9 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <span class="tag">&lt;meta</span> <span class="attr">charset</span>=<span class="str">"UTF-8"</span><span class="tag">&gt;</span>
 <span class="tag">&lt;/head&gt;</span></div>
     </div>
+  </div>
+  <div class="note note--bottom reveal">
+    現在看到的只是 <code>&lt;head&gt;</code> 的起點。<b>之後我們還會回來這一區</b>：放 SEO 用的 <code>meta description</code> 與 Open Graph，以及響應式網站／加入手機主畫面（App 化）需要的 <code>viewport</code>、<code>manifest</code> 設定——眉角不少，第 14、15 週會專門講。
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
   <!-- 講述重點：這一頁是「為什麼 title 看不到」的答案。示範改 title 看分頁標籤變化；
@@ -867,22 +950,34 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <p class="eyebrow">Part 3｜HTML 常用標籤</p>
   <p class="pagedot">xxiii</p>
   <h2 class="headline reveal">編輯器通用技巧：<em>一次改很多地方</em></h2>
-  <div class="body-split">
+  <div class="body-split body-split--even body-split--note">
     <div>
-      <ul class="points">
-        <li class="reveal">重點不是背按鍵，是知道<b>有這些技巧存在</b></li>
-        <li class="reveal">游標停在任何位置，直接跳下一行</li>
-        <li class="reveal">不必選取，整行複製貼上</li>
-        <li class="reveal"><b>多重游標</b>：一次修改畫面上多處相同的字</li>
-        <li class="reveal">按鍵依編輯器而異，換工具就要重新找</li>
-      </ul>
+      <span class="code-label">多重游標：操作步驟</span>
+      <ol class="steps">
+        <li>用滑鼠選取一個要更換的單字</li>
+        <li>按 <b>Cmd + D</b>（Mac）／<b>Ctrl + D</b>（Windows），選取下一個相同的字</li>
+        <li>連按幾次，畫面上每個相同的字都各自出現一個游標</li>
+        <li>直接輸入新內容，所有位置<b>同時改掉</b></li>
+      </ol>
+      <div class="note">
+        另一招：<b>Option + 點擊</b>（Mac）／<b>Alt + 點擊</b>（Windows），在任意位置手動增加游標。
+      </div>
     </div>
     <div class="reveal">
-      <span class="code-label">想同時把三個 class 從 card 改成 item</span>
-      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"card"</span><span class="tag">&gt;</span>
-<span class="tag">&lt;span</span> <span class="attr">class</span>=<span class="str">"card"</span><span class="tag">&gt;</span>
-<span class="tag">&lt;p</span> <span class="attr">class</span>=<span class="str">"card"</span><span class="tag">&gt;</span></div>
+      <span class="code-label">排版與編輯常用快速鍵</span>
+      <div class="keys">
+        <div class="keys__row keys__row--head"><span>功能</span><span>macOS</span><span>Windows</span></div>
+        <div class="keys__row"><span class="keys__fn">註解／取消註解</span><span class="keys__k">Cmd + /</span><span class="keys__k">Ctrl + /</span></div>
+        <div class="keys__row"><span class="keys__fn">選下一個相同字</span><span class="keys__k">Cmd + D</span><span class="keys__k">Ctrl + D</span></div>
+        <div class="keys__row"><span class="keys__fn">任意位置加游標</span><span class="keys__k">Option + 點擊</span><span class="keys__k">Alt + 點擊</span></div>
+        <div class="keys__row"><span class="keys__fn">整行上下移動</span><span class="keys__k">Option + ↑↓</span><span class="keys__k">Alt + ↑↓</span></div>
+        <div class="keys__row"><span class="keys__fn">複製整行</span><span class="keys__k">Shift+Option+↓</span><span class="keys__k">Shift+Alt+↓</span></div>
+        <div class="keys__row"><span class="keys__fn">縮排／取消縮排</span><span class="keys__k">Tab / Shift+Tab</span><span class="keys__k">Tab / Shift+Tab</span></div>
+      </div>
     </div>
+  </div>
+  <div class="note note--bottom reveal">
+    上表是<b>編輯器通用慣例</b>（Sublime、VS Code 都適用）。CodePen 內建編輯器多數相同、少數不同——重點是先知道「有這些技巧存在」，換了工具再找對應按鍵就好。
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
   <!-- 講述重點：原教材這段是 Sublime Text 的按鍵，本課已改以 CodePen 為場域。
@@ -1037,6 +1132,12 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
         <li class="reveal"><code>b</code> 加粗（Bold）、<code>i</code> 斜體（Italic）、<code>u</code> 底線（Underline）</li>
         <li class="reveal"><span class="ic ic--warn"></span> 針對<b>特定英文字</b>套用時，Emmet 可能無法辨識，<b>手動打完整標籤</b></li>
       </ul>
+      <div class="res res--audio reveal">
+      <span class="res__kind">推薦 · 音訊</span>
+      <span class="res__title">文字修飾與排版微調技巧</span>
+      <div class="res__desc">為何 Enter 換行無效，以及 span、br 與 b/i/u 的實務應用。</div>
+    </div>
+
     </div>
     <div class="reveal">
       <span class="code-label">三種效果一次看</span>
@@ -1097,10 +1198,8 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
         <div class="code"><span class="tag">&lt;p&gt;</span>第一行<span class="ok">&lt;br&gt;</span>第二行<span class="tag">&lt;/p&gt;</span></div>
       </div>
     </div>
-    <div class="res res--audio reveal">
-      <span class="res__kind">推薦 · 音訊</span>
-      <span class="res__title">文字修飾與排版微調技巧</span>
-      <div class="res__desc">為何 Enter 換行無效，以及 span、br 與 b/i/u 的實務應用。</div>
+    <div class="note reveal">
+      <code>&lt;br&gt;</code> 是<b>單一標籤</b>，沒有「開始／結束」的配對，所以不該寫 <code>&lt;/br&gt;</code>。寫 <code>&lt;br&gt;</code> 或 <code>&lt;br /&gt;</code> 都可以——瀏覽器對 <code>&lt;/br&gt;</code> 通常會默默忽略，但那是<b>語意錯誤</b>，檢查程式碼時會被挑出來。
     </div>
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
@@ -1248,6 +1347,7 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
         <li class="reveal"><code>alt</code>：圖片無法顯示時呈現的<b>替代文字</b>，也幫助<b>視障人士與搜尋引擎</b>理解圖片</li>
         <li class="reveal"><code>title</code>：滑鼠<b>懸停</b>時出現的說明小框</li>
         <li class="reveal">差別：alt 是圖片壞掉時給人看的，title 是滑鼠移過去才出現的</li>
+        <li class="reveal"><code>alt</code> 更是 <b>SEO 的關鍵</b>——搜尋引擎靠它讀懂圖片內容，第 14 週會專門講</li>
       </ul>
     </div>
     <div class="reveal">
@@ -1556,38 +1656,37 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   <!-- 講述重點：讓學生自己說出「外層包內層」這句話，比老師再講一次有效。 -->
 </section>
 
-<!-- ═══════════ 48｜小測驗 ═══════════ -->
-<section class="slide" data-label="小測驗">
+<!-- ═══════════ 48｜隨堂練習 ═══════════ -->
+<section class="slide" data-label="隨堂練習">
   <p class="eyebrow">收尾</p>
   <p class="pagedot">xlviii</p>
-  <h2 class="headline reveal">小測驗：快問快答</h2>
+  <h2 class="headline reveal">隨堂練習：把今天學的串起來</h2>
   <div class="body-split body-split--even">
     <div>
-      <ul class="points">
-        <li class="reveal">DOM 是什麼？瀏覽器何時建立它？</li>
-        <li class="reveal">如何創造從屬關係？如何創造同層關係？</li>
-        <li class="reveal">Windows / Mac 分別如何開啟開發人員工具？</li>
-        <li class="reveal"><code>title</code> 寫在哪裡？為什麼畫面上看不到？</li>
-        <li class="reveal"><code>br</code>、<code>hr</code>、<code>img</code> 有什麼共同點？</li>
-        <li class="reveal"><code>a</code> 和 <code>img</code> 分別用哪個屬性？<code>alt</code> 做什麼用？</li>
-      </ul>
+      <span class="code-label">在你的 Pen 上依序完成</span>
+      <ol class="steps">
+        <li>開一個新 Pen，用 <code>!</code> + <code>Tab</code> 生出骨架</li>
+        <li>把 <code>title</code> 改成自己的名字，<code>lang</code> 設為 <code>zh-TW</code></li>
+        <li>放一個 <code>h1</code>、兩個 <code>p</code>，其中一段用 <code>lorem</code> 生假字</li>
+        <li>加一組 <code>a href</code> 與一個 <code>img src alt</code></li>
+        <li>用 <code>ul</code> + <code>li</code> 做三個項目的清單</li>
+        <li>用 <code>span style</code> 把其中幾個字變紅</li>
+      </ol>
     </div>
     <div>
-      <div class="res res--quiz reveal">
-        <span class="res__kind">推薦 · 測驗</span>
-        <span class="res__title">HTML 基礎知識驗收</span>
-        <div class="res__desc">DOM 結構、標籤嵌套規則、開發人員工具快捷鍵與常用屬性。</div>
-      </div>
-      <div class="res res--quiz reveal">
-        <span class="res__kind">推薦 · 測驗</span>
-        <span class="res__title">HTML 常用標籤基礎實力檢測</span>
-        <div class="res__desc">共 5 題，檢驗基本結構、連結、圖片及清單標籤的掌握度。</div>
-      </div>
+      <span class="code-label">做完後，自己核對這幾件事</span>
+      <ul class="points">
+        <li class="reveal"><span class="ic ic--check"></span> 展開 <code>&lt;body&gt;</code>，看得到 h1、p、a、img、ul</li>
+        <li class="reveal"><span class="ic ic--check"></span> a 與 img 是同層；img 放進 a 裡面時，點圖片能跳轉</li>
+        <li class="reveal"><span class="ic ic--check"></span> br、hr、img 三個單一標籤都沒有寫結尾標籤</li>
+        <li class="reveal"><span class="ic ic--check"></span> 縮排整齊，父子層一眼看得出來</li>
+      </ul>
     </div>
   </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
-  <!-- 講述重點：用舉手或點答快速跑一輪，不超過 5 分鐘。答不出來的可對應回前面的頁次複習。
-       完整版測驗請學生課後自行做完。 -->
+  <!-- 講述重點：這裡刻意不做測驗、不打分數——用實作把記憶固化，學生才不會因為怕答錯而緊張。
+       讓學生動手做、互相看畫面；教師逐桌走動，把卡住的人當場帶起來。
+       做不完的，正好就是今天的作業起點。 -->
 </section>
 
 <!-- ═══════════ 49｜今日重點回顧 ═══════════ -->
@@ -1622,31 +1721,39 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 </section>
 
 <!-- ═══════════ 50｜作業與下週預告 ═══════════ -->
-<section class="slide" data-label="作業與下週預告">
+<section class="slide" data-label="作業繳交">
   <p class="eyebrow">收尾</p>
   <p class="pagedot">l</p>
-  <h2 class="headline reveal">作業與下週預告</h2>
-  <div class="body-split">
+  <h2 class="headline reveal">作業繳交</h2>
+  <div class="body-split body-split--note">
     <div>
       <ul class="points">
         <li class="reveal">用 CodePen 完成<b>個人技能簡歷頁</b>（純結構，不需美化）</li>
-        <li class="reveal">需含：完整結構、<code>h1</code>／<code>h2</code>／<code>p</code>、<code>a href</code>、<code>img src alt</code></li>
-        <li class="reveal">需含：一組 <code>ul</code> + <code>li</code> 清單、至少一處 <code>style</code></li>
-        <li class="reveal">繳交：貼上 CodePen 的 Pen 網址</li>
+        <li class="reveal">需含完整結構，<code>&lt;head&gt;</code> 內有 <code>title</code> 與 <code>meta charset</code></li>
+        <li class="reveal">需含 <code>h1</code>／<code>h2</code>／<code>p</code>、<code>a href</code>、<code>img src alt</code></li>
+        <li class="reveal">需含一組 <code>ul</code> + <code>li</code> 清單、至少一處 <code>style</code></li>
       </ul>
     </div>
     <div class="reveal">
-      <span class="code-label">下週：Tailwind CSS 快速上手、UI/UX 設計規範與 RWD</span>
-      <div class="code"><span class="cmt">今天的樣子</span>
-<span class="tag">&lt;div</span> <span class="attr">style</span>=<span class="str">"color: red;"</span><span class="tag">&gt;</span>卡片<span class="tag">&lt;/div&gt;</span>
-
-<span class="cmt">下週的樣子</span>
-<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"text-red-500"</span><span class="tag">&gt;</span>卡片<span class="tag">&lt;/div&gt;</span></div>
+      <span class="code-label">繳交步驟</span>
+      <ol class="steps">
+        <li>把今天的練習頁補完，存檔</li>
+        <li>複製你自己的 Pen 網址</li>
+        <li>到數位學習平台貼上網址並送出</li>
+      </ol>
+      <div class="res res--check reveal">
+        <span class="res__kind">評分重點</span>
+        <span class="res__title">結構層級是否清楚、縮格是否整齊</span>
+        <div class="res__desc">不是視覺美感——美感是後面 Tailwind 與 UI/UX 課程的事。</div>
+      </div>
     </div>
   </div>
+  <div class="note note--bottom reveal">
+    作業一律上傳<b>數位學習平台</b>：<a href="https://elearn.ncut.edu.tw" target="_blank">https://elearn.ncut.edu.tw</a>
+  </div>
   <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
-  <!-- 講述重點：評分重點在「結構層級是否清楚」與「縮格是否整齊」，不是視覺美感。
-       預告下週會用 Tailwind 把今天的樣式換成 class，讓學生知道今天的苦工是為了理解後面的捷徑。 -->
+  <!-- 講述重點：把繳交動作講死——上平台、貼網址、送出。評分重點在「結構層級是否清楚」與
+       「縮格是否整齊」，不是視覺美感。今天做不完的，正好就是作業的起點。 -->
 </section>
 
 <!-- ═══════════ 51｜Q&A ═══════════ -->
