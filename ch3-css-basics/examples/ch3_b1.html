@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>範例 B1｜產品定價頁 — 步驟、程式碼與即時預覽</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #F2EEDF;
+    --panel: #FBF9F2;
+    --ink: #2A241B;
+    --ink-soft: #6B6255;
+    --rule: rgba(42, 36, 27, 0.18);
+    --accent: #A64C7C;
+    --accent-soft: #F0DCE8;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ===== 上方工具列 ===== */
+  .bar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 24px;
+    padding: 11px 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar__id { display: flex; align-items: baseline; gap: 14px; }
+  .bar__code { font-size: 24px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+  .bar__id h1 { font-size: 21px; font-weight: 700; letter-spacing: 1px; }
+  .bar__meta { font-size: 12.5px; color: var(--ink-soft); flex: 1 1 auto; }
+  .bar__meta b { font-weight: 500; color: var(--ink); }
+  .bar__act { display: flex; gap: 9px; flex: 0 0 auto; }
+
+  button {
+    font: inherit; font-size: 12.5px;
+    padding: 7px 15px;
+    border: 1px solid var(--ink); border-radius: 999px;
+    background: transparent; color: var(--ink); cursor: pointer;
+  }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button.done { background: #B7C7A8; border-color: #B7C7A8; color: var(--ink); }
+
+  /* ===== 製作步驟（可切換）===== */
+  .steps { flex: 0 0 auto; padding: 11px 24px 12px; border-bottom: 1px solid var(--rule); }
+  .steps__hd {
+    display: flex; align-items: baseline; gap: 14px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    margin-bottom: 9px;
+  }
+  .steps__hd b { color: var(--ink); font-weight: 500; }
+  .steps__nav { margin-left: auto; display: flex; gap: 7px; }
+  .steps__nav button { padding: 3px 12px; font-size: 12px; }
+  .steps__nav button:disabled { opacity: 0.35; cursor: default; }
+  .steps__nav button:disabled:hover { background: transparent; color: var(--ink); }
+
+  .steps__list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .steps__list button {
+    width: 100%; height: 100%;
+    display: flex; gap: 9px; text-align: left;
+    padding: 8px 11px 9px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-size: 12.5px; line-height: 1.48;
+    color: #3A332A;
+  }
+  .steps__list button:hover { background: #FFF; color: #3A332A; border-color: var(--ink-soft); }
+  .steps__list button b {
+    flex: 0 0 auto;
+    width: 19px; height: 19px; margin-top: 1px;
+    border-radius: 999px;
+    background: #CFC7B6; color: var(--paper);
+    font-size: 11px; font-weight: 700; line-height: 19px; text-align: center;
+  }
+  .steps__list button.on {
+    background: #FFF; border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .steps__list button.on b { background: var(--accent); }
+  .steps__list button.seen b { background: var(--ink-soft); }
+
+  .steps__check {
+    margin-top: 9px;
+    font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+  }
+  .steps__check b { color: var(--ink); font-weight: 500; }
+
+  /* ===== 兩欄主體 ===== */
+  main {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+    min-height: 0;
+  }
+
+  .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+  .pane__head {
+    flex: 0 0 auto;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 9px 20px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+  }
+  .pane__head span { font-variant-numeric: tabular-nums; }
+
+  /* 左：程式碼 */
+  .pane--code { border-right: 1px solid var(--rule); }
+  .code {
+    flex: 1 1 auto; overflow: auto; margin: 0;
+    padding: 16px 20px 40px;
+    background: var(--panel);
+    font-family: "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
+    font-size: 13px; line-height: 1.68; tab-size: 2;
+    -webkit-text-size-adjust: 100%;
+  }
+  .code code { white-space: pre; display: block; }
+  .c-cmt  { color: #8A8072; }
+  .c-str  { color: #A64C7C; }
+  .c-tag  { color: #8C5A3C; }
+  .c-prop { color: #6E7F45; }
+
+  /* 右：預覽 */
+  .pane--prev { background: #E7E3D6; }
+  .stagewrap { flex: 1 1 auto; overflow: auto; padding: 16px; }
+  .stageouter { width: 1200px; }
+  .stage { width: 1200px; transform-origin: 0 0; }
+  .stage iframe {
+    display: block; width: 1200px; height: 1200px;
+    border: 0; border-radius: 10px; background: #fff;
+    box-shadow: 0 10px 30px rgba(42, 36, 27, 0.16);
+  }
+
+  .hint { font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__id">
+    <span class="bar__code">B1</span>
+    <h1>產品定價頁</h1>
+  </div>
+  <p class="bar__meta"><b>B 組 挑戰</b>　用到今天：inline-block 三欄 ・ border 與圓角 ・ 對比色拉層級　｜　SaaS、顧問服務最常被要求做的頁面</p>
+  <div class="bar__act">
+    <button id="btnCopy">複製這一步的程式碼</button>
+    <button id="btnReload">重新整理預覽</button>
+    <button id="btnPop">開新視窗</button>
+  </div>
+</header>
+
+<section class="steps">
+  <p class="steps__hd">
+    製作步驟（<b>點任一步</b>可切換左下程式碼與右側畫面）
+    <span id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav">
+      <button id="btnPrev">◀ 上一步</button>
+      <button id="btnNext">下一步 ▶</button>
+    </span>
+  </p>
+  <ol class="steps__list" id="stepList">
+    <li><button type="button" data-i="0"><b>1</b><span>標題區置中（text-align:center），先建立頁面的第一視覺</span></button></li>
+    <li><button type="button" data-i="1"><b>2</b><span>做方案卡的外框與容器：內距、圓角、白底，先放進第一張卡的內容</span></button></li>
+    <li><button type="button" data-i="2"><b>3</b><span>推薦方案加一個 .featured class 換深底 + 邊框，一個 class 就拉出層級</span></button></li>
+    <li><button type="button" data-i="3"><b>4</b><span>補上名稱與價格的字級，以及方案內容清單</span></button></li>
+    <li><button type="button" data-i="4"><b>5</b><span>列點前面的短橫線用 li::before + position:absolute 自己畫，不要用圖片</span></button></li>
+    <li><button type="button" data-i="5"><b>6</b><span>最後補上按鈕，內距要夠大才像可以按</span></button></li>
+  </ol>
+</section>
+
+<main>
+  <section class="pane pane--code">
+    <div class="pane__head"><span id="codeTitle">第 1 步的程式碼</span><span id="stat"></span></div>
+    <pre class="code"><code id="code"></code></pre>
+  </section>
+
+  <section class="pane pane--prev">
+    <div class="pane__head"><span>即時預覽（由左側同一份程式碼執行）</span><span class="hint">捲動可看完整頁面</span></div>
+    <div class="stagewrap" id="wrap">
+      <div class="stageouter" id="outer">
+        <div class="stage" id="stage"><iframe id="prev" title="範例預覽"></iframe></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script id="data" type="application/json">{"docs": ["<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B1 產品定價頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 頁面標題：整塊置中 ===== */\n  .head {\n    text-align: center;    /* 讓裡面「行內」的內容整排置中 */\n    margin-bottom: 40px;   /* 和下面的方案卡分開 */\n  }\n  .head h1 {\n    font-size: 36px;\n    font-weight: 700;\n    letter-spacing: 3px;\n  }\n  .head p {\n    font-size: 16px;\n    color: #5C5345;    /* 副標灰一點 */\n    margin-top: 10px;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"head\">\n    <h1>選擇你的方案<\/h1>\n    <p>年繳可折兩個月，隨時可以升級<\/p>\n  <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B1 產品定價頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 頁面標題：整塊置中 ===== */\n  .head {\n    text-align: center;    /* 讓裡面「行內」的內容整排置中 */\n    margin-bottom: 40px;   /* 和下面的方案卡分開 */\n  }\n  .head h1 {\n    font-size: 36px;\n    font-weight: 700;\n    letter-spacing: 3px;\n  }\n  .head p {\n    font-size: 16px;\n    color: #5C5345;    /* 副標灰一點 */\n    margin-top: 10px;\n  }\n  /* ===== ③ 三張方案卡要並排：寬度要先算清楚 ===== */\n  .plans {\n    width: 900px;         /* 容器寬度 */\n    margin: 0 auto;       /* 水平置中 */\n    font-size: 0;         /* 消掉 inline-block 之間的空白縫隙 */\n    text-align: center;   /* 卡片是靠 text-align 來決定「擺哪裡」的 */\n  }\n\n  .plan {\n    display: inline-block;  /* 三張並排 */\n    vertical-align: top;    /* 頂端對齊；三張內容高度不同也不會歪 */\n    width: 276px;           /* 算術：276 × 3 = 828，加上兩個 24 的間距 = 876 ≤ 900 ✔ */\n    margin-right: 24px;\n    padding: 30px 26px 34px;\n    background: #FFFFFF;\n    border-radius: 16px;\n    text-align: left;       /* 卡片「自己」要左對齊，蓋掉父層的 center */\n  }\n  /* 最後一張不要右間距，否則會超出 900 而掉到第二行 */\n  .plan:last-child { margin-right: 0; }\n<\/style>\n<\/head>\n<body>\n  <div class=\"head\">\n    <h1>選擇你的方案<\/h1>\n    <p>年繳可折兩個月，隨時可以升級<\/p>\n  <\/div>\n  <div class=\"plans\">\n    <div class=\"plan\">\n      <p class=\"plan-name\">入門<\/p>\n      <p class=\"price\">$0<small> / 月<\/small><\/p>\n      <ul>\n        <li>1 個專案<\/li>\n        <li>基本版型<\/li>\n        <li>社群支援<\/li>\n      <\/ul>\n      <span class=\"buy\">免費開始<\/span>\n    <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B1 產品定價頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 頁面標題：整塊置中 ===== */\n  .head {\n    text-align: center;    /* 讓裡面「行內」的內容整排置中 */\n    margin-bottom: 40px;   /* 和下面的方案卡分開 */\n  }\n  .head h1 {\n    font-size: 36px;\n    font-weight: 700;\n    letter-spacing: 3px;\n  }\n  .head p {\n    font-size: 16px;\n    color: #5C5345;    /* 副標灰一點 */\n    margin-top: 10px;\n  }\n  /* ===== ③ 三張方案卡要並排：寬度要先算清楚 ===== */\n  .plans {\n    width: 900px;         /* 容器寬度 */\n    margin: 0 auto;       /* 水平置中 */\n    font-size: 0;         /* 消掉 inline-block 之間的空白縫隙 */\n    text-align: center;   /* 卡片是靠 text-align 來決定「擺哪裡」的 */\n  }\n\n  .plan {\n    display: inline-block;  /* 三張並排 */\n    vertical-align: top;    /* 頂端對齊；三張內容高度不同也不會歪 */\n    width: 276px;           /* 算術：276 × 3 = 828，加上兩個 24 的間距 = 876 ≤ 900 ✔ */\n    margin-right: 24px;\n    padding: 30px 26px 34px;\n    background: #FFFFFF;\n    border-radius: 16px;\n    text-align: left;       /* 卡片「自己」要左對齊，蓋掉父層的 center */\n  }\n  /* 最後一張不要右間距，否則會超出 900 而掉到第二行 */\n  .plan:last-child { margin-right: 0; }\n  /* ===== ④ 推薦方案：靠「深底 + 邊框」把主推的那一張凸顯出來 ===== */\n  /* 只寫「和別人不一樣」的部分，其他樣式全部沿用 .plan */\n  .plan.featured {\n    background: #2A241B;            /* 深底反白 */\n    color: #F2EEDF;\n    border: 3px solid #E1A4C2;      /* 加一圈亮色外框，視線一定先看到它 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"head\">\n    <h1>選擇你的方案<\/h1>\n    <p>年繳可折兩個月，隨時可以升級<\/p>\n  <\/div>\n  <div class=\"plans\">\n    <div class=\"plan\">\n      <p class=\"plan-name\">入門<\/p>\n      <p class=\"price\">$0<small> / 月<\/small><\/p>\n      <ul>\n        <li>1 個專案<\/li>\n        <li>基本版型<\/li>\n        <li>社群支援<\/li>\n      <\/ul>\n      <span class=\"buy\">免費開始<\/span>\n    <\/div>\n    <div class=\"plan featured\">\n      <p class=\"plan-name\">標準<\/p>\n      <p class=\"price\">$390<small> / 月<\/small><\/p>\n      <ul>\n        <li>10 個專案<\/li>\n        <li>全部版型<\/li>\n        <li>自訂網域<\/li>\n      <\/ul>\n      <span class=\"buy\">最多人選<\/span>\n    <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B1 產品定價頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 頁面標題：整塊置中 ===== */\n  .head {\n    text-align: center;    /* 讓裡面「行內」的內容整排置中 */\n    margin-bottom: 40px;   /* 和下面的方案卡分開 */\n  }\n  .head h1 {\n    font-size: 36px;\n    font-weight: 700;\n    letter-spacing: 3px;\n  }\n  .head p {\n    font-size: 16px;\n    color: #5C5345;    /* 副標灰一點 */\n    margin-top: 10px;\n  }\n  /* ===== ③ 三張方案卡要並排：寬度要先算清楚 ===== */\n  .plans {\n    width: 900px;         /* 容器寬度 */\n    margin: 0 auto;       /* 水平置中 */\n    font-size: 0;         /* 消掉 inline-block 之間的空白縫隙 */\n    text-align: center;   /* 卡片是靠 text-align 來決定「擺哪裡」的 */\n  }\n\n  .plan {\n    display: inline-block;  /* 三張並排 */\n    vertical-align: top;    /* 頂端對齊；三張內容高度不同也不會歪 */\n    width: 276px;           /* 算術：276 × 3 = 828，加上兩個 24 的間距 = 876 ≤ 900 ✔ */\n    margin-right: 24px;\n    padding: 30px 26px 34px;\n    background: #FFFFFF;\n    border-radius: 16px;\n    text-align: left;       /* 卡片「自己」要左對齊，蓋掉父層的 center */\n  }\n  /* 最後一張不要右間距，否則會超出 900 而掉到第二行 */\n  .plan:last-child { margin-right: 0; }\n  /* ===== ④ 推薦方案：靠「深底 + 邊框」把主推的那一張凸顯出來 ===== */\n  /* 只寫「和別人不一樣」的部分，其他樣式全部沿用 .plan */\n  .plan.featured {\n    background: #2A241B;            /* 深底反白 */\n    color: #F2EEDF;\n    border: 3px solid #E1A4C2;      /* 加一圈亮色外框，視線一定先看到它 */\n  }\n  /* ===== ⑤ 方案名稱與價格：價格是這一頁最大的字 ===== */\n  .plan-name {\n    font-size: 20px;\n    font-weight: 700;\n    letter-spacing: 2px;\n  }\n  .price {\n    font-size: 44px;         /* 全頁最大：比價時第一眼看的就是數字 */\n    font-weight: 700;\n    margin: 10px 0 2px;\n  }\n  .price small {\n    font-size: 16px;         /* 「/ 月」這種補充資訊縮小 */\n    font-weight: 400;\n    color: #8A8072;\n  }\n  .featured .price small { color: #C9BEC0; }  /* 深底上的灰要換淺一點才看得見 */\n\n  /* ===== ⑥ 方案內容清單 ===== */\n  .plan ul {\n    list-style: none;    /* 拿掉預設圓點，下面的短橫線自己畫 */\n    margin: 22px 0 26px;\n  }\n  .plan li {\n    font-size: 15px;\n    padding-left: 22px;  /* 左邊留出空間給等一下要畫的短橫線 */\n    position: relative;  /* 建立定位基準，短橫線才能用 absolute 貼在這一行 */\n    color: #5C5345;\n    margin-bottom: 8px;\n  }\n  .featured li { color: #E6E0D2; }  /* 深底卡片的文字要換亮色 */\n<\/style>\n<\/head>\n<body>\n  <div class=\"head\">\n    <h1>選擇你的方案<\/h1>\n    <p>年繳可折兩個月，隨時可以升級<\/p>\n  <\/div>\n  <div class=\"plans\">\n    <div class=\"plan\">\n      <p class=\"plan-name\">入門<\/p>\n      <p class=\"price\">$0<small> / 月<\/small><\/p>\n      <ul>\n        <li>1 個專案<\/li>\n        <li>基本版型<\/li>\n        <li>社群支援<\/li>\n      <\/ul>\n      <span class=\"buy\">免費開始<\/span>\n    <\/div>\n    <div class=\"plan featured\">\n      <p class=\"plan-name\">標準<\/p>\n      <p class=\"price\">$390<small> / 月<\/small><\/p>\n      <ul>\n        <li>10 個專案<\/li>\n        <li>全部版型<\/li>\n        <li>自訂網域<\/li>\n      <\/ul>\n      <span class=\"buy\">最多人選<\/span>\n    <\/div>\n    <div class=\"plan\">\n      <p class=\"plan-name\">專業<\/p>\n      <p class=\"price\">$890<small> / 月<\/small><\/p>\n      <ul>\n        <li>專案無上限<\/li>\n        <li>團隊協作<\/li>\n        <li>優先支援<\/li>\n      <\/ul>\n      <span class=\"buy\">聯絡我們<\/span>\n    <\/div>\n  <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B1 產品定價頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 頁面標題：整塊置中 ===== */\n  .head {\n    text-align: center;    /* 讓裡面「行內」的內容整排置中 */\n    margin-bottom: 40px;   /* 和下面的方案卡分開 */\n  }\n  .head h1 {\n    font-size: 36px;\n    font-weight: 700;\n    letter-spacing: 3px;\n  }\n  .head p {\n    font-size: 16px;\n    color: #5C5345;    /* 副標灰一點 */\n    margin-top: 10px;\n  }\n  /* ===== ③ 三張方案卡要並排：寬度要先算清楚 ===== */\n  .plans {\n    width: 900px;         /* 容器寬度 */\n    margin: 0 auto;       /* 水平置中 */\n    font-size: 0;         /* 消掉 inline-block 之間的空白縫隙 */\n    text-align: center;   /* 卡片是靠 text-align 來決定「擺哪裡」的 */\n  }\n\n  .plan {\n    display: inline-block;  /* 三張並排 */\n    vertical-align: top;    /* 頂端對齊；三張內容高度不同也不會歪 */\n    width: 276px;           /* 算術：276 × 3 = 828，加上兩個 24 的間距 = 876 ≤ 900 ✔ */\n    margin-right: 24px;\n    padding: 30px 26px 34px;\n    background: #FFFFFF;\n    border-radius: 16px;\n    text-align: left;       /* 卡片「自己」要左對齊，蓋掉父層的 center */\n  }\n  /* 最後一張不要右間距，否則會超出 900 而掉到第二行 */\n  .plan:last-child { margin-right: 0; }\n  /* ===== ④ 推薦方案：靠「深底 + 邊框」把主推的那一張凸顯出來 ===== */\n  /* 只寫「和別人不一樣」的部分，其他樣式全部沿用 .plan */\n  .plan.featured {\n    background: #2A241B;            /* 深底反白 */\n    color: #F2EEDF;\n    border: 3px solid #E1A4C2;      /* 加一圈亮色外框，視線一定先看到它 */\n  }\n  /* ===== ⑤ 方案名稱與價格：價格是這一頁最大的字 ===== */\n  .plan-name {\n    font-size: 20px;\n    font-weight: 700;\n    letter-spacing: 2px;\n  }\n  .price {\n    font-size: 44px;         /* 全頁最大：比價時第一眼看的就是數字 */\n    font-weight: 700;\n    margin: 10px 0 2px;\n  }\n  .price small {\n    font-size: 16px;         /* 「/ 月」這種補充資訊縮小 */\n    font-weight: 400;\n    color: #8A8072;\n  }\n  .featured .price small { color: #C9BEC0; }  /* 深底上的灰要換淺一點才看得見 */\n\n  /* ===== ⑥ 方案內容清單 ===== */\n  .plan ul {\n    list-style: none;    /* 拿掉預設圓點，下面的短橫線自己畫 */\n    margin: 22px 0 26px;\n  }\n  .plan li {\n    font-size: 15px;\n    padding-left: 22px;  /* 左邊留出空間給等一下要畫的短橫線 */\n    position: relative;  /* 建立定位基準，短橫線才能用 absolute 貼在這一行 */\n    color: #5C5345;\n    margin-bottom: 8px;\n  }\n  .featured li { color: #E6E0D2; }  /* 深底卡片的文字要換亮色 */\n  /* ===== ⑦ 列點前面的短橫線：用偽元素畫，不需要圖片 ===== */\n  /* ::before 會在每個 li 的內容前面「生出一個假元素」，我們把它畫成一條 10×2 的短線 */\n  .plan li::before {\n    content: \"\";            /* 偽元素一定要有 content 才會出現（空字串也可以） */\n    position: absolute;     /* 用絕對定位貼在 li 裡（li 已經設了 relative） */\n    left: 0;                /* 靠左 */\n    top: 0.65em;            /* 0.65em 大約是這一行文字的中線位置 */\n    width: 10px;\n    height: 2px;            /* 10 × 2 的小矩形 */\n    background: #B7C7A8;    /* 有底色才會被看見 */\n  }\n  .featured li::before { background: #E1A4C2; }  /* 深底卡片換亮色 */\n<\/style>\n<\/head>\n<body>\n  <div class=\"head\">\n    <h1>選擇你的方案<\/h1>\n    <p>年繳可折兩個月，隨時可以升級<\/p>\n  <\/div>\n  <div class=\"plans\">\n    <div class=\"plan\">\n      <p class=\"plan-name\">入門<\/p>\n      <p class=\"price\">$0<small> / 月<\/small><\/p>\n      <ul>\n        <li>1 個專案<\/li>\n        <li>基本版型<\/li>\n        <li>社群支援<\/li>\n      <\/ul>\n      <span class=\"buy\">免費開始<\/span>\n    <\/div>\n    <div class=\"plan featured\">\n      <p class=\"plan-name\">標準<\/p>\n      <p class=\"price\">$390<small> / 月<\/small><\/p>\n      <ul>\n        <li>10 個專案<\/li>\n        <li>全部版型<\/li>\n        <li>自訂網域<\/li>\n      <\/ul>\n      <span class=\"buy\">最多人選<\/span>\n    <\/div>\n    <div class=\"plan\">\n      <p class=\"plan-name\">專業<\/p>\n      <p class=\"price\">$890<small> / 月<\/small><\/p>\n      <ul>\n        <li>專案無上限<\/li>\n        <li>團隊協作<\/li>\n        <li>優先支援<\/li>\n      <\/ul>\n      <span class=\"buy\">聯絡我們<\/span>\n    <\/div>\n  <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B1 產品定價頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 頁面標題：整塊置中 ===== */\n  .head {\n    text-align: center;    /* 讓裡面「行內」的內容整排置中 */\n    margin-bottom: 40px;   /* 和下面的方案卡分開 */\n  }\n  .head h1 {\n    font-size: 36px;\n    font-weight: 700;\n    letter-spacing: 3px;\n  }\n  .head p {\n    font-size: 16px;\n    color: #5C5345;    /* 副標灰一點 */\n    margin-top: 10px;\n  }\n  /* ===== ③ 三張方案卡要並排：寬度要先算清楚 ===== */\n  .plans {\n    width: 900px;         /* 容器寬度 */\n    margin: 0 auto;       /* 水平置中 */\n    font-size: 0;         /* 消掉 inline-block 之間的空白縫隙 */\n    text-align: center;   /* 卡片是靠 text-align 來決定「擺哪裡」的 */\n  }\n\n  .plan {\n    display: inline-block;  /* 三張並排 */\n    vertical-align: top;    /* 頂端對齊；三張內容高度不同也不會歪 */\n    width: 276px;           /* 算術：276 × 3 = 828，加上兩個 24 的間距 = 876 ≤ 900 ✔ */\n    margin-right: 24px;\n    padding: 30px 26px 34px;\n    background: #FFFFFF;\n    border-radius: 16px;\n    text-align: left;       /* 卡片「自己」要左對齊，蓋掉父層的 center */\n  }\n  /* 最後一張不要右間距，否則會超出 900 而掉到第二行 */\n  .plan:last-child { margin-right: 0; }\n  /* ===== ④ 推薦方案：靠「深底 + 邊框」把主推的那一張凸顯出來 ===== */\n  /* 只寫「和別人不一樣」的部分，其他樣式全部沿用 .plan */\n  .plan.featured {\n    background: #2A241B;            /* 深底反白 */\n    color: #F2EEDF;\n    border: 3px solid #E1A4C2;      /* 加一圈亮色外框，視線一定先看到它 */\n  }\n  /* ===== ⑤ 方案名稱與價格：價格是這一頁最大的字 ===== */\n  .plan-name {\n    font-size: 20px;\n    font-weight: 700;\n    letter-spacing: 2px;\n  }\n  .price {\n    font-size: 44px;         /* 全頁最大：比價時第一眼看的就是數字 */\n    font-weight: 700;\n    margin: 10px 0 2px;\n  }\n  .price small {\n    font-size: 16px;         /* 「/ 月」這種補充資訊縮小 */\n    font-weight: 400;\n    color: #8A8072;\n  }\n  .featured .price small { color: #C9BEC0; }  /* 深底上的灰要換淺一點才看得見 */\n\n  /* ===== ⑥ 方案內容清單 ===== */\n  .plan ul {\n    list-style: none;    /* 拿掉預設圓點，下面的短橫線自己畫 */\n    margin: 22px 0 26px;\n  }\n  .plan li {\n    font-size: 15px;\n    padding-left: 22px;  /* 左邊留出空間給等一下要畫的短橫線 */\n    position: relative;  /* 建立定位基準，短橫線才能用 absolute 貼在這一行 */\n    color: #5C5345;\n    margin-bottom: 8px;\n  }\n  .featured li { color: #E6E0D2; }  /* 深底卡片的文字要換亮色 */\n  /* ===== ⑦ 列點前面的短橫線：用偽元素畫，不需要圖片 ===== */\n  /* ::before 會在每個 li 的內容前面「生出一個假元素」，我們把它畫成一條 10×2 的短線 */\n  .plan li::before {\n    content: \"\";            /* 偽元素一定要有 content 才會出現（空字串也可以） */\n    position: absolute;     /* 用絕對定位貼在 li 裡（li 已經設了 relative） */\n    left: 0;                /* 靠左 */\n    top: 0.65em;            /* 0.65em 大約是這一行文字的中線位置 */\n    width: 10px;\n    height: 2px;            /* 10 × 2 的小矩形 */\n    background: #B7C7A8;    /* 有底色才會被看見 */\n  }\n  .featured li::before { background: #E1A4C2; }  /* 深底卡片換亮色 */\n  /* ===== ⑧ 按鈕 ===== */\n  .buy {\n    display: block;         /* 獨占一行，寬度自動撐滿卡片 */\n    text-align: center;     /* 文字在按鈕中間 */\n    padding: 13px 0;        /* 內距把按鈕撐高，太小的話點不到 */\n    border-radius: 999px;   /* 膠囊形 */\n    font-size: 16px;\n    font-weight: 700;\n    background: #F2EEDF;\n    color: #2A241B;\n  }\n  .featured .buy { background: #E1A4C2; }  /* 主推那張的按鈕換亮色，更顯眼 */\n<\/style>\n<\/head>\n<body>\n  <div class=\"head\">\n    <h1>選擇你的方案<\/h1>\n    <p>年繳可折兩個月，隨時可以升級<\/p>\n  <\/div>\n  <div class=\"plans\">\n    <div class=\"plan\">\n      <p class=\"plan-name\">入門<\/p>\n      <p class=\"price\">$0<small> / 月<\/small><\/p>\n      <ul>\n        <li>1 個專案<\/li>\n        <li>基本版型<\/li>\n        <li>社群支援<\/li>\n      <\/ul>\n      <span class=\"buy\">免費開始<\/span>\n    <\/div>\n    <div class=\"plan featured\">\n      <p class=\"plan-name\">標準<\/p>\n      <p class=\"price\">$390<small> / 月<\/small><\/p>\n      <ul>\n        <li>10 個專案<\/li>\n        <li>全部版型<\/li>\n        <li>自訂網域<\/li>\n      <\/ul>\n      <span class=\"buy\">最多人選<\/span>\n    <\/div>\n    <div class=\"plan\">\n      <p class=\"plan-name\">專業<\/p>\n      <p class=\"price\">$890<small> / 月<\/small><\/p>\n      <ul>\n        <li>專案無上限<\/li>\n        <li>團隊協作<\/li>\n        <li>優先支援<\/li>\n      <\/ul>\n      <span class=\"buy\">聯絡我們<\/span>\n    <\/div>\n  <\/div>\n<\/body>\n<\/html>\n"]}</script>
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('data').textContent);
+  var docs = DATA.docs, total = docs.length;
+  var cur = 0;
+  var frame = document.getElementById('prev');
+  var stage = document.getElementById('stage');
+  var outer = document.getElementById('outer');
+  var wrap = document.getElementById('wrap');
+
+  /* ---- 極簡語法上色：單次掃描，避免跳脫互相破壞 ---- */
+  function highlight(src) {
+    var esc = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc.replace(
+      /(&lt;!--[\s\S]*?--&gt;|\/\*[\s\S]*?\*\/|"[^"\n]*"|&lt;\/?[a-zA-Z][\w:-]*|[a-z-]+(?=\s*:))/g,
+      function (m) {
+        var cls = m.slice(0, 4) === '&lt;' ? 'c-tag'
+                : m.slice(0, 2) === '/*' || m.slice(0, 4) === '&lt;!' ? 'c-cmt'
+                : m.charAt(0) === '"' ? 'c-str'
+                : 'c-prop';
+        return '<span class="' + cls + '">' + m + '</span>';
+      }
+    );
+  }
+
+  function render() {
+    var code = docs[cur];
+    document.getElementById('code').innerHTML = highlight(code);
+    document.getElementById('code').scrollTop = 0;
+    document.getElementById('stat').textContent = code.split('\n').length + ' 行';
+    document.getElementById('codeTitle').textContent =
+      (cur === total - 1) ? '完整程式碼（HTML ＋ CSS，附註解）' : '第 ' + (cur + 1) + ' 步的程式碼';
+    document.getElementById('pos').textContent = '第 ' + (cur + 1) + ' 步／共 ' + total + ' 步';
+
+    var btns = document.querySelectorAll('#stepList button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', i === cur);
+      btns[i].classList.toggle('seen', i < cur);
+    }
+    document.getElementById('btnPrev').disabled = cur === 0;
+    document.getElementById('btnNext').disabled = cur === total - 1;
+    run();
+  }
+
+  function run() { frame.srcdoc = docs[cur]; }
+
+  /* 內容載入後量出實際高度：量測前先把 iframe 壓到 10px，
+     scrollHeight 才會反映真正的內容高度，不會留一大段空白。 */
+  frame.addEventListener('load', function () {
+    var h = 1200;
+    try {
+      frame.style.height = '10px';
+      h = Math.ceil(frame.contentDocument.documentElement.scrollHeight) || 1200;
+    } catch (e) {}
+    if (h < 120) h = 120;
+    frame.style.height = h + 'px';
+    fit();
+  });
+
+  /* 縮放：把 1200px 寬的頁面等比塞進右欄，並讓外層捲動範圍正確 */
+  function fit() {
+    var avail = wrap.clientWidth - 32;
+    var k = Math.min(1, avail / 1200);
+    stage.style.transform = 'scale(' + k + ')';
+    outer.style.width = (1200 * k) + 'px';
+    outer.style.height = (parseFloat(frame.style.height || 1200) * k) + 'px';
+  }
+  window.addEventListener('resize', fit);
+
+  function go(i) { cur = Math.max(0, Math.min(total - 1, i)); render(); }
+
+  document.getElementById('stepList').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) go(parseInt(b.dataset.i, 10));
+  });
+  document.getElementById('btnPrev').addEventListener('click', function () { go(cur - 1); });
+  document.getElementById('btnNext').addEventListener('click', function () { go(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1); }
+  });
+
+  var btnCopy = document.getElementById('btnCopy');
+  btnCopy.addEventListener('click', function () {
+    var code = docs[cur];
+    function ok() {
+      btnCopy.textContent = '已複製';
+      btnCopy.classList.add('done');
+      setTimeout(function () {
+        btnCopy.textContent = '複製這一步的程式碼';
+        btnCopy.classList.remove('done');
+      }, 1600);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); ok(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(ok, fallback);
+    } else { fallback(); }
+  });
+
+  document.getElementById('btnReload').addEventListener('click', run);
+
+  document.getElementById('btnPop').addEventListener('click', function () {
+    var url = URL.createObjectURL(new Blob([docs[cur]], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  });
+
+  render();
+  fit();
+})();
+</script>
+</body>
+</html>

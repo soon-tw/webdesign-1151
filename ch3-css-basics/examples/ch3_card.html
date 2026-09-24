@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>範例 名片｜數位名片 — 步驟、程式碼與即時預覽</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #F2EEDF;
+    --panel: #FBF9F2;
+    --ink: #2A241B;
+    --ink-soft: #6B6255;
+    --rule: rgba(42, 36, 27, 0.18);
+    --accent: #A64C7C;
+    --accent-soft: #F0DCE8;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ===== 上方工具列 ===== */
+  .bar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 24px;
+    padding: 11px 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar__id { display: flex; align-items: baseline; gap: 14px; }
+  .bar__code { font-size: 24px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+  .bar__id h1 { font-size: 21px; font-weight: 700; letter-spacing: 1px; }
+  .bar__meta { font-size: 12.5px; color: var(--ink-soft); flex: 1 1 auto; }
+  .bar__meta b { font-weight: 500; color: var(--ink); }
+  .bar__act { display: flex; gap: 9px; flex: 0 0 auto; }
+
+  button {
+    font: inherit; font-size: 12.5px;
+    padding: 7px 15px;
+    border: 1px solid var(--ink); border-radius: 999px;
+    background: transparent; color: var(--ink); cursor: pointer;
+  }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button.done { background: #B7C7A8; border-color: #B7C7A8; color: var(--ink); }
+
+  /* ===== 製作步驟（可切換）===== */
+  .steps { flex: 0 0 auto; padding: 11px 24px 12px; border-bottom: 1px solid var(--rule); }
+  .steps__hd {
+    display: flex; align-items: baseline; gap: 14px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    margin-bottom: 9px;
+  }
+  .steps__hd b { color: var(--ink); font-weight: 500; }
+  .steps__nav { margin-left: auto; display: flex; gap: 7px; }
+  .steps__nav button { padding: 3px 12px; font-size: 12px; }
+  .steps__nav button:disabled { opacity: 0.35; cursor: default; }
+  .steps__nav button:disabled:hover { background: transparent; color: var(--ink); }
+
+  .steps__list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .steps__list button {
+    width: 100%; height: 100%;
+    display: flex; gap: 9px; text-align: left;
+    padding: 8px 11px 9px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-size: 12.5px; line-height: 1.48;
+    color: #3A332A;
+  }
+  .steps__list button:hover { background: #FFF; color: #3A332A; border-color: var(--ink-soft); }
+  .steps__list button b {
+    flex: 0 0 auto;
+    width: 19px; height: 19px; margin-top: 1px;
+    border-radius: 999px;
+    background: #CFC7B6; color: var(--paper);
+    font-size: 11px; font-weight: 700; line-height: 19px; text-align: center;
+  }
+  .steps__list button.on {
+    background: #FFF; border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .steps__list button.on b { background: var(--accent); }
+  .steps__list button.seen b { background: var(--ink-soft); }
+
+  .steps__check {
+    margin-top: 9px;
+    font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+  }
+  .steps__check b { color: var(--ink); font-weight: 500; }
+
+  /* ===== 兩欄主體 ===== */
+  main {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+    min-height: 0;
+  }
+
+  .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+  .pane__head {
+    flex: 0 0 auto;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 9px 20px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+  }
+  .pane__head span { font-variant-numeric: tabular-nums; }
+
+  /* 左：程式碼 */
+  .pane--code { border-right: 1px solid var(--rule); }
+  .code {
+    flex: 1 1 auto; overflow: auto; margin: 0;
+    padding: 16px 20px 40px;
+    background: var(--panel);
+    font-family: "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
+    font-size: 13px; line-height: 1.68; tab-size: 2;
+    -webkit-text-size-adjust: 100%;
+  }
+  .code code { white-space: pre; display: block; }
+  .c-cmt  { color: #8A8072; }
+  .c-str  { color: #A64C7C; }
+  .c-tag  { color: #8C5A3C; }
+  .c-prop { color: #6E7F45; }
+
+  /* 右：預覽 */
+  .pane--prev { background: #E7E3D6; }
+  .stagewrap { flex: 1 1 auto; overflow: auto; padding: 16px; }
+  .stageouter { width: 1200px; }
+  .stage { width: 1200px; transform-origin: 0 0; }
+  .stage iframe {
+    display: block; width: 1200px; height: 1200px;
+    border: 0; border-radius: 10px; background: #fff;
+    box-shadow: 0 10px 30px rgba(42, 36, 27, 0.16);
+  }
+
+  .hint { font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__id">
+    <span class="bar__code">名片</span>
+    <h1>數位名片</h1>
+  </div>
+  <p class="bar__meta"><b>課堂示範</b>　用到今天：盒模型 ・ margin auto 置中 ・ inline-block 聯絡列 ・ 多重 class　｜　課堂跟著老師一起做的那一張名片</p>
+  <div class="bar__act">
+    <button id="btnCopy">複製這一步的程式碼</button>
+    <button id="btnReload">重新整理預覽</button>
+    <button id="btnPop">開新視窗</button>
+  </div>
+</header>
+
+<section class="steps">
+  <p class="steps__hd">
+    製作步驟（<b>點任一步</b>可切換左下程式碼與右側畫面）
+    <span id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav">
+      <button id="btnPrev">◀ 上一步</button>
+      <button id="btnNext">下一步 ▶</button>
+    </span>
+  </p>
+  <ol class="steps__list" id="stepList">
+    <li><button type="button" data-i="0"><b>1</b><span>把每一格盒子的預設值歸零、設定整頁文字，再讓 .card 用寬度 + margin:0 auto 置中——畫面上先出現一張白卡</span></button></li>
+    <li><button type="button" data-i="1"><b>2</b><span>加上頭像與名字——頭像用空盒子 + border-radius:999px 就是一個圓，不需要任何圖片</span></button></li>
+    <li><button type="button" data-i="2"><b>3</b><span>補一句話簡介：用「字級小一階 + 顏色灰一點」做出第二層，和名字拉開差距</span></button></li>
+    <li><button type="button" data-i="3"><b>4</b><span>用 <hr> 拉一條虛線把名片切成兩段，再加上小標樣式</span></button></li>
+    <li><button type="button" data-i="4"><b>5</b><span>聯絡方式改成 li + inline-block，三顆膠囊按鈕就會橫向排成一列</span></button></li>
+    <li><button type="button" data-i="5"><b>6</b><span>第二個 class 只覆蓋「外框」那部分——HTML 早就掛好 ghost，CSS 一寫上去就生效</span></button></li>
+  </ol>
+  <p class="steps__check"><b>做完自己檢查：</b>水平置中 ・ 有一顆看起來可以按的按鈕 ・ 標題與內文字級有明顯差距 ・ 內文行高 ≥ 1.5 ・ 四周都有留白</p>
+</section>
+
+<main>
+  <section class="pane pane--code">
+    <div class="pane__head"><span id="codeTitle">第 1 步的程式碼</span><span id="stat"></span></div>
+    <pre class="code"><code id="code"></code></pre>
+  </section>
+
+  <section class="pane pane--prev">
+    <div class="pane__head"><span>即時預覽（由左側同一份程式碼執行）</span><span class="hint">捲動可看完整頁面</span></div>
+    <div class="stagewrap" id="wrap">
+      <div class="stageouter" id="outer">
+        <div class="stage" id="stage"><iframe id="prev" title="範例預覽"></iframe></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script id="data" type="application/json">{"docs": ["<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>名片 數位名片<\/title>\n<style>\n  /* ===== ① 每一格都是「盒子」：先把瀏覽器送的預設值歸零 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距（標題、段落自己都帶了一段空白） */\n    padding: 0;             /* 預設內距也一起清掉 */\n    box-sizing: border-box; /* 重要：讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  /* ===== ② 整頁的文字與底色 ===== */\n  body {\n    /* 中文字型寫兩個最安全的，最後 sans-serif 是保底：\n       前面都找不到就退回系統預設，不會變成亂碼 */\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;      /* 內文基準字級，其他字級都是跟它比大小 */\n    line-height: 1.7;     /* 行高 1.7 倍：中文筆畫密，行高要比英文更寬才好讀 */\n    color: #2A241B;       /* 不用純黑，深墨色讀起來比較柔和不刺眼 */\n    background: #E7E3D6;  /* 名片外的底色，讓中間的白卡跳出來 */\n    padding: 72px 24px;   /* 上下 72、左右 24：內容不要貼著螢幕邊緣 */\n  }\n\n  /* ===== ③ 名片本體：一張置中的白卡 ===== */\n  .card {\n    width: 560px;            /* 先給寬度，下一步的 auto 才有東西可以分 */\n    margin: 0 auto;          /* 左右自動分掉剩餘空間 = 水平置中（margin 是推別人，不是撐自己） */\n    padding: 44px 44px 40px; /* 內距：把內容撐開，不要擠在卡片邊上 */\n    background: #FFFFFF;\n    border-radius: 20px;     /* 圓角：方角與圓角看起來像兩個世代的產品 */\n    box-shadow: 0 12px 32px rgba(42, 36, 27, 0.10); /* 一點陰影，讓卡片浮起來 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>名片 數位名片<\/title>\n<style>\n  /* ===== ① 每一格都是「盒子」：先把瀏覽器送的預設值歸零 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距（標題、段落自己都帶了一段空白） */\n    padding: 0;             /* 預設內距也一起清掉 */\n    box-sizing: border-box; /* 重要：讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  /* ===== ② 整頁的文字與底色 ===== */\n  body {\n    /* 中文字型寫兩個最安全的，最後 sans-serif 是保底：\n       前面都找不到就退回系統預設，不會變成亂碼 */\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;      /* 內文基準字級，其他字級都是跟它比大小 */\n    line-height: 1.7;     /* 行高 1.7 倍：中文筆畫密，行高要比英文更寬才好讀 */\n    color: #2A241B;       /* 不用純黑，深墨色讀起來比較柔和不刺眼 */\n    background: #E7E3D6;  /* 名片外的底色，讓中間的白卡跳出來 */\n    padding: 72px 24px;   /* 上下 72、左右 24：內容不要貼著螢幕邊緣 */\n  }\n\n  /* ===== ③ 名片本體：一張置中的白卡 ===== */\n  .card {\n    width: 560px;            /* 先給寬度，下一步的 auto 才有東西可以分 */\n    margin: 0 auto;          /* 左右自動分掉剩餘空間 = 水平置中（margin 是推別人，不是撐自己） */\n    padding: 44px 44px 40px; /* 內距：把內容撐開，不要擠在卡片邊上 */\n    background: #FFFFFF;\n    border-radius: 20px;     /* 圓角：方角與圓角看起來像兩個世代的產品 */\n    box-shadow: 0 12px 32px rgba(42, 36, 27, 0.10); /* 一點陰影，讓卡片浮起來 */\n  }\n  /* ===== ④ 頭像：空盒子 + 圓角就是一個圓 ===== */\n  .avatar {\n    width: 96px;\n    height: 96px;           /* 寬高一樣，才會是正圓 */\n    border-radius: 999px;   /* 999px 遠大於半徑，所以一定是圓而不是圓角矩形 */\n    background: #E8C9B6;    /* 沒有圖片也能做頭像，先用色塊代替 */\n  }\n\n  /* ===== ⑤ 名字：整張名片最大的字 ===== */\n  .name {\n    font-size: 36px;      /* 最大的一階，視線第一個落在這裡 */\n    font-weight: 700;     /* 700 = bold；中文字型常常只有 400 與 700 兩種 */\n    letter-spacing: 3px;  /* 字距：標題加一點，看起來更透氣 */\n    margin-top: 20px;     /* 和上面的頭像分開一點 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <div class=\"avatar\"><\/div>\n    <p class=\"name\">林彥廷<\/p>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>名片 數位名片<\/title>\n<style>\n  /* ===== ① 每一格都是「盒子」：先把瀏覽器送的預設值歸零 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距（標題、段落自己都帶了一段空白） */\n    padding: 0;             /* 預設內距也一起清掉 */\n    box-sizing: border-box; /* 重要：讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  /* ===== ② 整頁的文字與底色 ===== */\n  body {\n    /* 中文字型寫兩個最安全的，最後 sans-serif 是保底：\n       前面都找不到就退回系統預設，不會變成亂碼 */\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;      /* 內文基準字級，其他字級都是跟它比大小 */\n    line-height: 1.7;     /* 行高 1.7 倍：中文筆畫密，行高要比英文更寬才好讀 */\n    color: #2A241B;       /* 不用純黑，深墨色讀起來比較柔和不刺眼 */\n    background: #E7E3D6;  /* 名片外的底色，讓中間的白卡跳出來 */\n    padding: 72px 24px;   /* 上下 72、左右 24：內容不要貼著螢幕邊緣 */\n  }\n\n  /* ===== ③ 名片本體：一張置中的白卡 ===== */\n  .card {\n    width: 560px;            /* 先給寬度，下一步的 auto 才有東西可以分 */\n    margin: 0 auto;          /* 左右自動分掉剩餘空間 = 水平置中（margin 是推別人，不是撐自己） */\n    padding: 44px 44px 40px; /* 內距：把內容撐開，不要擠在卡片邊上 */\n    background: #FFFFFF;\n    border-radius: 20px;     /* 圓角：方角與圓角看起來像兩個世代的產品 */\n    box-shadow: 0 12px 32px rgba(42, 36, 27, 0.10); /* 一點陰影，讓卡片浮起來 */\n  }\n  /* ===== ④ 頭像：空盒子 + 圓角就是一個圓 ===== */\n  .avatar {\n    width: 96px;\n    height: 96px;           /* 寬高一樣，才會是正圓 */\n    border-radius: 999px;   /* 999px 遠大於半徑，所以一定是圓而不是圓角矩形 */\n    background: #E8C9B6;    /* 沒有圖片也能做頭像，先用色塊代替 */\n  }\n\n  /* ===== ⑤ 名字：整張名片最大的字 ===== */\n  .name {\n    font-size: 36px;      /* 最大的一階，視線第一個落在這裡 */\n    font-weight: 700;     /* 700 = bold；中文字型常常只有 400 與 700 兩種 */\n    letter-spacing: 3px;  /* 字距：標題加一點，看起來更透氣 */\n    margin-top: 20px;     /* 和上面的頭像分開一點 */\n  }\n  /* ===== ⑥ 一句話簡介：用「小 + 灰」拉出第二層 ===== */\n  .lead {\n    font-size: 17px;   /* 只比內文大一點，跟名字差一階，層級就出來了 */\n    color: #5C5345;    /* 灰色：比主標弱，但仍看得清楚 */\n    margin-top: 8px;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <div class=\"avatar\"><\/div>\n    <p class=\"name\">林彥廷<\/p>\n    <p class=\"lead\">前端切版 ｜ 把想法變成一頁看得懂的網站<\/p>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>名片 數位名片<\/title>\n<style>\n  /* ===== ① 每一格都是「盒子」：先把瀏覽器送的預設值歸零 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距（標題、段落自己都帶了一段空白） */\n    padding: 0;             /* 預設內距也一起清掉 */\n    box-sizing: border-box; /* 重要：讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  /* ===== ② 整頁的文字與底色 ===== */\n  body {\n    /* 中文字型寫兩個最安全的，最後 sans-serif 是保底：\n       前面都找不到就退回系統預設，不會變成亂碼 */\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;      /* 內文基準字級，其他字級都是跟它比大小 */\n    line-height: 1.7;     /* 行高 1.7 倍：中文筆畫密，行高要比英文更寬才好讀 */\n    color: #2A241B;       /* 不用純黑，深墨色讀起來比較柔和不刺眼 */\n    background: #E7E3D6;  /* 名片外的底色，讓中間的白卡跳出來 */\n    padding: 72px 24px;   /* 上下 72、左右 24：內容不要貼著螢幕邊緣 */\n  }\n\n  /* ===== ③ 名片本體：一張置中的白卡 ===== */\n  .card {\n    width: 560px;            /* 先給寬度，下一步的 auto 才有東西可以分 */\n    margin: 0 auto;          /* 左右自動分掉剩餘空間 = 水平置中（margin 是推別人，不是撐自己） */\n    padding: 44px 44px 40px; /* 內距：把內容撐開，不要擠在卡片邊上 */\n    background: #FFFFFF;\n    border-radius: 20px;     /* 圓角：方角與圓角看起來像兩個世代的產品 */\n    box-shadow: 0 12px 32px rgba(42, 36, 27, 0.10); /* 一點陰影，讓卡片浮起來 */\n  }\n  /* ===== ④ 頭像：空盒子 + 圓角就是一個圓 ===== */\n  .avatar {\n    width: 96px;\n    height: 96px;           /* 寬高一樣，才會是正圓 */\n    border-radius: 999px;   /* 999px 遠大於半徑，所以一定是圓而不是圓角矩形 */\n    background: #E8C9B6;    /* 沒有圖片也能做頭像，先用色塊代替 */\n  }\n\n  /* ===== ⑤ 名字：整張名片最大的字 ===== */\n  .name {\n    font-size: 36px;      /* 最大的一階，視線第一個落在這裡 */\n    font-weight: 700;     /* 700 = bold；中文字型常常只有 400 與 700 兩種 */\n    letter-spacing: 3px;  /* 字距：標題加一點，看起來更透氣 */\n    margin-top: 20px;     /* 和上面的頭像分開一點 */\n  }\n  /* ===== ⑥ 一句話簡介：用「小 + 灰」拉出第二層 ===== */\n  .lead {\n    font-size: 17px;   /* 只比內文大一點，跟名字差一階，層級就出來了 */\n    color: #5C5345;    /* 灰色：比主標弱，但仍看得清楚 */\n    margin-top: 8px;\n  }\n  /* ===== ⑦ 分隔線：一條虛線把名片切成上下兩段 ===== */\n  hr {\n    border: 0;                      /* 先把瀏覽器預設的立體框線關掉 */\n    border-top: 1px dashed #D8D2C0; /* 只留上面那一條虛線（框線三件事：粗細 樣式 顏色） */\n    margin: 28px 0 24px;            /* 上下留白，讓兩段有呼吸空間 */\n  }\n\n  /* ===== ⑧ 區塊小標 ===== */\n  .label {\n    font-size: 13px;      /* 最小的一層：它只是標籤，不是主要內容 */\n    font-weight: 700;\n    letter-spacing: 2px;  /* 小字加字距，閱讀時比較不會黏成一團 */\n    color: #8A8072;\n    margin-bottom: 12px;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <div class=\"avatar\"><\/div>\n    <p class=\"name\">林彥廷<\/p>\n    <p class=\"lead\">前端切版 ｜ 把想法變成一頁看得懂的網站<\/p>\n    <hr>\n\n    <p class=\"label\">聯絡方式<\/p>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>名片 數位名片<\/title>\n<style>\n  /* ===== ① 每一格都是「盒子」：先把瀏覽器送的預設值歸零 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距（標題、段落自己都帶了一段空白） */\n    padding: 0;             /* 預設內距也一起清掉 */\n    box-sizing: border-box; /* 重要：讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  /* ===== ② 整頁的文字與底色 ===== */\n  body {\n    /* 中文字型寫兩個最安全的，最後 sans-serif 是保底：\n       前面都找不到就退回系統預設，不會變成亂碼 */\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;      /* 內文基準字級，其他字級都是跟它比大小 */\n    line-height: 1.7;     /* 行高 1.7 倍：中文筆畫密，行高要比英文更寬才好讀 */\n    color: #2A241B;       /* 不用純黑，深墨色讀起來比較柔和不刺眼 */\n    background: #E7E3D6;  /* 名片外的底色，讓中間的白卡跳出來 */\n    padding: 72px 24px;   /* 上下 72、左右 24：內容不要貼著螢幕邊緣 */\n  }\n\n  /* ===== ③ 名片本體：一張置中的白卡 ===== */\n  .card {\n    width: 560px;            /* 先給寬度，下一步的 auto 才有東西可以分 */\n    margin: 0 auto;          /* 左右自動分掉剩餘空間 = 水平置中（margin 是推別人，不是撐自己） */\n    padding: 44px 44px 40px; /* 內距：把內容撐開，不要擠在卡片邊上 */\n    background: #FFFFFF;\n    border-radius: 20px;     /* 圓角：方角與圓角看起來像兩個世代的產品 */\n    box-shadow: 0 12px 32px rgba(42, 36, 27, 0.10); /* 一點陰影，讓卡片浮起來 */\n  }\n  /* ===== ④ 頭像：空盒子 + 圓角就是一個圓 ===== */\n  .avatar {\n    width: 96px;\n    height: 96px;           /* 寬高一樣，才會是正圓 */\n    border-radius: 999px;   /* 999px 遠大於半徑，所以一定是圓而不是圓角矩形 */\n    background: #E8C9B6;    /* 沒有圖片也能做頭像，先用色塊代替 */\n  }\n\n  /* ===== ⑤ 名字：整張名片最大的字 ===== */\n  .name {\n    font-size: 36px;      /* 最大的一階，視線第一個落在這裡 */\n    font-weight: 700;     /* 700 = bold；中文字型常常只有 400 與 700 兩種 */\n    letter-spacing: 3px;  /* 字距：標題加一點，看起來更透氣 */\n    margin-top: 20px;     /* 和上面的頭像分開一點 */\n  }\n  /* ===== ⑥ 一句話簡介：用「小 + 灰」拉出第二層 ===== */\n  .lead {\n    font-size: 17px;   /* 只比內文大一點，跟名字差一階，層級就出來了 */\n    color: #5C5345;    /* 灰色：比主標弱，但仍看得清楚 */\n    margin-top: 8px;\n  }\n  /* ===== ⑦ 分隔線：一條虛線把名片切成上下兩段 ===== */\n  hr {\n    border: 0;                      /* 先把瀏覽器預設的立體框線關掉 */\n    border-top: 1px dashed #D8D2C0; /* 只留上面那一條虛線（框線三件事：粗細 樣式 顏色） */\n    margin: 28px 0 24px;            /* 上下留白，讓兩段有呼吸空間 */\n  }\n\n  /* ===== ⑧ 區塊小標 ===== */\n  .label {\n    font-size: 13px;      /* 最小的一層：它只是標籤，不是主要內容 */\n    font-weight: 700;\n    letter-spacing: 2px;  /* 小字加字距，閱讀時比較不會黏成一團 */\n    color: #8A8072;\n    margin-bottom: 12px;\n  }\n  /* ===== ⑨ 聯絡列：把 li 從「各佔一行」改成「橫向排開」 ===== */\n  .contact {\n    list-style: none; /* 拿掉清單前面的圓點 */\n    font-size: 0;     /* 關鍵技巧：inline-block 之間的空隙是「空白字元」造成的，\n                         把父層字級設成 0，就沒有空白字元可以撐開 → 項目間不會有縫 */\n  }\n  .contact li {\n    display: inline-block; /* 要 inline（可以並排）＋ 要 block（可以調寬高與內距） */\n    padding: 10px 22px;    /* 內距撐出「可以按」的面積，這是可用性問題不是裝飾 */\n    margin: 0 8px 8px 0;\n    background: #2A241B;   /* 深底反白，看起來就像一顆按鈕 */\n    color: #F2EEDF;\n    border-radius: 999px;  /* 膠囊形 */\n    font-size: 14px;       /* 父層是 0，這裡一定要把字級還原，不然字會看不到 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <div class=\"avatar\"><\/div>\n    <p class=\"name\">林彥廷<\/p>\n    <p class=\"lead\">前端切版 ｜ 把想法變成一頁看得懂的網站<\/p>\n    <hr>\n\n    <p class=\"label\">聯絡方式<\/p>\n    <ul class=\"contact\">\n      <li>Email<\/li>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>名片 數位名片<\/title>\n<style>\n  /* ===== ① 每一格都是「盒子」：先把瀏覽器送的預設值歸零 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距（標題、段落自己都帶了一段空白） */\n    padding: 0;             /* 預設內距也一起清掉 */\n    box-sizing: border-box; /* 重要：讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  /* ===== ② 整頁的文字與底色 ===== */\n  body {\n    /* 中文字型寫兩個最安全的，最後 sans-serif 是保底：\n       前面都找不到就退回系統預設，不會變成亂碼 */\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;      /* 內文基準字級，其他字級都是跟它比大小 */\n    line-height: 1.7;     /* 行高 1.7 倍：中文筆畫密，行高要比英文更寬才好讀 */\n    color: #2A241B;       /* 不用純黑，深墨色讀起來比較柔和不刺眼 */\n    background: #E7E3D6;  /* 名片外的底色，讓中間的白卡跳出來 */\n    padding: 72px 24px;   /* 上下 72、左右 24：內容不要貼著螢幕邊緣 */\n  }\n\n  /* ===== ③ 名片本體：一張置中的白卡 ===== */\n  .card {\n    width: 560px;            /* 先給寬度，下一步的 auto 才有東西可以分 */\n    margin: 0 auto;          /* 左右自動分掉剩餘空間 = 水平置中（margin 是推別人，不是撐自己） */\n    padding: 44px 44px 40px; /* 內距：把內容撐開，不要擠在卡片邊上 */\n    background: #FFFFFF;\n    border-radius: 20px;     /* 圓角：方角與圓角看起來像兩個世代的產品 */\n    box-shadow: 0 12px 32px rgba(42, 36, 27, 0.10); /* 一點陰影，讓卡片浮起來 */\n  }\n  /* ===== ④ 頭像：空盒子 + 圓角就是一個圓 ===== */\n  .avatar {\n    width: 96px;\n    height: 96px;           /* 寬高一樣，才會是正圓 */\n    border-radius: 999px;   /* 999px 遠大於半徑，所以一定是圓而不是圓角矩形 */\n    background: #E8C9B6;    /* 沒有圖片也能做頭像，先用色塊代替 */\n  }\n\n  /* ===== ⑤ 名字：整張名片最大的字 ===== */\n  .name {\n    font-size: 36px;      /* 最大的一階，視線第一個落在這裡 */\n    font-weight: 700;     /* 700 = bold；中文字型常常只有 400 與 700 兩種 */\n    letter-spacing: 3px;  /* 字距：標題加一點，看起來更透氣 */\n    margin-top: 20px;     /* 和上面的頭像分開一點 */\n  }\n  /* ===== ⑥ 一句話簡介：用「小 + 灰」拉出第二層 ===== */\n  .lead {\n    font-size: 17px;   /* 只比內文大一點，跟名字差一階，層級就出來了 */\n    color: #5C5345;    /* 灰色：比主標弱，但仍看得清楚 */\n    margin-top: 8px;\n  }\n  /* ===== ⑦ 分隔線：一條虛線把名片切成上下兩段 ===== */\n  hr {\n    border: 0;                      /* 先把瀏覽器預設的立體框線關掉 */\n    border-top: 1px dashed #D8D2C0; /* 只留上面那一條虛線（框線三件事：粗細 樣式 顏色） */\n    margin: 28px 0 24px;            /* 上下留白，讓兩段有呼吸空間 */\n  }\n\n  /* ===== ⑧ 區塊小標 ===== */\n  .label {\n    font-size: 13px;      /* 最小的一層：它只是標籤，不是主要內容 */\n    font-weight: 700;\n    letter-spacing: 2px;  /* 小字加字距，閱讀時比較不會黏成一團 */\n    color: #8A8072;\n    margin-bottom: 12px;\n  }\n  /* ===== ⑨ 聯絡列：把 li 從「各佔一行」改成「橫向排開」 ===== */\n  .contact {\n    list-style: none; /* 拿掉清單前面的圓點 */\n    font-size: 0;     /* 關鍵技巧：inline-block 之間的空隙是「空白字元」造成的，\n                         把父層字級設成 0，就沒有空白字元可以撐開 → 項目間不會有縫 */\n  }\n  .contact li {\n    display: inline-block; /* 要 inline（可以並排）＋ 要 block（可以調寬高與內距） */\n    padding: 10px 22px;    /* 內距撐出「可以按」的面積，這是可用性問題不是裝飾 */\n    margin: 0 8px 8px 0;\n    background: #2A241B;   /* 深底反白，看起來就像一顆按鈕 */\n    color: #F2EEDF;\n    border-radius: 999px;  /* 膠囊形 */\n    font-size: 14px;       /* 父層是 0，這裡一定要把字級還原，不然字會看不到 */\n  }\n  /* ===== ⑩ 第二個 class：只覆蓋「外框」那一部分 ===== */\n  /* HTML 早就掛好了 class=\"ghost\"，只是還沒有人給它樣式；\n     這裡一寫，後面兩顆按鈕立刻變成外框版本——這就是「多重 class」的威力：\n     基礎樣式沿用 .contact li，只把不同之處寫一次 */\n  .contact li.ghost {\n    background: transparent;   /* 蓋掉深底 */\n    color: #2A241B;            /* 字改成深色，在淺底上才看得見 */\n    border: 2px solid #2A241B; /* 改成外框（粗細 樣式 顏色，少寫一項就不會出現） */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <div class=\"avatar\"><\/div>\n    <p class=\"name\">林彥廷<\/p>\n    <p class=\"lead\">前端切版 ｜ 把想法變成一頁看得懂的網站<\/p>\n    <hr>\n\n    <p class=\"label\">聯絡方式<\/p>\n    <ul class=\"contact\">\n      <li>Email<\/li>\n      <li class=\"ghost\">GitHub<\/li>\n      <li class=\"ghost\">作品集<\/li>\n    <\/ul>\n  <\/div>\n<\/body>\n<\/html>\n"]}</script>
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('data').textContent);
+  var docs = DATA.docs, total = docs.length;
+  var cur = 0;
+  var frame = document.getElementById('prev');
+  var stage = document.getElementById('stage');
+  var outer = document.getElementById('outer');
+  var wrap = document.getElementById('wrap');
+
+  /* ---- 極簡語法上色：單次掃描，避免跳脫互相破壞 ---- */
+  function highlight(src) {
+    var esc = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc.replace(
+      /(&lt;!--[\s\S]*?--&gt;|\/\*[\s\S]*?\*\/|"[^"\n]*"|&lt;\/?[a-zA-Z][\w:-]*|[a-z-]+(?=\s*:))/g,
+      function (m) {
+        var cls = m.slice(0, 4) === '&lt;' ? 'c-tag'
+                : m.slice(0, 2) === '/*' || m.slice(0, 4) === '&lt;!' ? 'c-cmt'
+                : m.charAt(0) === '"' ? 'c-str'
+                : 'c-prop';
+        return '<span class="' + cls + '">' + m + '</span>';
+      }
+    );
+  }
+
+  function render() {
+    var code = docs[cur];
+    document.getElementById('code').innerHTML = highlight(code);
+    document.getElementById('code').scrollTop = 0;
+    document.getElementById('stat').textContent = code.split('\n').length + ' 行';
+    document.getElementById('codeTitle').textContent =
+      (cur === total - 1) ? '完整程式碼（HTML ＋ CSS，附註解）' : '第 ' + (cur + 1) + ' 步的程式碼';
+    document.getElementById('pos').textContent = '第 ' + (cur + 1) + ' 步／共 ' + total + ' 步';
+
+    var btns = document.querySelectorAll('#stepList button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', i === cur);
+      btns[i].classList.toggle('seen', i < cur);
+    }
+    document.getElementById('btnPrev').disabled = cur === 0;
+    document.getElementById('btnNext').disabled = cur === total - 1;
+    run();
+  }
+
+  function run() { frame.srcdoc = docs[cur]; }
+
+  /* 內容載入後量出實際高度：量測前先把 iframe 壓到 10px，
+     scrollHeight 才會反映真正的內容高度，不會留一大段空白。 */
+  frame.addEventListener('load', function () {
+    var h = 1200;
+    try {
+      frame.style.height = '10px';
+      h = Math.ceil(frame.contentDocument.documentElement.scrollHeight) || 1200;
+    } catch (e) {}
+    if (h < 120) h = 120;
+    frame.style.height = h + 'px';
+    fit();
+  });
+
+  /* 縮放：把 1200px 寬的頁面等比塞進右欄，並讓外層捲動範圍正確 */
+  function fit() {
+    var avail = wrap.clientWidth - 32;
+    var k = Math.min(1, avail / 1200);
+    stage.style.transform = 'scale(' + k + ')';
+    outer.style.width = (1200 * k) + 'px';
+    outer.style.height = (parseFloat(frame.style.height || 1200) * k) + 'px';
+  }
+  window.addEventListener('resize', fit);
+
+  function go(i) { cur = Math.max(0, Math.min(total - 1, i)); render(); }
+
+  document.getElementById('stepList').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) go(parseInt(b.dataset.i, 10));
+  });
+  document.getElementById('btnPrev').addEventListener('click', function () { go(cur - 1); });
+  document.getElementById('btnNext').addEventListener('click', function () { go(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1); }
+  });
+
+  var btnCopy = document.getElementById('btnCopy');
+  btnCopy.addEventListener('click', function () {
+    var code = docs[cur];
+    function ok() {
+      btnCopy.textContent = '已複製';
+      btnCopy.classList.add('done');
+      setTimeout(function () {
+        btnCopy.textContent = '複製這一步的程式碼';
+        btnCopy.classList.remove('done');
+      }, 1600);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); ok(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(ok, fallback);
+    } else { fallback(); }
+  });
+
+  document.getElementById('btnReload').addEventListener('click', run);
+
+  document.getElementById('btnPop').addEventListener('click', function () {
+    var url = URL.createObjectURL(new Blob([docs[cur]], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  });
+
+  render();
+  fit();
+})();
+</script>
+</body>
+</html>

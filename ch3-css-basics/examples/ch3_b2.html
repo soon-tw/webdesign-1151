@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>範例 B2｜活動報名頁 — 步驟、程式碼與即時預覽</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #F2EEDF;
+    --panel: #FBF9F2;
+    --ink: #2A241B;
+    --ink-soft: #6B6255;
+    --rule: rgba(42, 36, 27, 0.18);
+    --accent: #A64C7C;
+    --accent-soft: #F0DCE8;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ===== 上方工具列 ===== */
+  .bar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 24px;
+    padding: 11px 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar__id { display: flex; align-items: baseline; gap: 14px; }
+  .bar__code { font-size: 24px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+  .bar__id h1 { font-size: 21px; font-weight: 700; letter-spacing: 1px; }
+  .bar__meta { font-size: 12.5px; color: var(--ink-soft); flex: 1 1 auto; }
+  .bar__meta b { font-weight: 500; color: var(--ink); }
+  .bar__act { display: flex; gap: 9px; flex: 0 0 auto; }
+
+  button {
+    font: inherit; font-size: 12.5px;
+    padding: 7px 15px;
+    border: 1px solid var(--ink); border-radius: 999px;
+    background: transparent; color: var(--ink); cursor: pointer;
+  }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button.done { background: #B7C7A8; border-color: #B7C7A8; color: var(--ink); }
+
+  /* ===== 製作步驟（可切換）===== */
+  .steps { flex: 0 0 auto; padding: 11px 24px 12px; border-bottom: 1px solid var(--rule); }
+  .steps__hd {
+    display: flex; align-items: baseline; gap: 14px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    margin-bottom: 9px;
+  }
+  .steps__hd b { color: var(--ink); font-weight: 500; }
+  .steps__nav { margin-left: auto; display: flex; gap: 7px; }
+  .steps__nav button { padding: 3px 12px; font-size: 12px; }
+  .steps__nav button:disabled { opacity: 0.35; cursor: default; }
+  .steps__nav button:disabled:hover { background: transparent; color: var(--ink); }
+
+  .steps__list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .steps__list button {
+    width: 100%; height: 100%;
+    display: flex; gap: 9px; text-align: left;
+    padding: 8px 11px 9px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-size: 12.5px; line-height: 1.48;
+    color: #3A332A;
+  }
+  .steps__list button:hover { background: #FFF; color: #3A332A; border-color: var(--ink-soft); }
+  .steps__list button b {
+    flex: 0 0 auto;
+    width: 19px; height: 19px; margin-top: 1px;
+    border-radius: 999px;
+    background: #CFC7B6; color: var(--paper);
+    font-size: 11px; font-weight: 700; line-height: 19px; text-align: center;
+  }
+  .steps__list button.on {
+    background: #FFF; border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .steps__list button.on b { background: var(--accent); }
+  .steps__list button.seen b { background: var(--ink-soft); }
+
+  .steps__check {
+    margin-top: 9px;
+    font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+  }
+  .steps__check b { color: var(--ink); font-weight: 500; }
+
+  /* ===== 兩欄主體 ===== */
+  main {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+    min-height: 0;
+  }
+
+  .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+  .pane__head {
+    flex: 0 0 auto;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 9px 20px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+  }
+  .pane__head span { font-variant-numeric: tabular-nums; }
+
+  /* 左：程式碼 */
+  .pane--code { border-right: 1px solid var(--rule); }
+  .code {
+    flex: 1 1 auto; overflow: auto; margin: 0;
+    padding: 16px 20px 40px;
+    background: var(--panel);
+    font-family: "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
+    font-size: 13px; line-height: 1.68; tab-size: 2;
+    -webkit-text-size-adjust: 100%;
+  }
+  .code code { white-space: pre; display: block; }
+  .c-cmt  { color: #8A8072; }
+  .c-str  { color: #A64C7C; }
+  .c-tag  { color: #8C5A3C; }
+  .c-prop { color: #6E7F45; }
+
+  /* 右：預覽 */
+  .pane--prev { background: #E7E3D6; }
+  .stagewrap { flex: 1 1 auto; overflow: auto; padding: 16px; }
+  .stageouter { width: 1200px; }
+  .stage { width: 1200px; transform-origin: 0 0; }
+  .stage iframe {
+    display: block; width: 1200px; height: 1200px;
+    border: 0; border-radius: 10px; background: #fff;
+    box-shadow: 0 10px 30px rgba(42, 36, 27, 0.16);
+  }
+
+  .hint { font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__id">
+    <span class="bar__code">B2</span>
+    <h1>活動報名頁</h1>
+  </div>
+  <p class="bar__meta"><b>B 組 挑戰</b>　用到今天：absolute 日期標籤 ・ label 換行 ・ 可點擊面積　｜　講座、工作坊、課程的報名頁</p>
+  <div class="bar__act">
+    <button id="btnCopy">複製這一步的程式碼</button>
+    <button id="btnReload">重新整理預覽</button>
+    <button id="btnPop">開新視窗</button>
+  </div>
+</header>
+
+<section class="steps">
+  <p class="steps__hd">
+    製作步驟（<b>點任一步</b>可切換左下程式碼與右側畫面）
+    <span id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav">
+      <button id="btnPrev">◀ 上一步</button>
+      <button id="btnNext">下一步 ▶</button>
+    </span>
+  </p>
+  <ol class="steps__list" id="stepList">
+    <li><button type="button" data-i="0"><b>1</b><span>上半做成活動資訊卡：外層容器置中，卡片給內距與上方圓角</span></button></li>
+    <li><button type="button" data-i="1"><b>2</b><span>日期標籤用 position:absolute 壓在卡片右上角，父層要先設 relative</span></button></li>
+    <li><button type="button" data-i="2"><b>3</b><span>補上活動標題與時間地點，標題右側要先留出徽章的空間</span></button></li>
+    <li><button type="button" data-i="3"><b>4</b><span>下半接表單卡：白底、下方圓角，與上半接成一整組</span></button></li>
+    <li><button type="button" data-i="4"><b>5</b><span>欄位樣式：label 設 display:block，輸入框才會換到下一行</span></button></li>
+    <li><button type="button" data-i="5"><b>6</b><span>兩個欄位用 inline-block 各佔約一半，最後做送出按鈕與說明文字</span></button></li>
+  </ol>
+</section>
+
+<main>
+  <section class="pane pane--code">
+    <div class="pane__head"><span id="codeTitle">第 1 步的程式碼</span><span id="stat"></span></div>
+    <pre class="code"><code id="code"></code></pre>
+  </section>
+
+  <section class="pane pane--prev">
+    <div class="pane__head"><span>即時預覽（由左側同一份程式碼執行）</span><span class="hint">捲動可看完整頁面</span></div>
+    <div class="stagewrap" id="wrap">
+      <div class="stageouter" id="outer">
+        <div class="stage" id="stage"><iframe id="prev" title="範例預覽"></iframe></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script id="data" type="application/json">{"docs": ["<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B2 活動報名頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整張表單的容器 ===== */\n  .page {\n    width: 860px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 上半：活動資訊卡 ===== */\n  .event {\n    position: relative;             /* 建立定位基準，等一下右上角的日期要用 */\n    padding: 32px 36px 34px;\n    background: #E8C9B6;            /* 和下半的表單不同色 */\n    border-radius: 18px 18px 0 0;   /* 四個角：左上 右上 右下 左下 → 只有上面圓角 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"page\">\n    <section class=\"event\">\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B2 活動報名頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整張表單的容器 ===== */\n  .page {\n    width: 860px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 上半：活動資訊卡 ===== */\n  .event {\n    position: relative;             /* 建立定位基準，等一下右上角的日期要用 */\n    padding: 32px 36px 34px;\n    background: #E8C9B6;            /* 和下半的表單不同色 */\n    border-radius: 18px 18px 0 0;   /* 四個角：左上 右上 右下 左下 → 只有上面圓角 */\n  }\n  /* ===== ④ 日期標籤：absolute 貼在卡片的右上角 ===== */\n  /* 因為父層 .event 設了 relative，這裡的 top/right 是相對「卡片」而不是整個網頁 */\n  .date {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定 */\n    top: 28px;\n    right: 36px;\n    width: 74px;\n    padding: 8px 0;\n    text-align: center;\n    background: #2A241B;\n    color: #F2EEDF;\n    border-radius: 10px;\n    font-size: 13px;\n    line-height: 1.35;    /* 「10 月」和「15」兩行，行高收緊一點比較像一個標籤 */\n  }\n  .date b {\n    display: block;       /* block 才會獨占一行，把「15」推到「10 月」下面 */\n    font-size: 26px;      /* 日期數字放大，一眼就看到 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"page\">\n    <section class=\"event\">\n      <div class=\"date\">10 月<b>15<\/b><\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B2 活動報名頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整張表單的容器 ===== */\n  .page {\n    width: 860px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 上半：活動資訊卡 ===== */\n  .event {\n    position: relative;             /* 建立定位基準，等一下右上角的日期要用 */\n    padding: 32px 36px 34px;\n    background: #E8C9B6;            /* 和下半的表單不同色 */\n    border-radius: 18px 18px 0 0;   /* 四個角：左上 右上 右下 左下 → 只有上面圓角 */\n  }\n  /* ===== ④ 日期標籤：absolute 貼在卡片的右上角 ===== */\n  /* 因為父層 .event 設了 relative，這裡的 top/right 是相對「卡片」而不是整個網頁 */\n  .date {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定 */\n    top: 28px;\n    right: 36px;\n    width: 74px;\n    padding: 8px 0;\n    text-align: center;\n    background: #2A241B;\n    color: #F2EEDF;\n    border-radius: 10px;\n    font-size: 13px;\n    line-height: 1.35;    /* 「10 月」和「15」兩行，行高收緊一點比較像一個標籤 */\n  }\n  .date b {\n    display: block;       /* block 才會獨占一行，把「15」推到「10 月」下面 */\n    font-size: 26px;      /* 日期數字放大，一眼就看到 */\n  }\n  /* ===== ⑤ 活動標題與時間地點 ===== */\n  .event h1 {\n    font-size: 32px;\n    font-weight: 700;\n    letter-spacing: 2px;\n    padding-right: 100px;  /* 重要：右邊讓出空間，標題才不會被日期標籤蓋住 */\n  }\n  .meta {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 10px;\n  }\n  /* 三個資訊（時間、地點、人數）橫向排開，用 padding 當間距 */\n  .meta span {\n    display: inline-block;  /* 可以並排，也吃得到左右內距 */\n    padding-right: 22px;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"page\">\n    <section class=\"event\">\n      <div class=\"date\">10 月<b>15<\/b><\/div>\n      <h1>前端切版實作工作坊<\/h1>\n      <p class=\"meta\">\n        <span>週三 19:00–21:30<\/span>\n        <span>線上 Google Meet<\/span>\n        <span>限額 30 人<\/span>\n      <\/p>\n    <\/section>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B2 活動報名頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整張表單的容器 ===== */\n  .page {\n    width: 860px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 上半：活動資訊卡 ===== */\n  .event {\n    position: relative;             /* 建立定位基準，等一下右上角的日期要用 */\n    padding: 32px 36px 34px;\n    background: #E8C9B6;            /* 和下半的表單不同色 */\n    border-radius: 18px 18px 0 0;   /* 四個角：左上 右上 右下 左下 → 只有上面圓角 */\n  }\n  /* ===== ④ 日期標籤：absolute 貼在卡片的右上角 ===== */\n  /* 因為父層 .event 設了 relative，這裡的 top/right 是相對「卡片」而不是整個網頁 */\n  .date {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定 */\n    top: 28px;\n    right: 36px;\n    width: 74px;\n    padding: 8px 0;\n    text-align: center;\n    background: #2A241B;\n    color: #F2EEDF;\n    border-radius: 10px;\n    font-size: 13px;\n    line-height: 1.35;    /* 「10 月」和「15」兩行，行高收緊一點比較像一個標籤 */\n  }\n  .date b {\n    display: block;       /* block 才會獨占一行，把「15」推到「10 月」下面 */\n    font-size: 26px;      /* 日期數字放大，一眼就看到 */\n  }\n  /* ===== ⑤ 活動標題與時間地點 ===== */\n  .event h1 {\n    font-size: 32px;\n    font-weight: 700;\n    letter-spacing: 2px;\n    padding-right: 100px;  /* 重要：右邊讓出空間，標題才不會被日期標籤蓋住 */\n  }\n  .meta {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 10px;\n  }\n  /* 三個資訊（時間、地點、人數）橫向排開，用 padding 當間距 */\n  .meta span {\n    display: inline-block;  /* 可以並排，也吃得到左右內距 */\n    padding-right: 22px;\n  }\n  /* ===== ⑥ 下半：表單卡，和上半接成一組 ===== */\n  .form {\n    padding: 34px 36px 38px;\n    background: #FFFFFF;\n    border-radius: 0 0 18px 18px;  /* 只有下面兩個角是圓的，和上半合成一張卡 */\n  }\n  .form h2 {\n    font-size: 18px;\n    letter-spacing: 2px;\n    margin-bottom: 22px;\n    padding-bottom: 14px;\n    border-bottom: 1px dashed #C9BEC0;  /* 標題下面一條虛線，把表單分成兩段 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"page\">\n    <section class=\"event\">\n      <div class=\"date\">10 月<b>15<\/b><\/div>\n      <h1>前端切版實作工作坊<\/h1>\n      <p class=\"meta\">\n        <span>週三 19:00–21:30<\/span>\n        <span>線上 Google Meet<\/span>\n        <span>限額 30 人<\/span>\n      <\/p>\n    <\/section>\n    <section class=\"form\">\n      <h2>報名資料<\/h2>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B2 活動報名頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整張表單的容器 ===== */\n  .page {\n    width: 860px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 上半：活動資訊卡 ===== */\n  .event {\n    position: relative;             /* 建立定位基準，等一下右上角的日期要用 */\n    padding: 32px 36px 34px;\n    background: #E8C9B6;            /* 和下半的表單不同色 */\n    border-radius: 18px 18px 0 0;   /* 四個角：左上 右上 右下 左下 → 只有上面圓角 */\n  }\n  /* ===== ④ 日期標籤：absolute 貼在卡片的右上角 ===== */\n  /* 因為父層 .event 設了 relative，這裡的 top/right 是相對「卡片」而不是整個網頁 */\n  .date {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定 */\n    top: 28px;\n    right: 36px;\n    width: 74px;\n    padding: 8px 0;\n    text-align: center;\n    background: #2A241B;\n    color: #F2EEDF;\n    border-radius: 10px;\n    font-size: 13px;\n    line-height: 1.35;    /* 「10 月」和「15」兩行，行高收緊一點比較像一個標籤 */\n  }\n  .date b {\n    display: block;       /* block 才會獨占一行，把「15」推到「10 月」下面 */\n    font-size: 26px;      /* 日期數字放大，一眼就看到 */\n  }\n  /* ===== ⑤ 活動標題與時間地點 ===== */\n  .event h1 {\n    font-size: 32px;\n    font-weight: 700;\n    letter-spacing: 2px;\n    padding-right: 100px;  /* 重要：右邊讓出空間，標題才不會被日期標籤蓋住 */\n  }\n  .meta {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 10px;\n  }\n  /* 三個資訊（時間、地點、人數）橫向排開，用 padding 當間距 */\n  .meta span {\n    display: inline-block;  /* 可以並排，也吃得到左右內距 */\n    padding-right: 22px;\n  }\n  /* ===== ⑥ 下半：表單卡，和上半接成一組 ===== */\n  .form {\n    padding: 34px 36px 38px;\n    background: #FFFFFF;\n    border-radius: 0 0 18px 18px;  /* 只有下面兩個角是圓的，和上半合成一張卡 */\n  }\n  .form h2 {\n    font-size: 18px;\n    letter-spacing: 2px;\n    margin-bottom: 22px;\n    padding-bottom: 14px;\n    border-bottom: 1px dashed #C9BEC0;  /* 標題下面一條虛線，把表單分成兩段 */\n  }\n  /* ===== ⑦ 表單欄位 ===== */\n  .field { margin-bottom: 20px; }   /* 每個欄位之間留距離 */\n\n  .field label {\n    display: block;      /* 關鍵：block 會獨占一行，把下面的 input 推到下一行；\n                            不寫的話 label 和輸入框會擠在同一行 */\n    font-size: 14px;\n    font-weight: 700;\n    margin-bottom: 7px;\n  }\n  .field input {\n    width: 100%;         /* 撐滿欄位寬度 */\n    padding: 13px 16px;  /* 內距：輸入框要夠高才好點、好打字 */\n    font-size: 16px;\n    font-family: inherit; /* 表單元素不會自動繼承字型，要自己寫這一行 */\n    color: #2A241B;\n    background: #F7F5EC;\n    border: 2px solid #E6E0D2;  /* 框線：粗細 樣式 顏色 */\n    border-radius: 10px;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"page\">\n    <section class=\"event\">\n      <div class=\"date\">10 月<b>15<\/b><\/div>\n      <h1>前端切版實作工作坊<\/h1>\n      <p class=\"meta\">\n        <span>週三 19:00–21:30<\/span>\n        <span>線上 Google Meet<\/span>\n        <span>限額 30 人<\/span>\n      <\/p>\n    <\/section>\n    <section class=\"form\">\n      <h2>報名資料<\/h2>\n      <div class=\"row\">\n        <div class=\"field\">\n          <label>姓名<\/label>\n          <input type=\"text\" placeholder=\"王小明\">\n        <\/div>\n        <div class=\"field\">\n          <label>聯絡 Email<\/label>\n          <input type=\"email\" placeholder=\"you@example.com\">\n        <\/div>\n      <\/div>\n\n      <div class=\"field\">\n        <label>想帶走的東西<\/label>\n        <input type=\"text\" placeholder=\"例：一個可以放在履歷上的作品頁\">\n      <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B2 活動報名頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整張表單的容器 ===== */\n  .page {\n    width: 860px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 上半：活動資訊卡 ===== */\n  .event {\n    position: relative;             /* 建立定位基準，等一下右上角的日期要用 */\n    padding: 32px 36px 34px;\n    background: #E8C9B6;            /* 和下半的表單不同色 */\n    border-radius: 18px 18px 0 0;   /* 四個角：左上 右上 右下 左下 → 只有上面圓角 */\n  }\n  /* ===== ④ 日期標籤：absolute 貼在卡片的右上角 ===== */\n  /* 因為父層 .event 設了 relative，這裡的 top/right 是相對「卡片」而不是整個網頁 */\n  .date {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定 */\n    top: 28px;\n    right: 36px;\n    width: 74px;\n    padding: 8px 0;\n    text-align: center;\n    background: #2A241B;\n    color: #F2EEDF;\n    border-radius: 10px;\n    font-size: 13px;\n    line-height: 1.35;    /* 「10 月」和「15」兩行，行高收緊一點比較像一個標籤 */\n  }\n  .date b {\n    display: block;       /* block 才會獨占一行，把「15」推到「10 月」下面 */\n    font-size: 26px;      /* 日期數字放大，一眼就看到 */\n  }\n  /* ===== ⑤ 活動標題與時間地點 ===== */\n  .event h1 {\n    font-size: 32px;\n    font-weight: 700;\n    letter-spacing: 2px;\n    padding-right: 100px;  /* 重要：右邊讓出空間，標題才不會被日期標籤蓋住 */\n  }\n  .meta {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 10px;\n  }\n  /* 三個資訊（時間、地點、人數）橫向排開，用 padding 當間距 */\n  .meta span {\n    display: inline-block;  /* 可以並排，也吃得到左右內距 */\n    padding-right: 22px;\n  }\n  /* ===== ⑥ 下半：表單卡，和上半接成一組 ===== */\n  .form {\n    padding: 34px 36px 38px;\n    background: #FFFFFF;\n    border-radius: 0 0 18px 18px;  /* 只有下面兩個角是圓的，和上半合成一張卡 */\n  }\n  .form h2 {\n    font-size: 18px;\n    letter-spacing: 2px;\n    margin-bottom: 22px;\n    padding-bottom: 14px;\n    border-bottom: 1px dashed #C9BEC0;  /* 標題下面一條虛線，把表單分成兩段 */\n  }\n  /* ===== ⑦ 表單欄位 ===== */\n  .field { margin-bottom: 20px; }   /* 每個欄位之間留距離 */\n\n  .field label {\n    display: block;      /* 關鍵：block 會獨占一行，把下面的 input 推到下一行；\n                            不寫的話 label 和輸入框會擠在同一行 */\n    font-size: 14px;\n    font-weight: 700;\n    margin-bottom: 7px;\n  }\n  .field input {\n    width: 100%;         /* 撐滿欄位寬度 */\n    padding: 13px 16px;  /* 內距：輸入框要夠高才好點、好打字 */\n    font-size: 16px;\n    font-family: inherit; /* 表單元素不會自動繼承字型，要自己寫這一行 */\n    color: #2A241B;\n    background: #F7F5EC;\n    border: 2px solid #E6E0D2;  /* 框線：粗細 樣式 顏色 */\n    border-radius: 10px;\n  }\n  /* ===== ⑧ 兩個欄位並排：改成 inline-block（block 會各佔一行） ===== */\n  .row {\n    font-size: 0;   /* 消掉兩個欄位之間的空白縫隙 */\n  }\n  .row .field {\n    display: inline-block;  /* 並排 */\n    vertical-align: top;\n    width: 47%;             /* 47% + 47% + 間距 6% = 100% */\n    font-size: 16px;        /* 父層歸 0 了，這裡一定要還原字級 */\n  }\n  .row .field:first-child { margin-right: 6%; }  /* 兩欄中間的間距 */\n\n  /* ===== ⑨ 送出按鈕 ===== */\n  .submit {\n    display: inline-block;  /* inline-block 讓它「有按鈕的體積」而不是一行字 */\n    padding: 15px 46px;     /* 上下 15、左右 46：夠大的可點擊面積 */\n    background: #2A241B;\n    color: #F2EEDF;\n    border-radius: 999px;   /* 膠囊形 */\n    font-size: 17px;\n    font-weight: 700;\n  }\n  /* 按鈕旁邊的補充說明 */\n  .note {\n    display: inline-block;\n    margin-left: 18px;\n    font-size: 14px;\n    color: #8A8072;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"page\">\n    <section class=\"event\">\n      <div class=\"date\">10 月<b>15<\/b><\/div>\n      <h1>前端切版實作工作坊<\/h1>\n      <p class=\"meta\">\n        <span>週三 19:00–21:30<\/span>\n        <span>線上 Google Meet<\/span>\n        <span>限額 30 人<\/span>\n      <\/p>\n    <\/section>\n    <section class=\"form\">\n      <h2>報名資料<\/h2>\n      <div class=\"row\">\n        <div class=\"field\">\n          <label>姓名<\/label>\n          <input type=\"text\" placeholder=\"王小明\">\n        <\/div>\n        <div class=\"field\">\n          <label>聯絡 Email<\/label>\n          <input type=\"email\" placeholder=\"you@example.com\">\n        <\/div>\n      <\/div>\n\n      <div class=\"field\">\n        <label>想帶走的東西<\/label>\n        <input type=\"text\" placeholder=\"例：一個可以放在履歷上的作品頁\">\n      <\/div>\n      <span class=\"submit\">送出報名<\/span>\n      <span class=\"note\">送出後會收到確認信，名額保留 3 天。<\/span>\n    <\/section>\n  <\/div>\n<\/body>\n<\/html>\n"]}</script>
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('data').textContent);
+  var docs = DATA.docs, total = docs.length;
+  var cur = 0;
+  var frame = document.getElementById('prev');
+  var stage = document.getElementById('stage');
+  var outer = document.getElementById('outer');
+  var wrap = document.getElementById('wrap');
+
+  /* ---- 極簡語法上色：單次掃描，避免跳脫互相破壞 ---- */
+  function highlight(src) {
+    var esc = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc.replace(
+      /(&lt;!--[\s\S]*?--&gt;|\/\*[\s\S]*?\*\/|"[^"\n]*"|&lt;\/?[a-zA-Z][\w:-]*|[a-z-]+(?=\s*:))/g,
+      function (m) {
+        var cls = m.slice(0, 4) === '&lt;' ? 'c-tag'
+                : m.slice(0, 2) === '/*' || m.slice(0, 4) === '&lt;!' ? 'c-cmt'
+                : m.charAt(0) === '"' ? 'c-str'
+                : 'c-prop';
+        return '<span class="' + cls + '">' + m + '</span>';
+      }
+    );
+  }
+
+  function render() {
+    var code = docs[cur];
+    document.getElementById('code').innerHTML = highlight(code);
+    document.getElementById('code').scrollTop = 0;
+    document.getElementById('stat').textContent = code.split('\n').length + ' 行';
+    document.getElementById('codeTitle').textContent =
+      (cur === total - 1) ? '完整程式碼（HTML ＋ CSS，附註解）' : '第 ' + (cur + 1) + ' 步的程式碼';
+    document.getElementById('pos').textContent = '第 ' + (cur + 1) + ' 步／共 ' + total + ' 步';
+
+    var btns = document.querySelectorAll('#stepList button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', i === cur);
+      btns[i].classList.toggle('seen', i < cur);
+    }
+    document.getElementById('btnPrev').disabled = cur === 0;
+    document.getElementById('btnNext').disabled = cur === total - 1;
+    run();
+  }
+
+  function run() { frame.srcdoc = docs[cur]; }
+
+  /* 內容載入後量出實際高度：量測前先把 iframe 壓到 10px，
+     scrollHeight 才會反映真正的內容高度，不會留一大段空白。 */
+  frame.addEventListener('load', function () {
+    var h = 1200;
+    try {
+      frame.style.height = '10px';
+      h = Math.ceil(frame.contentDocument.documentElement.scrollHeight) || 1200;
+    } catch (e) {}
+    if (h < 120) h = 120;
+    frame.style.height = h + 'px';
+    fit();
+  });
+
+  /* 縮放：把 1200px 寬的頁面等比塞進右欄，並讓外層捲動範圍正確 */
+  function fit() {
+    var avail = wrap.clientWidth - 32;
+    var k = Math.min(1, avail / 1200);
+    stage.style.transform = 'scale(' + k + ')';
+    outer.style.width = (1200 * k) + 'px';
+    outer.style.height = (parseFloat(frame.style.height || 1200) * k) + 'px';
+  }
+  window.addEventListener('resize', fit);
+
+  function go(i) { cur = Math.max(0, Math.min(total - 1, i)); render(); }
+
+  document.getElementById('stepList').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) go(parseInt(b.dataset.i, 10));
+  });
+  document.getElementById('btnPrev').addEventListener('click', function () { go(cur - 1); });
+  document.getElementById('btnNext').addEventListener('click', function () { go(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1); }
+  });
+
+  var btnCopy = document.getElementById('btnCopy');
+  btnCopy.addEventListener('click', function () {
+    var code = docs[cur];
+    function ok() {
+      btnCopy.textContent = '已複製';
+      btnCopy.classList.add('done');
+      setTimeout(function () {
+        btnCopy.textContent = '複製這一步的程式碼';
+        btnCopy.classList.remove('done');
+      }, 1600);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); ok(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(ok, fallback);
+    } else { fallback(); }
+  });
+
+  document.getElementById('btnReload').addEventListener('click', run);
+
+  document.getElementById('btnPop').addEventListener('click', function () {
+    var url = URL.createObjectURL(new Blob([docs[cur]], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  });
+
+  render();
+  fit();
+})();
+</script>
+</body>
+</html>

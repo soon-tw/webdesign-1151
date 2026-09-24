@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>範例 B3｜數位菜單頁 — 步驟、程式碼與即時預覽</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #F2EEDF;
+    --panel: #FBF9F2;
+    --ink: #2A241B;
+    --ink-soft: #6B6255;
+    --rule: rgba(42, 36, 27, 0.18);
+    --accent: #A64C7C;
+    --accent-soft: #F0DCE8;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ===== 上方工具列 ===== */
+  .bar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 24px;
+    padding: 11px 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar__id { display: flex; align-items: baseline; gap: 14px; }
+  .bar__code { font-size: 24px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+  .bar__id h1 { font-size: 21px; font-weight: 700; letter-spacing: 1px; }
+  .bar__meta { font-size: 12.5px; color: var(--ink-soft); flex: 1 1 auto; }
+  .bar__meta b { font-weight: 500; color: var(--ink); }
+  .bar__act { display: flex; gap: 9px; flex: 0 0 auto; }
+
+  button {
+    font: inherit; font-size: 12.5px;
+    padding: 7px 15px;
+    border: 1px solid var(--ink); border-radius: 999px;
+    background: transparent; color: var(--ink); cursor: pointer;
+  }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button.done { background: #B7C7A8; border-color: #B7C7A8; color: var(--ink); }
+
+  /* ===== 製作步驟（可切換）===== */
+  .steps { flex: 0 0 auto; padding: 11px 24px 12px; border-bottom: 1px solid var(--rule); }
+  .steps__hd {
+    display: flex; align-items: baseline; gap: 14px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    margin-bottom: 9px;
+  }
+  .steps__hd b { color: var(--ink); font-weight: 500; }
+  .steps__nav { margin-left: auto; display: flex; gap: 7px; }
+  .steps__nav button { padding: 3px 12px; font-size: 12px; }
+  .steps__nav button:disabled { opacity: 0.35; cursor: default; }
+  .steps__nav button:disabled:hover { background: transparent; color: var(--ink); }
+
+  .steps__list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .steps__list button {
+    width: 100%; height: 100%;
+    display: flex; gap: 9px; text-align: left;
+    padding: 8px 11px 9px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-size: 12.5px; line-height: 1.48;
+    color: #3A332A;
+  }
+  .steps__list button:hover { background: #FFF; color: #3A332A; border-color: var(--ink-soft); }
+  .steps__list button b {
+    flex: 0 0 auto;
+    width: 19px; height: 19px; margin-top: 1px;
+    border-radius: 999px;
+    background: #CFC7B6; color: var(--paper);
+    font-size: 11px; font-weight: 700; line-height: 19px; text-align: center;
+  }
+  .steps__list button.on {
+    background: #FFF; border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .steps__list button.on b { background: var(--accent); }
+  .steps__list button.seen b { background: var(--ink-soft); }
+
+  .steps__check {
+    margin-top: 9px;
+    font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+  }
+  .steps__check b { color: var(--ink); font-weight: 500; }
+
+  /* ===== 兩欄主體 ===== */
+  main {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+    min-height: 0;
+  }
+
+  .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+  .pane__head {
+    flex: 0 0 auto;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 9px 20px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+  }
+  .pane__head span { font-variant-numeric: tabular-nums; }
+
+  /* 左：程式碼 */
+  .pane--code { border-right: 1px solid var(--rule); }
+  .code {
+    flex: 1 1 auto; overflow: auto; margin: 0;
+    padding: 16px 20px 40px;
+    background: var(--panel);
+    font-family: "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
+    font-size: 13px; line-height: 1.68; tab-size: 2;
+    -webkit-text-size-adjust: 100%;
+  }
+  .code code { white-space: pre; display: block; }
+  .c-cmt  { color: #8A8072; }
+  .c-str  { color: #A64C7C; }
+  .c-tag  { color: #8C5A3C; }
+  .c-prop { color: #6E7F45; }
+
+  /* 右：預覽 */
+  .pane--prev { background: #E7E3D6; }
+  .stagewrap { flex: 1 1 auto; overflow: auto; padding: 16px; }
+  .stageouter { width: 1200px; }
+  .stage { width: 1200px; transform-origin: 0 0; }
+  .stage iframe {
+    display: block; width: 1200px; height: 1200px;
+    border: 0; border-radius: 10px; background: #fff;
+    box-shadow: 0 10px 30px rgba(42, 36, 27, 0.16);
+  }
+
+  .hint { font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__id">
+    <span class="bar__code">B3</span>
+    <h1>數位菜單頁</h1>
+  </div>
+  <p class="bar__meta"><b>B 組 挑戰</b>　用到今天：inline-block 左右對齊 ・ span 標重點 ・ 字距與行高　｜　餐飲業的線上菜單，手機打開就看得到</p>
+  <div class="bar__act">
+    <button id="btnCopy">複製這一步的程式碼</button>
+    <button id="btnReload">重新整理預覽</button>
+    <button id="btnPop">開新視窗</button>
+  </div>
+</header>
+
+<section class="steps">
+  <p class="steps__hd">
+    製作步驟（<b>點任一步</b>可切換左下程式碼與右側畫面）
+    <span id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav">
+      <button id="btnPrev">◀ 上一步</button>
+      <button id="btnNext">下一步 ▶</button>
+    </span>
+  </p>
+  <ol class="steps__list" id="stepList">
+    <li><button type="button" data-i="0"><b>1</b><span>容器置中，標題加上 letter-spacing 把字距拉開</span></button></li>
+    <li><button type="button" data-i="1"><b>2</b><span>分類標題用下框線當分隔，比加更多裝飾更乾淨</span></button></li>
+    <li><button type="button" data-i="2"><b>3</b><span>品項列用 inline-block 分左右：名稱約 68%、價格約 32% 並靠右</span></button></li>
+    <li><button type="button" data-i="3"><b>4</b><span>補齊其他品項與第二個分類（義式）</span></button></li>
+    <li><button type="button" data-i="4"><b>5</b><span>底部提醒用 span 標紅關鍵字，外面包一張圓角卡片</span></button></li>
+    <li><button type="button" data-i="5"><b>6</b><span>最後做「每日更換」這種小標籤樣式</span></button></li>
+  </ol>
+</section>
+
+<main>
+  <section class="pane pane--code">
+    <div class="pane__head"><span id="codeTitle">第 1 步的程式碼</span><span id="stat"></span></div>
+    <pre class="code"><code id="code"></code></pre>
+  </section>
+
+  <section class="pane pane--prev">
+    <div class="pane__head"><span>即時預覽（由左側同一份程式碼執行）</span><span class="hint">捲動可看完整頁面</span></div>
+    <div class="stagewrap" id="wrap">
+      <div class="stageouter" id="outer">
+        <div class="stage" id="stage"><iframe id="prev" title="範例預覽"></iframe></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script id="data" type="application/json">{"docs": ["<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B3 數位菜單頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整份菜單的容器 ===== */\n  .menu {\n    width: 820px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 店名與副標 ===== */\n  .top {\n    text-align: center;   /* 整塊置中 */\n    margin-bottom: 38px;\n  }\n  .top h1 {\n    font-size: 34px;\n    font-weight: 700;\n    letter-spacing: 5px;  /* 字距拉大：中文標題加字距會顯得比較「講究」 */\n  }\n  .top p {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 8px;\n    letter-spacing: 1px;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"menu\">\n    <div class=\"top\">\n      <h1>小滿咖啡<\/h1>\n      <p>內用 ・ 外帶 ・ 自備杯子每杯折 10 元<\/p>\n    <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B3 數位菜單頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整份菜單的容器 ===== */\n  .menu {\n    width: 820px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 店名與副標 ===== */\n  .top {\n    text-align: center;   /* 整塊置中 */\n    margin-bottom: 38px;\n  }\n  .top h1 {\n    font-size: 34px;\n    font-weight: 700;\n    letter-spacing: 5px;  /* 字距拉大：中文標題加字距會顯得比較「講究」 */\n  }\n  .top p {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 8px;\n    letter-spacing: 1px;\n  }\n  /* ===== ④ 分類區塊與分類標題 ===== */\n  .group { margin-bottom: 34px; }  /* 兩個分類之間的距離 */\n\n  .group h2 {\n    font-size: 15px;             /* 分類標題故意小，讓品項當主角 */\n    font-weight: 700;\n    letter-spacing: 3px;\n    color: #8A8072;\n    padding-bottom: 10px;\n    margin-bottom: 4px;\n    border-bottom: 2px solid #2A241B;  /* 一條實線當分隔，比框線加底色更乾淨 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"menu\">\n    <div class=\"top\">\n      <h1>小滿咖啡<\/h1>\n      <p>內用 ・ 外帶 ・ 自備杯子每杯折 10 元<\/p>\n    <\/div>\n    <div class=\"group\">\n      <h2>手 沖<\/h2>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B3 數位菜單頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整份菜單的容器 ===== */\n  .menu {\n    width: 820px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 店名與副標 ===== */\n  .top {\n    text-align: center;   /* 整塊置中 */\n    margin-bottom: 38px;\n  }\n  .top h1 {\n    font-size: 34px;\n    font-weight: 700;\n    letter-spacing: 5px;  /* 字距拉大：中文標題加字距會顯得比較「講究」 */\n  }\n  .top p {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 8px;\n    letter-spacing: 1px;\n  }\n  /* ===== ④ 分類區塊與分類標題 ===== */\n  .group { margin-bottom: 34px; }  /* 兩個分類之間的距離 */\n\n  .group h2 {\n    font-size: 15px;             /* 分類標題故意小，讓品項當主角 */\n    font-weight: 700;\n    letter-spacing: 3px;\n    color: #8A8072;\n    padding-bottom: 10px;\n    margin-bottom: 4px;\n    border-bottom: 2px solid #2A241B;  /* 一條實線當分隔，比框線加底色更乾淨 */\n  }\n  /* ===== ⑤ 品項列：名稱靠左、價格靠右，用兩個 inline-block 分掉整列 ===== */\n  .item {\n    font-size: 0;                  /* 消掉兩個 inline-block 之間的空白縫隙 */\n    padding: 15px 0;               /* 上下內距 = 每一列的高度 */\n    border-bottom: 1px dashed #D8D2C0;  /* 品項之間的細虛線 */\n  }\n  /* 最後一項不需要下面的線 */\n  .item:last-child { border-bottom: 0; }\n\n  /* 左邊 68%：名稱 */\n  .name {\n    display: inline-block;\n    width: 68%;\n    font-size: 18px;        /* 父層歸 0，名稱要還原字級 */\n    vertical-align: top;    /* 和右邊的價格「頂端對齊」 */\n  }\n  .name em {\n    display: block;         /* 讓說明獨占一行，跑到名稱下面 */\n    font-style: normal;     /* em 預設是斜體，這裡把它關掉 */\n    font-size: 14px;        /* 說明小一階 */\n    color: #8A8072;         /* 灰色，不要和名稱搶 */\n  }\n\n  /* 右邊 32%：價格，靠右對齊 */\n  .price {\n    display: inline-block;\n    width: 32%;             /* 68% + 32% = 100%，剛好分掉一整列 */\n    text-align: right;      /* 關鍵：靠右對齊，不要用空白鍵去推 */\n    font-size: 20px;        /* 價格比名稱大，方便快速掃描 */\n    font-weight: 700;\n    vertical-align: top;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"menu\">\n    <div class=\"top\">\n      <h1>小滿咖啡<\/h1>\n      <p>內用 ・ 外帶 ・ 自備杯子每杯折 10 元<\/p>\n    <\/div>\n    <div class=\"group\">\n      <h2>手 沖<\/h2>\n      <div class=\"item\">\n        <div class=\"name\">衣索比亞 耶加雪菲<em>柑橘、花香、尾韻乾淨<\/em><\/div>\n        <div class=\"price\">180<\/div>\n      <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B3 數位菜單頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整份菜單的容器 ===== */\n  .menu {\n    width: 820px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 店名與副標 ===== */\n  .top {\n    text-align: center;   /* 整塊置中 */\n    margin-bottom: 38px;\n  }\n  .top h1 {\n    font-size: 34px;\n    font-weight: 700;\n    letter-spacing: 5px;  /* 字距拉大：中文標題加字距會顯得比較「講究」 */\n  }\n  .top p {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 8px;\n    letter-spacing: 1px;\n  }\n  /* ===== ④ 分類區塊與分類標題 ===== */\n  .group { margin-bottom: 34px; }  /* 兩個分類之間的距離 */\n\n  .group h2 {\n    font-size: 15px;             /* 分類標題故意小，讓品項當主角 */\n    font-weight: 700;\n    letter-spacing: 3px;\n    color: #8A8072;\n    padding-bottom: 10px;\n    margin-bottom: 4px;\n    border-bottom: 2px solid #2A241B;  /* 一條實線當分隔，比框線加底色更乾淨 */\n  }\n  /* ===== ⑤ 品項列：名稱靠左、價格靠右，用兩個 inline-block 分掉整列 ===== */\n  .item {\n    font-size: 0;                  /* 消掉兩個 inline-block 之間的空白縫隙 */\n    padding: 15px 0;               /* 上下內距 = 每一列的高度 */\n    border-bottom: 1px dashed #D8D2C0;  /* 品項之間的細虛線 */\n  }\n  /* 最後一項不需要下面的線 */\n  .item:last-child { border-bottom: 0; }\n\n  /* 左邊 68%：名稱 */\n  .name {\n    display: inline-block;\n    width: 68%;\n    font-size: 18px;        /* 父層歸 0，名稱要還原字級 */\n    vertical-align: top;    /* 和右邊的價格「頂端對齊」 */\n  }\n  .name em {\n    display: block;         /* 讓說明獨占一行，跑到名稱下面 */\n    font-style: normal;     /* em 預設是斜體，這裡把它關掉 */\n    font-size: 14px;        /* 說明小一階 */\n    color: #8A8072;         /* 灰色，不要和名稱搶 */\n  }\n\n  /* 右邊 32%：價格，靠右對齊 */\n  .price {\n    display: inline-block;\n    width: 32%;             /* 68% + 32% = 100%，剛好分掉一整列 */\n    text-align: right;      /* 關鍵：靠右對齊，不要用空白鍵去推 */\n    font-size: 20px;        /* 價格比名稱大，方便快速掃描 */\n    font-weight: 700;\n    vertical-align: top;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"menu\">\n    <div class=\"top\">\n      <h1>小滿咖啡<\/h1>\n      <p>內用 ・ 外帶 ・ 自備杯子每杯折 10 元<\/p>\n    <\/div>\n    <div class=\"group\">\n      <h2>手 沖<\/h2>\n      <div class=\"item\">\n        <div class=\"name\">衣索比亞 耶加雪菲<em>柑橘、花香、尾韻乾淨<\/em><\/div>\n        <div class=\"price\">180<\/div>\n      <\/div>\n      <div class=\"item\">\n        <div class=\"name\">哥倫比亞 薇拉<em>焦糖、堅果、口感圓潤<\/em><\/div>\n        <div class=\"price\">170<\/div>\n      <\/div>\n      <div class=\"item\">\n        <div class=\"name\">本日單品<span class=\"tag\">每日更換<\/span><\/div>\n        <div class=\"price\">150<\/div>\n      <\/div>\n    <\/div>\n\n    <div class=\"group\">\n      <h2>義 式<\/h2>\n      <div class=\"item\">\n        <div class=\"name\">拿鐵<em>冰／熱<\/em><\/div>\n        <div class=\"price\">130<\/div>\n      <\/div>\n      <div class=\"item\">\n        <div class=\"name\">卡布奇諾<em>奶泡厚，建議熱飲<\/em><\/div>\n        <div class=\"price\">130<\/div>\n      <\/div>\n    <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B3 數位菜單頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整份菜單的容器 ===== */\n  .menu {\n    width: 820px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 店名與副標 ===== */\n  .top {\n    text-align: center;   /* 整塊置中 */\n    margin-bottom: 38px;\n  }\n  .top h1 {\n    font-size: 34px;\n    font-weight: 700;\n    letter-spacing: 5px;  /* 字距拉大：中文標題加字距會顯得比較「講究」 */\n  }\n  .top p {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 8px;\n    letter-spacing: 1px;\n  }\n  /* ===== ④ 分類區塊與分類標題 ===== */\n  .group { margin-bottom: 34px; }  /* 兩個分類之間的距離 */\n\n  .group h2 {\n    font-size: 15px;             /* 分類標題故意小，讓品項當主角 */\n    font-weight: 700;\n    letter-spacing: 3px;\n    color: #8A8072;\n    padding-bottom: 10px;\n    margin-bottom: 4px;\n    border-bottom: 2px solid #2A241B;  /* 一條實線當分隔，比框線加底色更乾淨 */\n  }\n  /* ===== ⑤ 品項列：名稱靠左、價格靠右，用兩個 inline-block 分掉整列 ===== */\n  .item {\n    font-size: 0;                  /* 消掉兩個 inline-block 之間的空白縫隙 */\n    padding: 15px 0;               /* 上下內距 = 每一列的高度 */\n    border-bottom: 1px dashed #D8D2C0;  /* 品項之間的細虛線 */\n  }\n  /* 最後一項不需要下面的線 */\n  .item:last-child { border-bottom: 0; }\n\n  /* 左邊 68%：名稱 */\n  .name {\n    display: inline-block;\n    width: 68%;\n    font-size: 18px;        /* 父層歸 0，名稱要還原字級 */\n    vertical-align: top;    /* 和右邊的價格「頂端對齊」 */\n  }\n  .name em {\n    display: block;         /* 讓說明獨占一行，跑到名稱下面 */\n    font-style: normal;     /* em 預設是斜體，這裡把它關掉 */\n    font-size: 14px;        /* 說明小一階 */\n    color: #8A8072;         /* 灰色，不要和名稱搶 */\n  }\n\n  /* 右邊 32%：價格，靠右對齊 */\n  .price {\n    display: inline-block;\n    width: 32%;             /* 68% + 32% = 100%，剛好分掉一整列 */\n    text-align: right;      /* 關鍵：靠右對齊，不要用空白鍵去推 */\n    font-size: 20px;        /* 價格比名稱大，方便快速掃描 */\n    font-weight: 700;\n    vertical-align: top;\n  }\n  /* ===== ⑥ 底部提醒 ===== */\n  .tip {\n    margin-top: 30px;\n    padding: 18px 22px;     /* 內距撑開，文字不要貼著卡片邊 */\n    background: #FFFFFF;    /* 白底卡片，和整頁的米色分開 */\n    border-radius: 12px;\n    font-size: 15px;\n    color: #5C5345;\n  }\n  /* span 只包住一個詞：不會把整段拆開，只改那幾個字的顏色 */\n  .tip span {\n    color: #A64C7C;\n    font-weight: 700;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"menu\">\n    <div class=\"top\">\n      <h1>小滿咖啡<\/h1>\n      <p>內用 ・ 外帶 ・ 自備杯子每杯折 10 元<\/p>\n    <\/div>\n    <div class=\"group\">\n      <h2>手 沖<\/h2>\n      <div class=\"item\">\n        <div class=\"name\">衣索比亞 耶加雪菲<em>柑橘、花香、尾韻乾淨<\/em><\/div>\n        <div class=\"price\">180<\/div>\n      <\/div>\n      <div class=\"item\">\n        <div class=\"name\">哥倫比亞 薇拉<em>焦糖、堅果、口感圓潤<\/em><\/div>\n        <div class=\"price\">170<\/div>\n      <\/div>\n      <div class=\"item\">\n        <div class=\"name\">本日單品<span class=\"tag\">每日更換<\/span><\/div>\n        <div class=\"price\">150<\/div>\n      <\/div>\n    <\/div>\n\n    <div class=\"group\">\n      <h2>義 式<\/h2>\n      <div class=\"item\">\n        <div class=\"name\">拿鐵<em>冰／熱<\/em><\/div>\n        <div class=\"price\">130<\/div>\n      <\/div>\n      <div class=\"item\">\n        <div class=\"name\">卡布奇諾<em>奶泡厚，建議熱飲<\/em><\/div>\n        <div class=\"price\">130<\/div>\n      <\/div>\n    <\/div>\n    <p class=\"tip\">\n      小提醒：手沖需要 <span>等待 6 到 8 分鐘<\/span>，趕時間的話建議點義式。\n    <\/p>\n  <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>B3 數位菜單頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 52px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 整份菜單的容器 ===== */\n  .menu {\n    width: 820px;    /* 有寬度才能置中 */\n    margin: 0 auto;\n  }\n\n  /* ===== ③ 店名與副標 ===== */\n  .top {\n    text-align: center;   /* 整塊置中 */\n    margin-bottom: 38px;\n  }\n  .top h1 {\n    font-size: 34px;\n    font-weight: 700;\n    letter-spacing: 5px;  /* 字距拉大：中文標題加字距會顯得比較「講究」 */\n  }\n  .top p {\n    font-size: 15px;\n    color: #5C5345;\n    margin-top: 8px;\n    letter-spacing: 1px;\n  }\n  /* ===== ④ 分類區塊與分類標題 ===== */\n  .group { margin-bottom: 34px; }  /* 兩個分類之間的距離 */\n\n  .group h2 {\n    font-size: 15px;             /* 分類標題故意小，讓品項當主角 */\n    font-weight: 700;\n    letter-spacing: 3px;\n    color: #8A8072;\n    padding-bottom: 10px;\n    margin-bottom: 4px;\n    border-bottom: 2px solid #2A241B;  /* 一條實線當分隔，比框線加底色更乾淨 */\n  }\n  /* ===== ⑤ 品項列：名稱靠左、價格靠右，用兩個 inline-block 分掉整列 ===== */\n  .item {\n    font-size: 0;                  /* 消掉兩個 inline-block 之間的空白縫隙 */\n    padding: 15px 0;               /* 上下內距 = 每一列的高度 */\n    border-bottom: 1px dashed #D8D2C0;  /* 品項之間的細虛線 */\n  }\n  /* 最後一項不需要下面的線 */\n  .item:last-child { border-bottom: 0; }\n\n  /* 左邊 68%：名稱 */\n  .name {\n    display: inline-block;\n    width: 68%;\n    font-size: 18px;        /* 父層歸 0，名稱要還原字級 */\n    vertical-align: top;    /* 和右邊的價格「頂端對齊」 */\n  }\n  .name em {\n    display: block;         /* 讓說明獨占一行，跑到名稱下面 */\n    font-style: normal;     /* em 預設是斜體，這裡把它關掉 */\n    font-size: 14px;        /* 說明小一階 */\n    color: #8A8072;         /* 灰色，不要和名稱搶 */\n  }\n\n  /* 右邊 32%：價格，靠右對齊 */\n  .price {\n    display: inline-block;\n    width: 32%;             /* 68% + 32% = 100%，剛好分掉一整列 */\n    text-align: right;      /* 關鍵：靠右對齊，不要用空白鍵去推 */\n    font-size: 20px;        /* 價格比名稱大，方便快速掃描 */\n    font-weight: 700;\n    vertical-align: top;\n  }\n  /* ===== ⑥ 底部提醒 ===== */\n  .tip {\n    margin-top: 30px;\n    padding: 18px 22px;     /* 內距撑開，文字不要貼著卡片邊 */\n    background: #FFFFFF;    /* 白底卡片，和整頁的米色分開 */\n    border-radius: 12px;\n    font-size: 15px;\n    color: #5C5345;\n  }\n  /* span 只包住一個詞：不會把整段拆開，只改那幾個字的顏色 */\n  .tip span {\n    color: #A64C7C;\n    font-weight: 700;\n  }\n  /* ===== ⑦ 小標籤（每日更換）===== */\n  .tag {\n    display: inline-block;  /* 變成一個有體積的小方塊，而不是一行字 */\n    margin-left: 10px;      /* 和前面的品項名稱分開 */\n    padding: 2px 12px;      /* 內距做出藥丸形狀 */\n    background: #D6DD63;    /* 亮色，一眼看到 */\n    border-radius: 999px;\n    font-size: 12px;        /* 最小的一層，只是提示 */\n    font-weight: 700;\n    vertical-align: 2px;    /* 往上抬 2px，和旁邊較大的文字對齊得更好看 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"menu\">\n    <div class=\"top\">\n      <h1>小滿咖啡<\/h1>\n      <p>內用 ・ 外帶 ・ 自備杯子每杯折 10 元<\/p>\n    <\/div>\n    <div class=\"group\">\n      <h2>手 沖<\/h2>\n      <div class=\"item\">\n        <div class=\"name\">衣索比亞 耶加雪菲<em>柑橘、花香、尾韻乾淨<\/em><\/div>\n        <div class=\"price\">180<\/div>\n      <\/div>\n      <div class=\"item\">\n        <div class=\"name\">哥倫比亞 薇拉<em>焦糖、堅果、口感圓潤<\/em><\/div>\n        <div class=\"price\">170<\/div>\n      <\/div>\n      <div class=\"item\">\n        <div class=\"name\">本日單品<span class=\"tag\">每日更換<\/span><\/div>\n        <div class=\"price\">150<\/div>\n      <\/div>\n    <\/div>\n\n    <div class=\"group\">\n      <h2>義 式<\/h2>\n      <div class=\"item\">\n        <div class=\"name\">拿鐵<em>冰／熱<\/em><\/div>\n        <div class=\"price\">130<\/div>\n      <\/div>\n      <div class=\"item\">\n        <div class=\"name\">卡布奇諾<em>奶泡厚，建議熱飲<\/em><\/div>\n        <div class=\"price\">130<\/div>\n      <\/div>\n    <\/div>\n    <p class=\"tip\">\n      小提醒：手沖需要 <span>等待 6 到 8 分鐘<\/span>，趕時間的話建議點義式。\n    <\/p>\n  <\/div>\n<\/body>\n<\/html>\n"]}</script>
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('data').textContent);
+  var docs = DATA.docs, total = docs.length;
+  var cur = 0;
+  var frame = document.getElementById('prev');
+  var stage = document.getElementById('stage');
+  var outer = document.getElementById('outer');
+  var wrap = document.getElementById('wrap');
+
+  /* ---- 極簡語法上色：單次掃描，避免跳脫互相破壞 ---- */
+  function highlight(src) {
+    var esc = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc.replace(
+      /(&lt;!--[\s\S]*?--&gt;|\/\*[\s\S]*?\*\/|"[^"\n]*"|&lt;\/?[a-zA-Z][\w:-]*|[a-z-]+(?=\s*:))/g,
+      function (m) {
+        var cls = m.slice(0, 4) === '&lt;' ? 'c-tag'
+                : m.slice(0, 2) === '/*' || m.slice(0, 4) === '&lt;!' ? 'c-cmt'
+                : m.charAt(0) === '"' ? 'c-str'
+                : 'c-prop';
+        return '<span class="' + cls + '">' + m + '</span>';
+      }
+    );
+  }
+
+  function render() {
+    var code = docs[cur];
+    document.getElementById('code').innerHTML = highlight(code);
+    document.getElementById('code').scrollTop = 0;
+    document.getElementById('stat').textContent = code.split('\n').length + ' 行';
+    document.getElementById('codeTitle').textContent =
+      (cur === total - 1) ? '完整程式碼（HTML ＋ CSS，附註解）' : '第 ' + (cur + 1) + ' 步的程式碼';
+    document.getElementById('pos').textContent = '第 ' + (cur + 1) + ' 步／共 ' + total + ' 步';
+
+    var btns = document.querySelectorAll('#stepList button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', i === cur);
+      btns[i].classList.toggle('seen', i < cur);
+    }
+    document.getElementById('btnPrev').disabled = cur === 0;
+    document.getElementById('btnNext').disabled = cur === total - 1;
+    run();
+  }
+
+  function run() { frame.srcdoc = docs[cur]; }
+
+  /* 內容載入後量出實際高度：量測前先把 iframe 壓到 10px，
+     scrollHeight 才會反映真正的內容高度，不會留一大段空白。 */
+  frame.addEventListener('load', function () {
+    var h = 1200;
+    try {
+      frame.style.height = '10px';
+      h = Math.ceil(frame.contentDocument.documentElement.scrollHeight) || 1200;
+    } catch (e) {}
+    if (h < 120) h = 120;
+    frame.style.height = h + 'px';
+    fit();
+  });
+
+  /* 縮放：把 1200px 寬的頁面等比塞進右欄，並讓外層捲動範圍正確 */
+  function fit() {
+    var avail = wrap.clientWidth - 32;
+    var k = Math.min(1, avail / 1200);
+    stage.style.transform = 'scale(' + k + ')';
+    outer.style.width = (1200 * k) + 'px';
+    outer.style.height = (parseFloat(frame.style.height || 1200) * k) + 'px';
+  }
+  window.addEventListener('resize', fit);
+
+  function go(i) { cur = Math.max(0, Math.min(total - 1, i)); render(); }
+
+  document.getElementById('stepList').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) go(parseInt(b.dataset.i, 10));
+  });
+  document.getElementById('btnPrev').addEventListener('click', function () { go(cur - 1); });
+  document.getElementById('btnNext').addEventListener('click', function () { go(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1); }
+  });
+
+  var btnCopy = document.getElementById('btnCopy');
+  btnCopy.addEventListener('click', function () {
+    var code = docs[cur];
+    function ok() {
+      btnCopy.textContent = '已複製';
+      btnCopy.classList.add('done');
+      setTimeout(function () {
+        btnCopy.textContent = '複製這一步的程式碼';
+        btnCopy.classList.remove('done');
+      }, 1600);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); ok(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(ok, fallback);
+    } else { fallback(); }
+  });
+
+  document.getElementById('btnReload').addEventListener('click', run);
+
+  document.getElementById('btnPop').addEventListener('click', function () {
+    var url = URL.createObjectURL(new Blob([docs[cur]], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  });
+
+  render();
+  fit();
+})();
+</script>
+</body>
+</html>

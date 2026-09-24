@@ -1,0 +1,2262 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>互動式網頁設計 CH3｜CSS 基礎與視覺樣式</title>
+
+
+<style>
+/* ===========================================================
+   CH2 簡報樣式 — soft-editorial
+   由 output/簡報建置/build.py 內嵌字型後寫入簡報檔案。
+   修改樣式請改本檔，再重跑 build.py。
+   =========================================================== */
+
+/* ===== 內嵌字型子集（離線可用；由 build.py 產生） ===== */
+
+/* ===========================================
+   1. THEME TOKENS
+   =========================================== */
+:root {
+  /* Colors */
+  --paper:        #F2EEDF;
+  --paper-2:      #ECE6D2;
+  --ink:          #2A241B;
+  --ink-soft:     #5C5345;
+  --pink:         #E1A4C2;
+  --lemon:        #D6DD63;
+  --blush:        #E8C9B6;
+  --sage:         #B7C7A8;
+  --lilac:        #C9BEDC;
+  --card:         rgba(255, 255, 255, 0.55);
+  --rule-soft:    rgba(42, 36, 27, 0.18);
+  --rule-medium:  rgba(42, 36, 27, 0.35);
+
+  /* 程式碼語法色（同一色票的加深版） */
+  --code-tag: #8C5A3C;
+  --code-attr: #6E7F45;
+  --code-str: #A64C7C;
+  --code-cmt: #8A8072;
+
+  /* Fonts — 全部內嵌，離線可用 */
+  --f-display: 'Cormorant Garamond', 'LXGW WenKai TC', 'Noto Serif TC', serif;
+  --f-body:    'Work Sans', 'Noto Serif TC', serif;
+  --f-sans:    'Work Sans', 'Noto Sans TC', sans-serif;
+  --f-code:    'JetBrains Mono', 'Noto Sans TC', monospace;
+  --f-icons:   'Material Symbols Outlined';
+
+  /* Type scale（1920×1080 stage；字級下限見 CLAUDE.md 規範） */
+  --t-display:  168px;
+  --t-chapter:  132px;
+  --t-headline: 76px;
+  --t-subhead:  48px;
+  --t-body:     38px;
+  --t-body-sm:  34px;
+  --t-code:     32px;
+  --t-min:      28px;
+  --t-eyebrow:  30px;
+
+  --pad-outer: 80px;
+  --pad-top: 60px;
+  --pad-bottom: 50px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.6s;
+
+  --stage-bg: #1a1713;
+  --slide-bg: var(--paper);
+}
+
+/* ===========================================
+   2. BASE（viewport-base.css 全文強制納入）
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html,
+body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-stage {
+  position: absolute; left: 0; top: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  background: var(--slide-bg, #fff);
+}
+.slide {
+  position: absolute; inset: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  display: block;
+  visibility: hidden; opacity: 0; pointer-events: none;
+  background: var(--slide-bg, #fff);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+
+@media print {
+  html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+  .deck-viewport { position: static; overflow: visible; background: #fff; }
+  .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+  .slide {
+    position: relative; display: block !important; visibility: visible !important;
+    opacity: 1 !important; pointer-events: auto !important;
+    width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   3. SLIDE CHROME
+   =========================================== */
+.eyebrow {
+  position: absolute; top: var(--pad-top); left: var(--pad-outer);
+  font-family: var(--f-sans); font-size: var(--t-eyebrow); font-weight: 400;
+  color: var(--ink);
+}
+.pagedot {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.footer {
+  position: absolute; bottom: var(--pad-bottom); left: var(--pad-outer); right: var(--pad-outer);
+  display: flex; justify-content: space-between;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+
+/* ===========================================
+   4. LAYOUT PRIMITIVES
+   =========================================== */
+.headline {
+  position: absolute; top: 128px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-headline);
+  line-height: 1.24; color: var(--ink);
+}
+.headline em { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+/* 標題下方的極細分隔線（編輯排版手法，非裝飾卡片） */
+.headline::after {
+  content: ''; display: block; width: 160px; height: 1px;
+  background: var(--rule-medium); margin-top: 26px;
+}
+
+.body-split {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; grid-template-columns: 44% minmax(0, 1fr); gap: 44px; align-items: start;
+}
+.body-split--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+/* 範例頁：截圖給 58%，投影時字才看得清楚 */
+.body-split--shot { grid-template-columns: 58% minmax(0, 1fr); }
+.body-full {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; gap: 34px; align-content: start;
+}
+
+/* 要點條列 — 單一墨色短橫線標記，不做彩色圓點循環 */
+.points { list-style: none; display: grid; gap: 24px; }
+.points li {
+  position: relative; padding-left: 40px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.62; color: var(--ink);
+}
+.points li::before {
+  content: ''; position: absolute; left: 0; top: 0.74em;
+  width: 22px; height: 2px; background: var(--ink); opacity: 0.34;
+}
+.points b, .points strong { font-weight: 500; }
+.points code {
+  font-family: var(--f-code); font-size: 0.92em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* ===========================================
+   5. CODE PANEL
+   =========================================== */
+.code-label {
+  display: block; margin-bottom: 14px;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.code {
+  font-family: var(--f-code); font-size: var(--t-code); line-height: 1.62;
+  color: var(--ink);
+  background: var(--card); border-radius: 22px;
+  padding: 38px 42px;
+  white-space: pre; overflow: hidden;
+}
+.code .tag  { color: var(--code-tag); }
+.code .attr { color: var(--code-attr); }
+.code .str  { color: var(--code-str); }
+.code .cmt  { color: var(--code-cmt); }
+.code .ok   { color: var(--code-attr); }
+.code .no   { color: var(--code-str); }
+
+/* ===========================================
+   6. 推薦資源 — 編輯式出處行（無外框、無彩色邊條）
+   =========================================== */
+.res {
+  margin-top: 34px; padding-top: 18px;
+  border-top: 1px dashed var(--rule-medium);
+}
+.res__kind {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.res__kind::before {
+  font-family: var(--f-icons); font-size: 30px; font-weight: normal;
+  font-style: normal; line-height: 1; color: var(--ink-soft);
+}
+.res__title {
+  display: block; margin-top: 8px;
+  font-family: var(--f-display); font-size: var(--t-body-sm); font-weight: 500; color: var(--ink);
+}
+.res__desc {
+  font-family: var(--f-body); font-size: 28px; line-height: 1.55;
+  color: var(--ink-soft); margin-top: 4px;
+}
+.res--card   .res__kind::before { content: "\e8e7"; }  /* bookmark */
+.res--video  .res__kind::before { content: "\e1c4"; }  /* play_circle */
+.res--mind   .res__kind::before { content: "\e97a"; }  /* account_tree */
+.res--chart  .res__kind::before { content: "\e26b"; }  /* bar_chart */
+.res--audio  .res__kind::before { content: "\f01f"; }  /* headphones */
+.res--slides .res__kind::before { content: "\e41b"; }  /* slideshow */
+.res--quiz   .res__kind::before { content: "\f04c"; }  /* quiz */
+.res--check  .res__kind::before { content: "\e2e6"; }  /* task_alt */
+
+/* ===========================================
+   7. 行內小圖示與狀態藥丸
+   =========================================== */
+.ic {
+  font-family: var(--f-icons); font-style: normal; font-weight: normal;
+  line-height: 1; vertical-align: -0.14em; display: inline-block;
+}
+.ic--warn::before  { content: "\f083"; }  /* warning */
+.ic--check::before { content: "\e2e6"; }  /* task_alt */
+.ic--no::before    { content: "\e888"; }  /* cancel */
+.ic--tip::before   { content: "\e90f"; }  /* lightbulb */
+.ic--info::before  { content: "\e88e"; }  /* info */
+
+.pill {
+  display: inline-block; border-radius: 999px; padding: 1px 18px 3px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink);
+}
+.pill--yes { background: var(--lemon); }
+.pill--no  { background: var(--pink); }
+
+/* ===========================================
+   8. 章節頁 / 封面 / 收尾
+   =========================================== */
+.chapter-num {
+  position: absolute; top: 250px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-weight: 500;
+  font-size: 120px; color: var(--blush);
+}
+.chapter-title {
+  position: absolute; top: 400px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-chapter);
+  line-height: 1.22; color: var(--ink);
+}
+.chapter-title::after {
+  content: ''; display: block; width: 240px; height: 1px;
+  background: var(--rule-medium); margin-top: 34px;
+}
+.chapter-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink-soft);
+}
+
+.cover-kicker {
+  position: absolute; top: 240px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-subhead);
+  color: var(--ink-soft);
+}
+.cover-title {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-display);
+  line-height: 1.16; color: var(--ink);
+}
+.cover-sub {
+  position: absolute; top: 560px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 64px;
+  line-height: 1.3; color: var(--ink-soft);
+}
+.cover-swatches {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  display: flex; gap: 20px;
+}
+.cover-swatches span { width: 56px; height: 56px; border-radius: 50%; display: block; }
+.cover-swatches span:nth-child(1) { background: var(--pink); }
+.cover-swatches span:nth-child(2) { background: var(--lemon); }
+.cover-swatches span:nth-child(3) { background: var(--sage); }
+
+.slide--accent { background: var(--pink); }
+.closer-title {
+  position: absolute; top: 380px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 140px;
+  line-height: 1.2; color: var(--ink);
+}
+.closer-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink);
+}
+
+/* ===========================================
+   9. ANIMATION
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(28px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal:nth-child(1) { transition-delay: 0.08s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: 0.16s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: 0.24s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: 0.32s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: 0.40s; }
+
+/* ===========================================
+   10. DECK CHROME（舞台外）
+   =========================================== */
+.progress {
+  position: fixed; left: 0; bottom: 0; height: 4px; width: 0;
+  background: var(--pink); z-index: 1001; transition: width 0.3s var(--ease);
+}
+.counter {
+  position: fixed; right: 18px; bottom: 14px; z-index: 1001;
+  font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+  position: fixed; top: 16px; left: 16px; z-index: 10001;
+  font-size: 18px; line-height: 1; padding: 10px 12px; border: 0; border-radius: 12px;
+  background: var(--paper); color: var(--ink); cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); outline-offset: 4px; }
+
+/* ===========================================
+   11. 補充元件（備注／步驟／雙平台快捷鍵表）
+   =========================================== */
+/* 頁尾備注：虛線細規 + 小字，用於補充說明 */
+.note {
+  margin-top: 28px; padding-top: 16px;
+  border-top: 1px dashed var(--rule-medium);
+  font-family: var(--f-body); font-size: var(--t-min); line-height: 1.6;
+  color: var(--ink-soft);
+}
+.note b { color: var(--ink); font-weight: 500; }
+.note code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 編號步驟：斜體羅馬數字，符合 soft-editorial 的步驟記號 */
+.steps { list-style: none; counter-reset: step; display: grid; gap: 18px; }
+.steps li {
+  position: relative; padding-left: 76px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.6; color: var(--ink);
+}
+.steps li::before {
+  counter-increment: step; content: counter(step, lower-roman) ".";
+  position: absolute; left: 0; top: 0;
+  font-family: var(--f-display); font-style: italic; font-size: 32px; color: var(--ink-soft);
+}
+.steps code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 雙平台快速鍵表 */
+.keys { display: grid; gap: 0; }
+.keys__row {
+  display: grid; grid-template-columns: 1fr 300px 300px; gap: 18px;
+  align-items: baseline; padding: 13px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-min);
+}
+.keys__row:last-child { border-bottom: 0; }
+.keys__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.keys__fn { font-family: var(--f-body); color: var(--ink); }
+.keys__k  { font-family: var(--f-code); font-size: var(--t-min); color: var(--code-tag); }
+
+/* 行內連結（CodePen、數位學習平台等） */
+.points a, .note a, .res__desc a, .code a {
+  color: var(--code-tag);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+/* 頁尾備注：佔用固定底槽，主體區域讓出空間 */
+.body-split--note, .body-full--note { bottom: 232px; }
+.note--bottom {
+  position: absolute; left: var(--pad-outer); right: var(--pad-outer); bottom: 120px;
+  margin: 0;
+}
+
+/* ===========================================
+   12. 內容表格（常用元素速查）
+   =========================================== */
+.tbl { display: grid; }
+.tbl__row {
+  display: grid; grid-template-columns: 420px 1fr 1.3fr; gap: 28px;
+  align-items: baseline; padding: 15px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-body);
+}
+.tbl__row:last-child { border-bottom: 0; }
+.tbl__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.tbl__el { font-family: var(--f-code); color: var(--code-tag); }
+.tbl__use { font-family: var(--f-body); line-height: 1.45; color: var(--ink); }
+.tbl__row--head .tbl__el { color: var(--ink-soft); }
+
+/* ===========================================
+   13. 作業範例的成品截圖
+   =========================================== */
+.shot {
+  display: block; width: auto; max-width: 100%; max-height: 560px;
+  border-radius: 12px; background: #fff;
+}
+.shot-frame {
+  background: var(--card); border-radius: 22px; padding: 22px;
+  display: inline-block; max-width: 100%;
+}
+
+/* ===========================================
+   14. 內嵌圖解（語彙取自 archify：格線底、泳道標頭、
+       節點卡、語意色票、箭頭先用 marker 定義）
+       —— 只用 CSS class 上色，不寫 inline fill，
+          換主題時整組跟著變
+   =========================================== */
+.dgm { display: block; width: 100%; height: auto; }
+
+.dgm .d-grid   { fill: none; stroke: rgba(42, 36, 27, 0.07); stroke-width: 1; }
+
+/* 節點卡：一律「先遮罩、再上色」兩層，避免半透明底色讓線穿過去 */
+.dgm .d-mask   { fill: var(--paper); stroke: none; }
+.dgm .d-card   { fill: rgba(255, 255, 255, 0.72); stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-margin { fill: rgba(232, 201, 182, 0.40); stroke: var(--blush); stroke-width: 2; stroke-dasharray: 9 7; }
+.dgm .d-border { fill: none; stroke: var(--ink); stroke-width: 4; }
+.dgm .d-padding{ fill: rgba(183, 199, 168, 0.45); stroke: var(--sage); stroke-width: 2; }
+.dgm .d-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-hot    { fill: rgba(225, 164, 194, 0.35); stroke: var(--pink); stroke-width: 2; }
+.dgm .d-cool   { fill: rgba(201, 190, 220, 0.35); stroke: var(--lilac); stroke-width: 2; }
+.dgm .d-soft   { fill: rgba(214, 221, 99, 0.32);  stroke: var(--lemon); stroke-width: 2; }
+
+/* 文字：字級已按「1920×1080 舞台的 28px 下限」放大，不沿用 archify 的 7–12px */
+.dgm .t-head { font-family: var(--f-display); font-style: italic; font-size: 30px; fill: var(--ink-soft); }
+.dgm .t-lab  { font-family: var(--f-sans);  font-size: 30px; fill: var(--ink); }
+.dgm .t-bold { font-family: var(--f-sans);  font-size: 30px; font-weight: 700; fill: var(--ink); }
+.dgm .t-code { font-family: var(--f-code);  font-size: 28px; fill: var(--code-tag); }
+.dgm .t-note { font-family: var(--f-body);  font-size: 28px; fill: var(--ink-soft); }
+.dgm .t-mono { font-family: var(--f-code);  font-size: 28px; fill: var(--ink-soft); }
+
+/* 色票小方塊（圖例用） */
+.dgm .sw-margin { fill: var(--blush); }
+.dgm .sw-border { fill: var(--ink); }
+.dgm .sw-padding{ fill: var(--sage); }
+.dgm .sw-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+
+/* 流程線與箭頭（marker 在各圖的 <defs> 內定義） */
+.dgm .a-line     { fill: none; stroke: var(--ink-soft); stroke-width: 2.5; }
+.dgm .a-line-soft{ fill: none; stroke: var(--rule-medium); stroke-width: 2; }
+.dgm .d-arrowhead{ fill: var(--ink-soft); }
+
+/* 原位／預設位置的虛線殘影 */
+.dgm .d-ghost { fill: none; stroke: var(--rule-medium); stroke-width: 2; stroke-dasharray: 7 7; }
+
+/* 小標籤（狀態、勝出、標記用） */
+.dgm .d-pill   { fill: rgba(214, 221, 99, 0.55); stroke: var(--lemon); stroke-width: 1.5; }
+.dgm .d-pill-w { fill: rgba(225, 164, 194, 0.45); stroke: var(--pink); stroke-width: 1.5; }
+
+/* 面板底色（比較用的分格） */
+.dgm .d-panel  { fill: rgba(255, 255, 255, 0.55); stroke: var(--rule-soft); stroke-width: 1.5; }
+.dgm .d-slot   { fill: rgba(42, 36, 27, 0.06); stroke: var(--rule-medium); stroke-width: 1.5; }
+
+</style>
+<link rel="stylesheet" href="../assets/deck-fonts.css">
+<link rel="stylesheet" href="../assets/deck-site.css">
+</head>
+<body>
+
+<!-- ===========================================
+     DECK
+     =========================================== -->
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ═══════════ 1｜封面 ═══════════ -->
+<section class="slide s-cover active" data-label="封面">
+  <div class="cover-swatches reveal"><span></span><span></span><span></span></div>
+  <p class="cover-kicker reveal">勤益科大進修部 115 學年度第 1 學期</p>
+  <h1 class="cover-title reveal">互動式網頁設計</h1>
+  <p class="cover-sub reveal">CH3｜CSS 基礎與視覺樣式<br><em style="font-style:italic">替你的網頁穿上衣服</em></p>
+  <div class="footer"><span>2026.09.24</span><span>CH3</span></div>
+  <!-- 講述重點：上週做出了骨架，但它是「沒有穿衣服」的網頁。今天只做一件事：
+       把外觀從結構裡分離出來，用一份 CSS 決定整個頁面長什麼樣子。 -->
+</section>
+
+<!-- ═══════════ 2｜今日目標 ═══════════ -->
+<section class="slide" data-label="今日目標">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">ii</p>
+  <h2 class="headline reveal">今日目標</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal"><b>選取器</b>：CSS 怎麼找到元素，以及誰蓋誰（權重）</li>
+      <li class="reveal"><b>盒模型</b>：padding、margin、border，控制空間的技術</li>
+      <li class="reveal"><b>顯示模式</b>：block、inline、inline-block、none</li>
+      <li class="reveal"><b>定位</b>：static、relative、absolute、fixed</li>
+      <li class="reveal"><b>排版</b>：字型、字級、字距、行高，決定專業感</li>
+      <li class="reveal"><b>產出</b>：把上週的自我介紹頁，變成一張數位名片</li>
+    </ul>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先給地圖。今天六個技術點看起來很多，但全部只服務一個目標——
+       讓上週那個「光禿禿」的頁面變成能拿給別人看的東西。
+       強調：今天全程只寫 CSS，HTML 幾乎不用改。 -->
+</section>
+
+<!-- ═══════════ 3｜回顧上週 ═══════════ -->
+<section class="slide" data-label="回顧上週">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">iii</p>
+  <h2 class="headline reveal">回顧上週：你已經有骨架了</h2>
+  <div class="body-full body-full--note">
+    <ul class="points">
+      <li class="reveal"><b>HTML 是骨架</b>：標題、段落、連結、圖片、清單</li>
+      <li class="reveal"><b>兩條規則長出整棵樹</b>：從屬關係、同層關係</li>
+      <li class="reveal"><b>開發人員工具</b>是你的 X 光機，看得到別人的結構</li>
+      <li class="reveal"><b>上週的產出</b>：一個純結構、完全沒有樣式的自我介紹頁</li>
+    </ul>
+  </div>
+  <div class="note note--bottom reveal">
+    那個頁面<b>不是壞掉</b>，它只是還沒穿衣服。今天要做的事，就是幫它穿上——而且換一件衣服，就換一個樣子。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是橋樑。讓學生重新打開上週那個沒有樣式的頁面。
+       先建立「同一份 HTML，換 CSS 就換樣子」的直覺，後面講權重與覆蓋才有依附。 -->
+</section>
+
+<!-- ═══════════ 4｜換工具 ═══════════ -->
+<section class="slide" data-label="換工具 VS Code">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">iv</p>
+  <h2 class="headline reveal">從 CodePen 換到 VS Code</h2>
+  <div class="body-full body-full--note">
+    <ul class="points">
+      <li class="reveal"><b>CodePen</b> 適合練單一語法，打開瀏覽器就能寫</li>
+      <li class="reveal">真實專案是<b>一個資料夾 ＋ 多個檔案</b>，不是一頁網頁</li>
+      <li class="reveal"><b>VS Code</b> 免費、跨平台，是業界最常用的編輯器</li>
+      <li class="reveal">今天先在瀏覽器上看懂 CSS，<b>課後留下來把環境裝好</b></li>
+    </ul>
+  </div>
+  <div class="note note--bottom reveal">
+    不用擔心電腦程度——安裝只有下載、下一步、裝三個套件。真的卡住，留下來老師陪你裝到好。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先說明「為什麼要換」。不是 CodePen 不好，而是它只有一頁，
+       沒辦法放圖片、多個檔案與版本控制——這些都是真實專案的必要條件。
+       強調今天不會因為換工具而學得比較少：概念完全一樣，只是換個地方打。
+       先安撫：安裝課後才做，今天上課不需要裝任何東西。 -->
+</section>
+
+<!-- ═══════════ 5｜課後 30 分鐘 ═══════════ -->
+<section class="slide" data-label="課後安裝 VS Code">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">v</p>
+  <h2 class="headline reveal">課後 30 分鐘：把環境裝好</h2>
+  <div class="body-full body-full--note">
+    <ol class="steps">
+      <li>到 <code>code.visualstudio.com</code> 下載安裝（Windows／macOS 都一樣）</li>
+      <li>開一個資料夾 <code>my-site</code>，把上週的自我介紹頁存成 <code>index.html</code></li>
+      <li>點左側「擴充」圖示，搜尋並安裝下一頁的三個套件</li>
+      <li>用 VS Code 開啟 <code>index.html</code>，右鍵選 <b>Open with Live Server</b></li>
+      <li>之後只要存檔，瀏覽器就會自動重整——邊改邊看</li>
+    </ol>
+  </div>
+  <div class="note note--bottom reveal">
+    這 30 分鐘是<b>老師留在教室陪你裝</b>。裝完就可以開始做後面的範例。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁是「課後 30 分鐘」的流程，一次講完就好，不需要當場操作。
+       重點只有一句：裝好之後，之後每一週都用得到，這 30 分鐘是這學期最划算的投資。
+       提醒資料夾命名用英文、不要有空白——之後接網址、上傳才會順利。 -->
+</section>
+
+<!-- ═══════════ 6｜三個必裝擴充 ═══════════ -->
+<section class="slide" data-label="必裝擴充套件">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">vi</p>
+  <h2 class="headline reveal">三個必裝的擴充套件</h2>
+  <div class="body-full">
+    <div class="tbl">
+      <div class="tbl__row tbl__row--head"><span class="tbl__el">套件</span><span>解決什麼問題</span><span class="tbl__use">沒有它會怎樣</span></div>
+      <div class="tbl__row"><span class="tbl__el">HTML CSS Support</span><span>打 class 名稱時自動提示</span><span class="tbl__use">常常打錯字</span></div>
+      <div class="tbl__row"><span class="tbl__el">Live Server</span><span>存檔就自動重整預覽</span><span class="tbl__use">一直手動重新整理</span></div>
+      <div class="tbl__row"><span class="tbl__el">Prettier</span><span>一鍵把程式碼排整齊</span><span class="tbl__use">縮排亂、格式不一致</span></div>
+    </div>
+  </div>
+  <div class="note note--bottom reveal">
+    三個都是免費的，在左側「擴充」面板<b>搜尋名稱就能安裝</b>。裝錯或不想用，隨時可以移除。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁只要學生記住「要裝三個東西」。不要念版本、不要念作者名稱。
+       Live Server 是投報率最高的那一個——存檔自動重整，少了來回切換的動作，學習摩擦小很多。
+       Prettier 對初學者特別有用：它會把縮排自動排好，學生可以從「排好的樣子」反推正確結構。 -->
+</section>
+
+<!-- ═══════════ 7｜專案資料夾 ═══════════ -->
+<section class="slide" data-label="專案資料夾結構">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">vii</p>
+  <h2 class="headline reveal">一個資料夾，就是一個專案</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <span class="code-label">之後每一週的作業都長這樣</span>
+      <div class="code">my-site/
+├── index.html      <span class="cmt">← 結構</span>
+├── style.css       <span class="cmt">← 外觀</span>
+└── images/
+    └── avatar.jpg  <span class="cmt">← 圖片</span></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>HTML 放結構、CSS 放外觀</b>，各自一個檔</li>
+        <li class="reveal">改外觀不必動結構，這就是<b>關注點分離</b></li>
+        <li class="reveal">CodePen 把兩者塞在同一頁，真實專案會分開</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁解釋「為什麼要分兩個檔案」。CodePen 把 HTML/CSS/JS 攤在同一頁，
+       學生會以為它們本來就該黏在一起；實際專案是分開的，這也是今天學的 CSS 為什麼要有自己的檔。
+       今天課堂上的範例仍用單一檔案（HTML 內嵌 <style>），課後搬進 my-site 時再拆成兩個檔。 -->
+</section>
+
+<!-- ═══════════ 8｜Part 1 章節頁 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 1 章節頁">
+  <p class="chapter-num reveal">I.</p>
+  <h2 class="chapter-title reveal">CSS 選取器與權重</h2>
+  <p class="chapter-sub reveal">語法 · 四種選取器 · 權重與覆蓋</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 1</span></div>
+  <!-- 講述重點：這一段解決最常見的疑問——「我明明寫了，為什麼沒生效？」
+       答案幾乎都在權重裡。 -->
+</section>
+
+<!-- ═══════════ 9｜CSS 是什麼 ═══════════ -->
+<section class="slide" data-label="CSS 是什麼">
+  <p class="eyebrow">Part 1｜CSS 選取器與權重</p>
+  <p class="pagedot">ix</p>
+  <h2 class="headline reveal">CSS 是什麼：把外觀從結構分離</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">HTML 回答「<b>這是什麼</b>」</li>
+        <li class="reveal">CSS 回答「<b>它長什麼樣子</b>」</li>
+        <li class="reveal">同一份 HTML，<b>換一份 CSS 就換一個樣子</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">一條規則的長相</span>
+      <div class="code"><span class="cmt">/* 選擇器 { 屬性: 值; } */</span>
+<span class="tag">h1</span> {
+  <span class="attr">color</span>: <span class="str">#2A241B</span>;
+  <span class="attr">font-size</span>: <span class="str">48px</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：用「沒穿衣服」的比喻收尾。強調 CSS 不做內容，只做外觀——
+       所以今天的 HTML 幾乎不用改，全部在 CSS 窗格解決。
+       語法只講三件事：選擇器決定「誰」，大括號包住「改什麼」，分號結束「一行」。 -->
+</section>
+
+<!-- ═══════════ 10｜選取器四種 ═══════════ -->
+<section class="slide" data-label="選取器四種">
+  <p class="eyebrow">Part 1｜CSS 選取器與權重</p>
+  <p class="pagedot">x</p>
+  <h2 class="headline reveal">四種選取器與它們的權重</h2>
+  <div class="body-full">
+    <div class="tbl">
+      <div class="tbl__row tbl__row--head"><span class="tbl__el">寫法</span><span>說明</span><span class="tbl__use">權重</span></div>
+      <div class="tbl__row"><span class="tbl__el">h1</span><span>標籤選取器，全站同種標籤</span><span class="tbl__use">0001</span></div>
+      <div class="tbl__row"><span class="tbl__el">.card</span><span>class 選取器，可重複套用</span><span class="tbl__use">0010</span></div>
+      <div class="tbl__row"><span class="tbl__el">#top</span><span>id 選取器，全頁唯一</span><span class="tbl__use">0100</span></div>
+      <div class="tbl__row"><span class="tbl__el">style="…"</span><span>行內樣式，最優先但難維護</span><span class="tbl__use">1000</span></div>
+      <div class="tbl__row"><span class="tbl__el">!important</span><span>加在宣告後面，蓋掉上面全部</span><span class="tbl__use">例外</span></div>
+    </div>
+    <div class="note reveal">
+      寫法是 <code>color: red !important;</code>——它<b>不是第五種選取器</b>，而是寫在「值」後面的例外，會蓋掉整份權重。
+      好用，但會讓後面的維護變難，<b>能不用就不用</b>。
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：權重就是「這一條規則多有份量」。數字不必背，但要記住順序：
+       行內 &gt; id &gt; class &gt; 標籤。
+       實務建議：八成樣式交給 class，id 留給 JavaScript 抓元素，行內樣式能不用就不用。 -->
+</section>
+
+<!-- ═══════════ 11｜權重高者勝 ═══════════ -->
+<section class="slide" data-label="權重高者勝">
+  <p class="eyebrow">Part 1｜CSS 選取器與權重</p>
+  <p class="pagedot">xi</p>
+  <h2 class="headline reveal">權重：同一個元素，誰說話比較大聲</h2>
+    <div class="body-split body-split--shot">
+    <div class="reveal">
+      <svg class="dgm" viewBox="0 0 940 600" role="img" aria-labelledby="sp7-t sp7-d">
+        <title id="sp7-t">CSS 權重的階梯與同權重時的覆蓋順序</title>
+        <desc id="sp7-d">左側四階梯依權重由低到高排列，右側說明同權重時後寫的規則會蓋掉先寫的。</desc>
+        <defs>
+          <pattern id="sp7-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path class="d-grid" d="M 40 0 L 0 0 0 40"/>
+          </pattern>
+          <marker id="sp7-arw" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="940" height="600" fill="url(#sp7-grid)"/>
+        <text class="t-head" x="30" y="48">01 / 誰說話比較大聲</text>
+
+        <rect class="d-slot" x="30"  y="96"  width="320" height="52" rx="8"/>
+        <text class="t-code" x="48" y="131">h1</text>
+        <text class="t-mono" x="334" y="131" text-anchor="end">0001</text>
+
+        <rect class="d-slot" x="70"  y="164" width="320" height="52" rx="8"/>
+        <text class="t-code" x="88" y="199">.card</text>
+        <text class="t-mono" x="374" y="199" text-anchor="end">0010</text>
+
+        <rect class="d-slot" x="110" y="232" width="320" height="52" rx="8"/>
+        <text class="t-code" x="128" y="267">#top</text>
+        <text class="t-mono" x="414" y="267" text-anchor="end">0100</text>
+
+        <rect class="d-hot"  x="150" y="300" width="320" height="52" rx="8"/>
+        <text class="t-code" x="168" y="335">style="…"</text>
+        <text class="t-mono" x="454" y="335" text-anchor="end">1000</text>
+
+        <text class="t-note" x="30" y="402">愈精確的選取器，</text>
+        <text class="t-note" x="30" y="438">權重就愈高。</text>
+
+        <rect class="d-mask" x="540" y="96" width="390" height="440" rx="10"/>
+        <rect class="d-card" x="540" y="96" width="390" height="440" rx="10"/>
+        <text class="t-head" x="568" y="142">02 / 同權重，後寫的贏</text>
+
+        <rect class="sw-border" x="568" y="196" width="20" height="20" rx="4"/>
+        <text class="t-mono" x="604" y="216">h1 { color: #222; }</text>
+        <text class="t-note" x="604" y="252">先寫的，被蓋掉</text>
+
+        <rect class="d-hot" x="568" y="304" width="20" height="20" rx="4"/>
+        <text class="t-bold" x="604" y="324">h1 { color: #A64C7C; }</text>
+        <text class="t-note" x="604" y="360">後寫的，贏</text>
+
+        <path class="a-line-soft" d="M 568 388 L 902 388"/>
+        <text class="t-note" x="568" y="428">兩條規則一模一樣時，</text>
+        <text class="t-note" x="568" y="464">只比「誰寫在後面」。</text>
+      </svg>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">多條規則命中同一個元素時，<b>權重高的贏</b></li>
+        <li class="reveal">權重<b>相同</b>時，<b>後寫的贏</b></li>
+        <li class="reveal">愈「精確」的選取器，權重愈高</li>
+        <li class="reveal">行內樣式最強，但<b>能不用就不用</b></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁是今天最實用的一頁。學生未來九成的「樣式沒生效」都是這裡出的問題。現場示範：對同一個 h1 寫兩條不同顏色的規則，交換順序，顏色的確跟著換。 -->
+<!-- 講述重點：這一頁是今天最實用的一頁。學生未來九成的「樣式沒生效」都是這裡出的問題。
+       現場示範：對同一個 h1 寫兩條不同顏色的規則，交換順序，顏色的確跟著換。 -->
+</section>
+
+<!-- ═══════════ 12｜多重 class 特化 ═══════════ -->
+<section class="slide" data-label="多重 class 特化">
+  <p class="eyebrow">Part 1｜CSS 選取器與權重</p>
+  <p class="pagedot">xii</p>
+  <h2 class="headline reveal">多重 class：先定義基礎，再局部覆蓋</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">一個元素可以同時掛<b>多個 class</b></li>
+        <li class="reveal">第一個 class 定義<b>基礎外觀</b></li>
+        <li class="reveal">第二個 class 只負責<b>覆蓋差異</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">同一顆按鈕，兩種顏色</span>
+      <div class="code">&lt;a class="<span class="str">button black-button</span>"&gt;送出&lt;/a&gt;
+
+<span class="attr">.button</span>       { <span class="attr">padding</span>: <span class="str">14px 32px</span>; }
+<span class="attr">.black-button</span> { <span class="attr">background</span>: <span class="str">#2A241B</span>; }</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是「設計系統」的雛形，也是後面 Tailwind 元件化、第十六週設計系統的前身。
+       工程意義：想改全站按鈕顏色，只改一行 CSS，而不是翻遍所有 HTML。 -->
+</section>
+
+<!-- ═══════════ 13｜為什麼樣式沒生效 ═══════════ -->
+<section class="slide" data-label="為什麼樣式沒生效">
+  <p class="eyebrow">Part 1｜CSS 選取器與權重</p>
+  <p class="pagedot">xiii</p>
+  <h2 class="headline reveal">「我明明寫了」的四種原因</h2>
+    <div class="body-split body-split--shot">
+    <div class="reveal">
+      <svg class="dgm" viewBox="0 0 940 620" role="img" aria-labelledby="sp9-t sp9-d">
+        <title id="sp9-t">樣式沒生效的四種原因與檢查流程</title>
+        <desc id="sp9-d">從樣式沒生效開始，先開開發人員工具，再依四種症狀分頭檢查。</desc>
+        <defs>
+          <pattern id="sp9-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path class="d-grid" d="M 40 0 L 0 0 0 40"/>
+          </pattern>
+          <marker id="sp9-arw" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="940" height="620" fill="url(#sp9-grid)"/>
+        <text class="t-head" x="30" y="48">01 / 照這個順序查</text>
+
+        <rect class="d-mask" x="320" y="76" width="300" height="60" rx="8"/>
+        <rect class="d-soft" x="320" y="76" width="300" height="60" rx="8"/>
+        <text class="t-bold" x="470" y="115" text-anchor="middle">樣式沒生效</text>
+
+        <path class="a-line" d="M 470 136 L 470 168" marker-end="url(#sp9-arw)"/>
+
+        <rect class="d-mask" x="250" y="172" width="440" height="60" rx="8"/>
+        <rect class="d-card" x="250" y="172" width="440" height="60" rx="8"/>
+        <text class="t-lab" x="470" y="211" text-anchor="middle">先開開發人員工具 → Styles 面板</text>
+
+        <path class="a-line" d="M 470 232 L 470 268"/>
+        <path class="a-line" d="M 135 268 L 795 268"/>
+        <path class="a-line" d="M 135 268 L 135 292" marker-end="url(#sp9-arw)"/>
+        <path class="a-line" d="M 355 268 L 355 292" marker-end="url(#sp9-arw)"/>
+        <path class="a-line" d="M 575 268 L 575 292" marker-end="url(#sp9-arw)"/>
+        <path class="a-line" d="M 795 268 L 795 292" marker-end="url(#sp9-arw)"/>
+
+        <rect class="d-mask" x="30"  y="296" width="210" height="240" rx="10"/>
+        <rect class="d-panel" x="30"  y="296" width="210" height="240" rx="10"/>
+        <text class="t-bold" x="48" y="336">沒對到</text>
+        <text class="t-note" x="48" y="376">class 拼錯，</text>
+        <text class="t-note" x="48" y="410">或漏了「.」</text>
+        <text class="t-note" x="48" y="474">→ 對照 HTML</text>
+
+        <rect class="d-mask" x="250" y="296" width="210" height="240" rx="10"/>
+        <rect class="d-panel" x="250" y="296" width="210" height="240" rx="10"/>
+        <text class="t-bold" x="268" y="336">被蓋掉</text>
+        <text class="t-note" x="268" y="376">行內或 id</text>
+        <text class="t-note" x="268" y="410">權重比你高</text>
+        <text class="t-note" x="268" y="474">→ 看誰在上面</text>
+
+        <rect class="d-mask" x="470" y="296" width="210" height="240" rx="10"/>
+        <rect class="d-panel" x="470" y="296" width="210" height="240" rx="10"/>
+        <text class="t-bold" x="488" y="336">順序輸了</text>
+        <text class="t-note" x="488" y="376">權重相同，</text>
+        <text class="t-note" x="488" y="410">你寫在前面</text>
+        <text class="t-note" x="488" y="474">→ 往下移</text>
+
+        <rect class="d-mask" x="690" y="296" width="210" height="240" rx="10"/>
+        <rect class="d-panel" x="690" y="296" width="210" height="240" rx="10"/>
+        <text class="t-bold" x="708" y="336">語法壞了</text>
+        <text class="t-note" x="708" y="376">漏了分號</text>
+        <text class="t-note" x="708" y="410">或括號</text>
+        <text class="t-note" x="708" y="474">→ 看上一行</text>
+      </svg>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>沒對到</b>：class 拼錯或漏了「.」</li>
+        <li class="reveal"><b>被蓋掉</b>：行內、id 權重更高</li>
+        <li class="reveal"><b>順序輸了</b>：同權重，你寫在前面</li>
+        <li class="reveal"><b>語法壞了</b>：漏分號，整段失效</li>
+      </ul>
+      <div class="note reveal">這四種症狀，用開發人員工具<b>一秒就能看出來</b>——下一頁教怎麼看。</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：把這張流程圖當成除錯口訣。學生卡住時，先問他是四種裡的哪一種，而不是把 CSS 全部重寫。強調最後一條最容易忽略：漏一個分號會拖垮整段。 -->
+<!-- 講述重點：把這四條當成「除錯口訣」。學生卡住時，先問他是這四種的哪一種，
+       而不是把 CSS 全部重寫。最後一條最容易忽略：漏一個分號會拖垮整段。 -->
+</section>
+
+<!-- ═══════════ 14｜用檢查元素看誰贏 ═══════════ -->
+<section class="slide" data-label="用檢查元素看誰贏">
+  <p class="eyebrow">Part 1｜CSS 選取器與權重</p>
+  <p class="pagedot">xiv</p>
+  <h2 class="headline reveal">用檢查元素看「誰贏了」</h2>
+  <div class="body-full">
+    <ol class="steps">
+      <li>在元素上按右鍵 → <b>檢查（Inspect）</b></li>
+      <li>右側 <b>Styles</b> 面板由上往下就是<b>權重順序</b></li>
+      <li>被<b>槓掉</b>的宣告代表它輸了，滑上去看是誰蓋的</li>
+      <li>打勾／取消打勾可以<b>即時測試</b>，重新整理就還原</li>
+    </ol>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：上一頁的四種症狀，這裡一次全部解決。示範時刻意做一個「被蓋掉」的例子，
+       讓學生看到槓線與來源檔案，理解「瀏覽器其實有告訴你答案」。
+       強調這裡改的只是暫存，不會存回你的檔案——所以可以放心亂試。 -->
+</section>
+
+<!-- ═══════════ 15｜實作 1 ═══════════ -->
+<section class="slide" data-label="實作 1 第一條 CSS">
+  <p class="eyebrow">Part 1｜動手實作</p>
+  <p class="pagedot">xv</p>
+  <h2 class="headline reveal">實作 1：寫下你的第一條 CSS</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">今天的第一個產出：一個有自己 CSS 的頁面</span>
+      <div class="shot-frame"><img class="shot" src="assets/illus-desk.jpg" alt="俯視視角的書桌插畫：筆電、攤開的筆記本、鉛筆、咖啡與盆栽"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">用 VS Code 打開上週寫好的自我介紹頁</li>
+        <li class="reveal">這次要動的是 <b>CSS</b>（上週完全沒寫）</li>
+        <li class="reveal">用標籤選取器替 <code>h1</code> 換色、加大字級</li>
+        <li class="reveal">用 class 選取器替某個區塊加背景色與內距</li>
+        <li class="reveal">存檔，重新整理看差別——裝了 Live Server 會自動重整</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：第一個動手點，目標只有「看見改變」。不要追求好看，
+       只要學生親眼看到自己打的字讓畫面變了，這一節就算成功。
+       巡場時優先處理「完全沒反應」的同學——通常是忘了存檔或選取器打錯。
+       插畫只是把「開始動手」的氛圍帶出來，不用多講，一句話帶過就好。 -->
+</section>
+
+<!-- ═══════════ 16｜Part 2 章節頁 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 2 章節頁">
+  <p class="chapter-num reveal">II.</p>
+  <h2 class="chapter-title reveal">盒子模型</h2>
+  <p class="chapter-sub reveal">padding · margin · border · 空間的藝術</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 2</span></div>
+  <!-- 講述重點：這一段是今天最核心的技術。網頁排版說穿了就是「控制盒子之間的距離」。 -->
+</section>
+
+<!-- ═══════════ 17｜盒子模型四層 ═══════════ -->
+<section class="slide" data-label="盒子模型四層">
+  <p class="eyebrow">Part 2｜盒子模型</p>
+  <p class="pagedot">xvii</p>
+  <h2 class="headline reveal">每一個元素，都是一個盒子</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <svg class="dgm" viewBox="0 0 940 600" role="img" aria-labelledby="bm13-t bm13-d">
+        <title id="bm13-t">盒模型四層：content、padding、border、margin</title>
+        <desc id="bm13-d">由內而外的同心方塊圖，右側說明卡列出四層的順序與各自的用途。</desc>
+        <defs>
+          <pattern id="bm13-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path class="d-grid" d="M 40 0 L 0 0 0 40"/>
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width="940" height="600" fill="url(#bm13-grid)"/>
+        <text class="t-head" x="30" y="48">01 / 由外而內</text>
+
+        <!-- 四層同心方塊：一律「先遮罩、再上色」兩層 -->
+        <rect class="d-mask"    x="30"  y="84"  width="500" height="464" rx="6"/>
+        <rect class="d-margin"  x="30"  y="84"  width="500" height="464" rx="6"/>
+        <rect class="d-mask"    x="64"  y="132" width="432" height="368" rx="4"/>
+        <rect class="d-border"  x="64"  y="132" width="432" height="368" rx="4"/>
+        <rect class="d-mask"    x="110" y="180" width="340" height="272" rx="4"/>
+        <rect class="d-padding" x="110" y="180" width="340" height="272" rx="4"/>
+        <rect class="d-mask"    x="170" y="240" width="220" height="152" rx="4"/>
+        <rect class="d-content" x="170" y="240" width="220" height="152" rx="4"/>
+
+        <text class="t-lab"  x="280" y="116" text-anchor="middle">margin 外距</text>
+        <text class="t-lab"  x="280" y="164" text-anchor="middle">border 框線</text>
+        <text class="t-lab"  x="280" y="212" text-anchor="middle">padding 內距</text>
+        <text class="t-bold" x="280" y="327" text-anchor="middle">content 內容</text>
+
+        <!-- 右：說明卡（archify 的「細節放摘要卡，不要多畫箭頭」） -->
+        <rect class="d-mask" x="576" y="60" width="350" height="520" rx="10"/>
+        <rect class="d-card" x="576" y="60" width="350" height="520" rx="10"/>
+        <text class="t-head" x="604" y="106">02 / 四層速記</text>
+
+        <rect class="sw-margin" x="604" y="176" width="20" height="20" rx="4"/>
+        <text class="t-bold" x="644" y="196">margin 外距</text>
+        <text class="t-note" x="644" y="228">推開鄰居</text>
+
+        <rect class="sw-border" x="604" y="272" width="20" height="20" rx="4"/>
+        <text class="t-bold" x="644" y="292">border 框線</text>
+        <text class="t-note" x="644" y="324">粗細 樣式 顏色</text>
+
+        <rect class="sw-padding" x="604" y="368" width="20" height="20" rx="4"/>
+        <text class="t-bold" x="644" y="388">padding 內距</text>
+        <text class="t-note" x="644" y="420">把自己撐大</text>
+
+        <rect class="sw-content" x="604" y="464" width="20" height="20" rx="4"/>
+        <text class="t-bold" x="644" y="484">content 內容</text>
+        <text class="t-note" x="644" y="516">文字、圖片</text>
+      </svg>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">瀏覽器把每一個元素都當成<b>矩形盒子</b>來排</li>
+        <li class="reveal">只有 content 是<b>內容</b>，其餘三層都是<b>空間</b></li>
+        <li class="reveal">開發人員工具裡可以<b>逐層看數字</b></li>
+      </ul>
+      <div class="note reveal">
+        專業設計用「<b>空氣</b>」形容空間感。學會看這張圖，CSS 除錯的速度會直接翻倍。
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：開場先讓學生在開發人員工具裡找到那張彩色同心方塊圖，
+       並且實際 hover 一個元素看四層數字。這張圖就是今天所有空間調整的儀表板。
+       對照右邊說明卡的四句話，先建立「往外一層就多一種空間」的直覺。 -->
+</section>
+
+<!-- ═══════════ 18｜Padding 內距 ═══════════ -->
+<section class="slide" data-label="Padding 內距">
+  <p class="eyebrow">Part 2｜盒子模型</p>
+  <p class="pagedot">xviii</p>
+  <h2 class="headline reveal">Padding：把內容撐開</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">內容與<b>邊框</b>之間的距離</li>
+        <li class="reveal">把內容撐開，讓它<b>不擁擠</b></li>
+        <li class="reveal">按鈕的關鍵：<b>有內距才看起來可點</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">做出「一看就想按」的按鈕</span>
+      <div class="code"><span class="attr">.nav a</span> {
+  <span class="attr">padding</span>: <span class="str">16px 36px</span>;
+  <span class="attr">background</span>: <span class="str">#2A241B</span>;
+  <span class="attr">color</span>: <span class="str">#F2EEDF</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是整堂課最有「感覺」的一頁。現場把 padding 從 0 拉到 16px 36px，
+       學生會親眼看到一行文字變成一個按鈕。
+       帶出 UX 觀點：可點擊區域太小，使用者就會點不到——內距不是裝飾，是可用性。 -->
+</section>
+
+<!-- ═══════════ 19｜Margin 外距 ═══════════ -->
+<section class="slide" data-label="Margin 外距">
+  <p class="eyebrow">Part 2｜盒子模型</p>
+  <p class="pagedot">xix</p>
+  <h2 class="headline reveal">Margin：把鄰居推開</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">元素與<b>其他元素</b>之間的距離</li>
+        <li class="reveal">推開鄰居，不是撐開自己</li>
+        <li class="reveal"><code>margin: 0 auto;</code> 讓區塊<b>水平置中</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">把卡片推到畫面正中央</span>
+      <div class="code"><span class="attr">.card</span> {
+  <span class="attr">width</span>: <span class="str">640px</span>;
+  <span class="attr">margin</span>: <span class="str">0 auto</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：一句話區分 padding 與 margin——padding 是自己變胖，margin 是把別人推遠。
+       水平置中的關鍵是「必須有寬度」，沒設寬度時 auto 沒有作用，這是學生最常卡住的地方。 -->
+</section>
+
+<!-- ═══════════ 20｜Border 與圓角 ═══════════ -->
+<section class="slide" data-label="Border 與圓角">
+  <p class="eyebrow">Part 2｜盒子模型</p>
+  <p class="pagedot">xx</p>
+  <h2 class="headline reveal">Border 與圓角：框線的三件事</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">框線要指定<b>樣式、粗細、顏色</b></li>
+        <li class="reveal">少寫一項，框線就不會出現</li>
+        <li class="reveal"><code>border-radius</code> 讓硬框<b>變圓潤</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">一個有框線的卡片</span>
+      <div class="code"><span class="attr">.card</span> {
+  <span class="attr">border</span>: <span class="str">2px solid #2A241B</span>;
+  <span class="attr">border-radius</span>: <span class="str">18px</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：學生最常寫 border: 2px 然後疑惑「怎麼沒框」。三件事缺一不可。
+       圓角是現代感的來源——同樣的方塊，圓角與直角看起來像是兩個世代的產品。
+       示範 border-radius: 999px 把按鈕壓成膠囊形。 -->
+</section>
+
+<!-- ═══════════ 21｜四邊寫法 ═══════════ -->
+<section class="slide" data-label="四邊寫法">
+  <p class="eyebrow">Part 2｜盒子模型</p>
+  <p class="pagedot">xxi</p>
+  <h2 class="headline reveal">先設定四邊，再微調單邊</h2>
+  <div class="body-full">
+    <span class="code-label">padding 的簡寫規則（margin 完全一樣）</span>
+    <div class="code">padding: 20px;           <span class="cmt">/* 四邊 */</span>
+padding: 20px 40px;      <span class="cmt">/* 上下 左右 */</span>
+padding: 20px 40px 60px; <span class="cmt">/* 上 左右 下 */</span>
+padding-left: 8px;       <span class="cmt">/* 單邊 */</span></div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：簡寫的記憶法——從上開始順時針，缺的往對面抄。
+       工作習慣：先一次設定四邊（例如 padding: 20px），再針對需要的那一邊單獨微調。
+       不要一開始就四邊分別寫，那會讓後續很難改。 -->
+</section>
+
+<!-- ═══════════ 22｜連結變按鈕 ═══════════ -->
+<section class="slide" data-label="連結變按鈕">
+  <p class="eyebrow">Part 2｜盒子模型</p>
+  <p class="pagedot">xxii</p>
+  <h2 class="headline reveal">實戰：一行連結，變成一顆按鈕</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">上週的 <code>&lt;a&gt;</code> 只是一行有色文字</li>
+        <li class="reveal">加上內距、背景、圓角</li>
+        <li class="reveal">它就會<b>看起來像可以按</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">全部只用到 Part 2 學到的屬性</span>
+      <div class="code"><span class="attr">.nav a</span> {
+  <span class="attr">display</span>: <span class="str">inline-block</span>;
+  <span class="attr">padding</span>: <span class="str">14px 32px</span>;
+  <span class="attr">background</span>: <span class="str">#2A241B</span>;
+  <span class="attr">color</span>: <span class="str">#F2EEDF</span>;
+  <span class="attr">border-radius</span>: <span class="str">999px</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁是 Part 2 的成果驗收，也埋了 Part 3 的伏筆：
+       為什麼要加 display: inline-block？因為 inline 的上下內距無效——
+       先照著做，等 Part 3 講完 display，學生會自己得到答案。 -->
+</section>
+
+<!-- ═══════════ 23｜實作 2 ═══════════ -->
+<section class="slide" data-label="實作 2 做一顆按鈕">
+  <p class="eyebrow">Part 2｜動手實作</p>
+  <p class="pagedot">xxiii</p>
+  <h2 class="headline reveal">實作 2：把你的連結變成按鈕</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal">挑一個 <code>&lt;a&gt;</code> 或 <code>&lt;div&gt;</code> 當成按鈕</li>
+      <li class="reveal">加上 <code>padding</code>，觀察它怎麼「變胖」</li>
+      <li class="reveal">加上 <code>background</code> 與 <code>color</code></li>
+      <li class="reveal">加上 <code>border-radius: 999px</code> 做膠囊圓角</li>
+      <li class="reveal">用 <code>margin</code> 把它和其他內容分開</li>
+    </ul>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：要求學生當場調整數值並觀察變化，不要只是複製貼上。
+       巡場重點：確認每個人的按鈕都有「足夠大」的可點擊範圍——
+       這是本週作業的評分項目之一。 -->
+</section>
+
+<!-- ═══════════ 24｜Part 3 章節頁 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 3 章節頁">
+  <p class="chapter-num reveal">III.</p>
+  <h2 class="chapter-title reveal">顯示模式 display</h2>
+  <p class="chapter-sub reveal">block · inline · inline-block · none</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 3</span></div>
+  <!-- 講述重點：display 決定元素在頁面流裡的「生存規則」——能不能換行、能不能調寬高。 -->
+</section>
+
+<!-- ═══════════ 25｜display 四種 ═══════════ -->
+<section class="slide" data-label="display 四種">
+  <p class="eyebrow">Part 3｜顯示模式 display</p>
+  <p class="pagedot">xxv</p>
+  <h2 class="headline reveal">display 決定元素怎麼活下去</h2>
+    <div class="body-split body-split--shot">
+    <div class="reveal">
+      <svg class="dgm" viewBox="0 0 940 540" role="img" aria-labelledby="sp21-t sp21-d">
+        <title id="sp21-t">四種 display 值下，同樣三個盒子的排法差異</title>
+        <desc id="sp21-d">block 各佔一行、inline 並排但寬度隨內容、inline-block 並排且可調寬高、none 完全不佔位。</desc>
+        <defs>
+          <pattern id="sp21-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path class="d-grid" d="M 40 0 L 0 0 0 40"/>
+          </pattern>
+          <marker id="sp21-arw" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="940" height="540" fill="url(#sp21-grid)"/>
+        <text class="t-head" x="30" y="60">01 / 同樣三個盒子，四種排法</text>
+
+        <rect class="d-mask" x="30" y="96" width="210" height="400" rx="10"/>
+        <rect class="d-panel" x="30" y="96" width="210" height="400" rx="10"/>
+        <text class="t-code" x="50" y="140">block</text>
+        <rect class="d-mask" x="50" y="168" width="170" height="62" rx="6"/>
+        <rect class="d-slot" x="50" y="168" width="170" height="62" rx="6"/>
+        <rect class="d-mask" x="50" y="244" width="170" height="62" rx="6"/>
+        <rect class="d-slot" x="50" y="244" width="170" height="62" rx="6"/>
+        <rect class="d-mask" x="50" y="320" width="170" height="62" rx="6"/>
+        <rect class="d-slot" x="50" y="320" width="170" height="62" rx="6"/>
+        <text class="t-note" x="50" y="448">各佔一整行</text>
+        <text class="t-note" x="50" y="482">寬度撐滿</text>
+        <rect class="d-mask" x="250" y="96" width="210" height="400" rx="10"/>
+        <rect class="d-panel" x="250" y="96" width="210" height="400" rx="10"/>
+        <text class="t-code" x="270" y="140">inline</text>
+        <rect class="d-mask" x="270" y="200" width="50" height="44" rx="6"/>
+        <rect class="d-soft" x="270" y="200" width="50" height="44" rx="6"/>
+        <rect class="d-mask" x="326" y="200" width="50" height="44" rx="6"/>
+        <rect class="d-soft" x="326" y="200" width="50" height="44" rx="6"/>
+        <rect class="d-mask" x="382" y="200" width="50" height="44" rx="6"/>
+        <rect class="d-soft" x="382" y="200" width="50" height="44" rx="6"/>
+        <text class="t-note" x="270" y="448">並排不換行</text>
+        <text class="t-note" x="270" y="482">寬度隨內容</text>
+        <rect class="d-mask" x="470" y="96" width="210" height="400" rx="10"/>
+        <rect class="d-panel" x="470" y="96" width="210" height="400" rx="10"/>
+        <text class="t-code" x="490" y="134">inline-</text>
+        <text class="t-code" x="490" y="168">block</text>
+        <rect class="d-mask" x="490" y="190" width="52" height="64" rx="6"/>
+        <rect class="d-padding" x="490" y="190" width="52" height="64" rx="6"/>
+        <rect class="d-mask" x="548" y="190" width="52" height="64" rx="6"/>
+        <rect class="d-padding" x="548" y="190" width="52" height="64" rx="6"/>
+        <rect class="d-mask" x="606" y="190" width="52" height="64" rx="6"/>
+        <rect class="d-padding" x="606" y="190" width="52" height="64" rx="6"/>
+        <text class="t-note" x="490" y="448">並排又可調</text>
+        <text class="t-note" x="490" y="482">導覽列關鍵</text>
+        <rect class="d-mask" x="690" y="96" width="210" height="400" rx="10"/>
+        <rect class="d-panel" x="690" y="96" width="210" height="400" rx="10"/>
+        <text class="t-code" x="710" y="140">none</text>
+        <rect class="d-mask" x="710" y="190" width="52" height="64" rx="6"/>
+        <rect class="d-padding" x="710" y="190" width="52" height="64" rx="6"/>
+        <rect class="d-ghost" x="768" y="190" width="52" height="64" rx="6"/>
+        <rect class="d-mask" x="826" y="190" width="52" height="64" rx="6"/>
+        <rect class="d-padding" x="826" y="190" width="52" height="64" rx="6"/>
+        <text class="t-note" x="710" y="448">中間那格消失</text>
+        <text class="t-note" x="710" y="482">不佔任何空間</text>
+      </svg>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>block</b>：各佔一整行</li>
+        <li class="reveal"><b>inline</b>：並排，但上下距無效</li>
+        <li class="reveal"><b>inline-block</b>：並排又可調寬高</li>
+        <li class="reveal"><b>none</b>：完全不佔空間</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先看圖再看右邊四個關鍵字。最需要強調的是 inline 與 inline-block 的差別——那是學生做水平導覽列時最常踩的坑，也是上一頁那顆按鈕為什麼要寫 inline-block 的答案。 -->
+<!-- 講述重點：先給全表，再逐頁拆解。最需要強調的是 inline 與 inline-block 的差別——
+       那是學生做水平導覽列時最常踩的坑，也是上一頁那顆按鈕為什麼要寫 inline-block 的答案。 -->
+</section>
+
+<!-- ═══════════ 26｜block ═══════════ -->
+<section class="slide" data-label="block">
+  <p class="eyebrow">Part 3｜顯示模式 display</p>
+  <p class="pagedot">xxvi</p>
+  <h2 class="headline reveal">block：一個佔一行</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">預設佔滿<b>整個寬度</b></li>
+        <li class="reveal">前後都會<b>強制換行</b></li>
+        <li class="reveal">常見：<code>&lt;h1&gt;</code>、<code>&lt;p&gt;</code>、<code>&lt;div&gt;</code></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">三個 div 會各自佔滿一行</span>
+      <div class="code"><span class="tag">div</span> {
+  <span class="attr">background</span>: <span class="str">#E8C9B6</span>;
+  <span class="attr">height</span>: <span class="str">60px</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：讓學生當場寫三個 div，看到它們自動堆疊。
+       帶出關鍵句：「block 元素不管內容多短，都霸佔一整行」——
+       這就是為什麼導覽列不能直接用 div 排。 -->
+</section>
+
+<!-- ═══════════ 27｜inline ═══════════ -->
+<section class="slide" data-label="inline">
+  <p class="eyebrow">Part 3｜顯示模式 display</p>
+  <p class="pagedot">xxvii</p>
+  <h2 class="headline reveal">inline：寬度由內容決定</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">寬度<b>隨內容而定</b>，不換行</li>
+        <li class="reveal"><b>上下</b>的 margin 與 padding <b>無效</b></li>
+        <li class="reveal">常見：<code>&lt;a&gt;</code>、<code>&lt;span&gt;</code>、<code>&lt;b&gt;</code></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">三個 span 會並排在同一行</span>
+      <div class="code"><span class="tag">span</span> {
+  <span class="attr">background</span>: <span class="str">#D6DD63</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：當場做實驗——對 a 標籤下 padding: 40px，會發現左右撐開了、上下沒動。
+       這就是 Part 2 那顆按鈕為什麼要加 display: inline-block 的答案。
+       先鋪「inline 的限制」，學生才會珍惜 inline-block。 -->
+</section>
+
+<!-- ═══════════ 28｜inline-block ═══════════ -->
+<section class="slide" data-label="inline-block">
+  <p class="eyebrow">Part 3｜顯示模式 display</p>
+  <p class="pagedot">xxviii</p>
+  <h2 class="headline reveal">inline-block：兩者的優點都拿</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">行內排列（<b>不換行</b>）＋ 區塊操縱（<b>可調寬高</b>）</li>
+        <li class="reveal">參考教材稱它「<b>最具戰略價值</b>」的模式</li>
+        <li class="reveal">把垂直清單變成<b>水平導覽列</b>的關鍵</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">讓清單項目橫向排開</span>
+      <div class="code"><span class="tag">li</span> {
+  <span class="attr">display</span>: <span class="str">inline-block</span>;
+  <span class="attr">padding</span>: <span class="str">12px 24px</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁是今天技術含量最高的一頁，也是做導覽列的分水嶺。
+       用一句話記住：inline-block = 「排得下去」＋「調得動」。
+       示範時把同一份 li 在 block / inline / inline-block 之間切換，效果最直接。 -->
+</section>
+
+<!-- ═══════════ 29｜display: none ═══════════ -->
+<section class="slide" data-label="display none">
+  <p class="eyebrow">Part 3｜顯示模式 display</p>
+  <p class="pagedot">xxix</p>
+  <h2 class="headline reveal">display: none：徹底不存在</h2>
+    <div class="body-split body-split--shot">
+    <div class="reveal">
+      <svg class="dgm" viewBox="0 0 940 560" role="img" aria-labelledby="sp25-t sp25-d">
+        <title id="sp25-t">三種「看不見」的差別：display none、visibility hidden、opacity 0</title>
+        <desc id="sp25-d">三個欄位各放三個方塊，中間那格使用不同的隱藏方式，比較佔位與可否做動畫。</desc>
+        <defs>
+          <pattern id="sp25-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path class="d-grid" d="M 40 0 L 0 0 0 40"/>
+          </pattern>
+          <marker id="sp25-arw" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="940" height="560" fill="url(#sp25-grid)"/>
+        <text class="t-head" x="30" y="60">01 / 三種「看不見」，差別在哪</text>
+
+        <rect class="d-mask" x="30" y="88" width="270" height="330" rx="10"/>
+        <rect class="d-panel" x="30" y="88" width="270" height="330" rx="10"/>
+        <text class="t-code" x="50" y="132">display: none</text>
+        <rect class="d-mask" x="50" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-padding" x="50" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-mask" x="130" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-padding" x="130" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-mask" x="210" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-padding" x="210" y="168" width="70" height="52" rx="6"/>
+        <text class="t-note" x="50" y="316">中間那格直接消失</text>
+        <text class="t-note" x="50" y="350">後面的往前遞補</text>
+        <text class="t-note" x="50" y="384">不佔位、不能動畫</text>
+        <rect class="d-mask" x="340" y="88" width="270" height="330" rx="10"/>
+        <rect class="d-panel" x="340" y="88" width="270" height="330" rx="10"/>
+        <text class="t-code" x="360" y="126">visibility:</text>
+        <text class="t-code" x="360" y="160">hidden</text>
+        <rect class="d-mask" x="360" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-padding" x="360" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-slot" x="440" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-mask" x="520" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-padding" x="520" y="168" width="70" height="52" rx="6"/>
+        <text class="t-note" x="360" y="316">位置空著，看不見</text>
+        <text class="t-note" x="360" y="350">後面的不會遞補</text>
+        <text class="t-note" x="360" y="384">佔位、可做動畫</text>
+        <rect class="d-mask" x="650" y="88" width="270" height="330" rx="10"/>
+        <rect class="d-panel" x="650" y="88" width="270" height="330" rx="10"/>
+        <text class="t-code" x="670" y="132">opacity: 0</text>
+        <rect class="d-mask" x="670" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-padding" x="670" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-slot" x="750" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-mask" x="830" y="168" width="70" height="52" rx="6"/>
+        <rect class="d-padding" x="830" y="168" width="70" height="52" rx="6"/>
+        <text class="t-note" x="670" y="316">完全透明，還在那</text>
+        <text class="t-note" x="670" y="350">可以淡入淡出</text>
+        <text class="t-note" x="670" y="384">佔位、適合動畫</text>
+      </svg>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>display: none</b>：不渲染也不佔位</li>
+        <li class="reveal"><b>visibility: hidden</b>：佔位但看不見</li>
+        <li class="reveal"><b>opacity: 0</b>：佔位且可以做動畫</li>
+        <li class="reveal">除錯也很好用：<b>先關掉一半</b>看問題在哪</li>
+      </ul>
+      <div class="note reveal">想做「淡出」動畫請用 <code>opacity</code> 或 <code>visibility</code>，<b>不是 display</b>——display 沒有中間狀態。</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：三者的差別建議當場比對：把同一個元素在三種寫法之間切換，學生會自己看出「有沒有佔位」。今天只要記住 display:none 是「消失得最徹底」的那一個。 -->
+<!-- 講述重點：三者的差別建議當場比對：display:none 不佔位、visibility:hidden 佔位但看不見、
+        opacity:0 佔位且看不見但可以動畫。今天只要記住 display:none 是「消失得最徹底」的那一個。 -->
+</section>
+
+<!-- ═══════════ 30｜清單變導覽列 ═══════════ -->
+<section class="slide" data-label="清單變導覽列">
+  <p class="eyebrow">Part 3｜顯示模式 display</p>
+  <p class="pagedot">xxx</p>
+  <h2 class="headline reveal">實戰：垂直清單變成水平導覽列</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">上週的 <code>&lt;ul&gt;</code> 預設是<b>垂直清單</b></li>
+        <li class="reveal">拿掉清單符號，再把 <code>&lt;li&gt;</code> 改成 <b>inline-block</b></li>
+        <li class="reveal">它就會橫向排成一條<b>導覽列</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">兩個屬性就完成</span>
+      <div class="code"><span class="attr">nav ul</span> { <span class="attr">list-style</span>: <span class="str">none</span>; }
+
+<span class="attr">nav li</span> {
+  <span class="attr">display</span>: <span class="str">inline-block</span>;
+  <span class="attr">padding</span>: <span class="str">12px 28px</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁把 Part 2 的盒模型與 Part 3 的 display 合起來用——
+       padding 讓每個項目有可點擊範圍，inline-block 讓它們排成一行。
+       提醒：現在還在「純粹用 CSS 排版」的階段，等學到 Flexbox 會有更省事的做法。 -->
+</section>
+
+<!-- ═══════════ 31｜實作 3 ═══════════ -->
+<section class="slide" data-label="實作 3 導覽列">
+  <p class="eyebrow">Part 3｜動手實作</p>
+  <p class="pagedot">xxxi</p>
+  <h2 class="headline reveal">實作 3：做出你的第一條導覽列</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal">把頁面上的 <code>&lt;ul&gt;</code> 當成導覽列</li>
+      <li class="reveal">用 <code>list-style: none</code> 拿掉前面的點</li>
+      <li class="reveal">每個 <code>&lt;li&gt;</code> 設 <code>display: inline-block</code></li>
+      <li class="reveal">加上內距，讓每個項目都有可點擊的面積</li>
+      <li class="reveal">存檔，用 Full Page 全螢幕檢查有沒有爆版</li>
+    </ul>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一步會直接變成下次作業「數位名片」的導覽區塊，請提醒學生留下來。
+       巡場重點：常見錯誤是忘了加 list-style: none，或是把 inline-block 寫在 ul 上而不是 li 上。 -->
+</section>
+
+<!-- ═══════════ 32｜Part 4 章節頁 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 4 章節頁">
+  <p class="chapter-num reveal">IV.</p>
+  <h2 class="chapter-title reveal">定位 position</h2>
+  <p class="chapter-sub reveal">static · relative · absolute · fixed</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 4</span></div>
+  <!-- 講述重點：當流式排版無法滿足需求時，我們需要「定位」來打破規則。 -->
+</section>
+
+<!-- ═══════════ 33｜四種定位 ═══════════ -->
+<section class="slide" data-label="四種定位">
+  <p class="eyebrow">Part 4｜定位 position</p>
+  <p class="pagedot">xxxiii</p>
+  <h2 class="headline reveal">四種定位模式</h2>
+    <div class="body-split body-split--shot">
+    <div class="reveal">
+      <svg class="dgm" viewBox="0 0 940 540" role="img" aria-labelledby="sp29-t sp29-d">
+        <title id="sp29-t">四種 position 值相對於什麼在移動</title>
+        <desc id="sp29-d">static 照文件流、relative 相對原位、absolute 相對定位父層、fixed 相對瀏覽器視窗。</desc>
+        <defs>
+          <pattern id="sp29-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path class="d-grid" d="M 40 0 L 0 0 0 40"/>
+          </pattern>
+          <marker id="sp29-arw" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="940" height="540" fill="url(#sp29-grid)"/>
+        <text class="t-head" x="30" y="60">01 / 相對於「誰」在動？</text>
+
+        <rect class="d-mask" x="30" y="96" width="210" height="400" rx="10"/>
+        <rect class="d-panel" x="30" y="96" width="210" height="400" rx="10"/>
+        <text class="t-code" x="50" y="140">static</text>
+        <rect class="d-ghost" x="60" y="200" width="150" height="150" rx="6"/>
+        <text class="t-note" x="70" y="230">父層</text>
+        <rect class="d-mask" x="60" y="250" width="90" height="52" rx="6"/>
+        <rect class="d-slot" x="60" y="250" width="90" height="52" rx="6"/>
+        <text class="t-note" x="50" y="440">照文件流排</text>
+        <text class="t-note" x="50" y="474">不能偏移</text>
+        <rect class="d-mask" x="250" y="96" width="210" height="400" rx="10"/>
+        <rect class="d-panel" x="250" y="96" width="210" height="400" rx="10"/>
+        <text class="t-code" x="270" y="140">relative</text>
+        <rect class="d-ghost" x="280" y="200" width="150" height="150" rx="6"/>
+        <text class="t-note" x="290" y="230">父層</text>
+        <rect class="d-ghost" x="280" y="290" width="90" height="52" rx="6"/>
+        <rect class="d-mask" x="280" y="240" width="90" height="52" rx="6"/>
+        <rect class="d-padding" x="280" y="240" width="90" height="52" rx="6"/>
+<path class="a-line" d="M 325 292 L 325 250" marker-end="url(#sp29-arw)"/>
+        <text class="t-note" x="270" y="440">相對自己的</text>
+        <text class="t-note" x="270" y="474">原位移動</text>
+        <rect class="d-mask" x="470" y="96" width="210" height="400" rx="10"/>
+        <rect class="d-panel" x="470" y="96" width="210" height="400" rx="10"/>
+        <text class="t-code" x="490" y="140">absolute</text>
+        <rect class="d-ghost" x="500" y="200" width="150" height="150" rx="6"/>
+        <text class="t-note" x="510" y="340">父層</text>
+        <rect class="d-mask" x="544" y="206" width="70" height="46" rx="6"/>
+        <rect class="d-padding" x="544" y="206" width="70" height="46" rx="6"/>
+        <text class="t-note" x="490" y="440">找最近的</text>
+        <text class="t-note" x="490" y="474">定位父層</text>
+        <rect class="d-mask" x="690" y="96" width="210" height="400" rx="10"/>
+        <rect class="d-panel" x="690" y="96" width="210" height="400" rx="10"/>
+        <text class="t-code" x="710" y="140">fixed</text>
+        <rect class="d-mask" x="812" y="122" width="70" height="46" rx="6"/>
+        <rect class="d-hot" x="812" y="122" width="70" height="46" rx="6"/>
+<text class="t-note" x="700" y="230">視窗</text>
+        <text class="t-note" x="710" y="440">相對瀏覽器</text>
+        <text class="t-note" x="710" y="474">視窗邊界</text>
+      </svg>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>static</b>：照文件流排</li>
+        <li class="reveal"><b>relative</b>：相對自己的原位</li>
+        <li class="reveal"><b>absolute</b>：相對定位父層</li>
+        <li class="reveal"><b>fixed</b>：相對瀏覽器視窗</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁只講「相對於誰」這一件事。今天真正會用到的是 relative 與 fixed，absolute 只需要聽懂「父層要設 relative」這條鐵則。 -->
+<!-- 講述重點：先給全表，再逐頁拆解。今天真正會用到的是 relative 與 fixed，
+       absolute 只需要聽懂「父層要設 relative」這一條鐵則。 -->
+</section>
+
+<!-- ═══════════ 34｜relative ═══════════ -->
+<section class="slide" data-label="relative">
+  <p class="eyebrow">Part 4｜定位 position</p>
+  <p class="pagedot">xxxiv</p>
+  <h2 class="headline reveal">relative：相對自己的原位移動</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">相對於<b>自己的原位</b>偏移</li>
+        <li class="reveal">移動後，<b>原本的空間仍保留</b></li>
+        <li class="reveal">不會把其他元素擠走</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">往上 8px、往右 12px</span>
+      <div class="code"><span class="attr">.card</span> {
+  <span class="attr">position</span>: <span class="str">relative</span>;
+  <span class="attr">top</span>: <span class="str">-8px</span>;
+  <span class="attr">left</span>: <span class="str">12px</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：relative 的價值有兩個——微調位置，以及「當 absolute 子元素的定位基準」。
+       今天先講微調，下一頁講基準。讓學生實際把 top 設成負值，看見元素浮起來但下面的東西沒動。 -->
+</section>
+
+<!-- ═══════════ 35｜absolute 與技術警示 ═══════════ -->
+<section class="slide" data-label="absolute 技術警示">
+  <p class="eyebrow">Part 4｜定位 position</p>
+  <p class="pagedot">xxxv</p>
+  <h2 class="headline reveal">absolute：父層一定要設 relative</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">相對<b>最近的一個非 static 父層</b>定位</li>
+        <li class="reveal">父層沒設 relative，它會<b>一路往上找</b></li>
+        <li class="reveal">最慘的結果：<b>定位到整個網頁的邊界</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">父層建立定位基準</span>
+      <div class="code"><span class="attr">.card</span> { <span class="attr">position</span>: <span class="str">relative</span>; }
+
+<span class="attr">.tag</span> {
+  <span class="attr">position</span>: <span class="str">absolute</span>;
+  <span class="attr">top</span>: <span class="str">12px</span>;
+  <span class="attr">right</span>: <span class="str">12px</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是本節唯一需要「背」的鐵則。用右上角的標籤（tag）當例子：
+       父層 .card 設 relative，標籤才會乖乖待在卡片的右上角。
+       示範拿掉父層的 relative，讓學生看到標籤直接飛到視窗右上角——看過一次就不會忘。 -->
+</section>
+
+<!-- ═══════════ 36｜fixed ═══════════ -->
+<section class="slide" data-label="fixed">
+  <p class="eyebrow">Part 4｜定位 position</p>
+  <p class="pagedot">xxxvi</p>
+  <h2 class="headline reveal">fixed：釘在視窗上，捲動也不跑</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">相對於<b>瀏覽器視窗</b>固定</li>
+        <li class="reveal">捲動時<b>釘在原地不動</b></li>
+        <li class="reveal">常見用途：<b>置頂導覽列</b>、蓋版廣告</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">把導覽列釘在最上面</span>
+      <div class="code"><span class="tag">header</span> {
+  <span class="attr">position</span>: <span class="str">fixed</span>;
+  <span class="attr">top</span>: <span class="str">0</span>;
+  <span class="attr">left</span>: <span class="str">0</span>; <span class="attr">right</span>: <span class="str">0</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：left:0 與 right:0 同時寫，等於把寬度撐滿整個視窗——這是 fixed 導覽列的標準寫法。
+       提醒副作用：fixed 的元素脫離文件流，會蓋住下面的內容，所以要留出對應的空間。 -->
+</section>
+
+<!-- ═══════════ 37｜2000px 滾輪實驗 ═══════════ -->
+<section class="slide" data-label="滾輪實驗">
+  <p class="eyebrow">Part 4｜定位 position</p>
+  <p class="pagedot">xxxvii</p>
+  <h2 class="headline reveal">課堂小實驗：2000px 滾輪測試</h2>
+  <div class="body-full body-full--note">
+    <span class="code-label">對 body 下這個測試，然後捲動滾輪</span>
+    <div class="code"><span class="tag">body</span> { <span class="attr">height</span>: <span class="str">2000px</span>; }
+
+<span class="tag">header</span> {
+  <span class="attr">position</span>: <span class="str">fixed</span>;
+  <span class="attr">top</span>: <span class="str">0</span>;
+}</div>
+  </div>
+  <div class="note note--bottom reveal">
+    捲動時：<code>static</code> 與 <code>absolute</code> 的元素都會往上滑走，唯獨 <code>fixed</code> 會一直釘在畫面上。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：body 預設高度只有內容那麼高，沒有捲軸就看不到 fixed 的效果，
+       所以這個實驗要先「把頁面撐高」。這是參考教材裡的小技巧，示範一次勝過講十次。 -->
+</section>
+
+<!-- ═══════════ 38｜實作 4 ═══════════ -->
+<section class="slide" data-label="實作 4 置頂導覽列">
+  <p class="eyebrow">Part 4｜動手實作</p>
+  <p class="pagedot">xxxviii</p>
+  <h2 class="headline reveal">實作 4：把導覽列釘在頂端</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal">在頁面最上方加一個 <code>&lt;header&gt;</code></li>
+      <li class="reveal">設 <code>position: fixed; top: 0;</code></li>
+      <li class="reveal">把 <code>body</code> 設成 <code>height: 2000px</code> 才看得出效果</li>
+      <li class="reveal">捲動頁面，確認它<b>留在頂端沒有跟著跑</b></li>
+      <li class="reveal">給下方內容留出空間，別讓導覽列蓋住標題</li>
+    </ul>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：最後一條是實務重點——「蓋住標題」是學生做完 fixed 之後最常見的求救。
+       解法很簡單：給 body 或第一個區塊加上 padding-top，把空間讓回來。 -->
+</section>
+
+<!-- ═══════════ 39｜Part 5 章節頁 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 5 章節頁">
+  <p class="chapter-num reveal">V.</p>
+  <h2 class="chapter-title reveal">字體排版美學</h2>
+  <p class="chapter-sub reveal">字型 · 字級 · 字重 · 字距與行高</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 5</span></div>
+  <!-- 講述重點：排版是網頁的靈魂。微小的調整，能把頁面從「工程草稿」變成「專業產品」。 -->
+</section>
+
+<!-- ═══════════ 40｜font-family ═══════════ -->
+<section class="slide" data-label="font-family">
+  <p class="eyebrow">Part 5｜字體排版美學</p>
+  <p class="pagedot">xl</p>
+  <h2 class="headline reveal">font-family：字型的候選清單</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">中文環境最安全的預設是<b>微軟正黑體</b></li>
+        <li class="reveal">寫法是「<b>候選清單</b>」，用逗號分隔</li>
+        <li class="reveal">前面找不到，就往<b>後退一個</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">一路退到 sans-serif 為止</span>
+      <div class="code"><span class="tag">body</span> {
+  <span class="attr">font-family</span>: <span class="str">"Microsoft JhengHei"</span>,
+               <span class="str">"PingFang TC"</span>,
+               <span class="str">sans-serif</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：為什麼要寫一串？因為你無法確定使用者的電腦裝了什麼字型。
+       最後一個一定要放通用字族（sans-serif / serif），這是「保底」。
+       重點觀念：使用者看到的是他電腦裡的字型，不是你電腦裡的。 -->
+</section>
+
+<!-- ═══════════ 41｜使用電腦沒有的字型 ═══════════ -->
+<section class="slide" data-label="使用電腦沒有的字型">
+  <p class="eyebrow">Part 5｜字體排版美學</p>
+  <p class="pagedot">xli</p>
+  <h2 class="headline reveal">使用電腦沒有的字型</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">使用者的電腦<b>不一定裝了</b>你寫的字型</li>
+        <li class="reveal">最簡單：用 <b>Google Fonts</b> 的 webfont</li>
+        <li class="reveal">要離線：用 <code>@font-face</code> 自備字型檔</li>
+        <li class="reveal">熱門免費中文字型：<b>Noto Sans TC</b>、<b>Noto Serif TC</b>、<b>LXGW WenKai TC</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">三個步驟就能換字型</span>
+      <ol class="steps">
+        <li>到 <code>fonts.google.com</code> 挑一個字型</li>
+        <li>把它給的 <code>&lt;link&gt;</code> 貼進 <code>&lt;head&gt;</code></li>
+        <li>在 CSS 寫 <code>font-family</code> 指定它</li>
+      </ol>
+      <div class="note reveal">
+        中文字型檔很大（一套 5 到 15 MB），挑 1–2 個字重就好。真的要離線，得把字型<b>子集化</b>——只留用得到的字；
+        這份簡報就是這樣做的，所以斷網也正常顯示。
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：上一頁說「使用者看到的是他電腦裡的字型」，這一頁給解法——把字型一起帶過去。
+       現場示範一次：換上 Noto Sans TC，請學生說「有沒有不一樣」。中文字型的差別比英文字型明顯得多。
+       三個步驟講完就好，不要當場操作（課堂時間不夠）；強調這是「以後接案一定會用到」的一步。
+       補一句：中文 webfont 檔很大，這也是為什麼這份簡報的字型要先子集化再內嵌。 -->
+</section>
+
+<!-- ═══════════ 42｜font-size 與 color ═══════════ -->
+<section class="slide" data-label="字級與顏色">
+  <p class="eyebrow">Part 5｜字體排版美學</p>
+  <p class="pagedot">xlii</p>
+  <h2 class="headline reveal">font-size 與 color：建立資訊層級</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">字級決定<b>閱讀順序</b>：標題大、內文小</li>
+        <li class="reveal">顏色可以到 <a href="https://colorpicker.com/" target="_blank">colorpicker.com</a> 挑</li>
+        <li class="reveal">全站建議只用 <b>2 到 3 個</b>主要顏色</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">拉開標題與內文的差距</span>
+      <div class="code"><span class="tag">h1</span> {
+  <span class="attr">font-size</span>: <span class="str">48px</span>;
+  <span class="attr">color</span>: <span class="str">#2A241B</span>;
+}
+
+<span class="tag">p</span> {
+  <span class="attr">font-size</span>: <span class="str">18px</span>;
+  <span class="attr">color</span>: <span class="str">#5C5345</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：顏色不要超過三個，是「看起來專業」最快的捷徑。
+       用深灰當內文色（#5C5345）而不是純黑，是編輯設計的常見手法。
+       連到下週的 UI/UX 主題：這就是在建立視覺層級（Visual Hierarchy）。 -->
+</section>
+
+<!-- ═══════════ 43｜font-weight ═══════════ -->
+<section class="slide" data-label="font-weight">
+  <p class="eyebrow">Part 5｜字體排版美學</p>
+  <p class="pagedot">xliii</p>
+  <h2 class="headline reveal">font-weight：用粗細分出重點</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">100（纖細）到 900（極粗）</li>
+        <li class="reveal"><code>normal</code> 是 400、<code>bold</code> 是 700</li>
+        <li class="reveal">中文字型<b>常常只有 400 與 700</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">標題加粗，內文不動</span>
+      <div class="code"><span class="tag">h1</span> { <span class="attr">font-weight</span>: <span class="str">700</span>; }
+
+<span class="attr">.lead</span> { <span class="attr">font-weight</span>: <span class="str">500</span>; }</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：用字型沒有的字重，瀏覽器會「假造」粗體，中文看起來會糊掉、歪掉。
+       實務原則：一個頁面用兩種字重就夠——一種給標題、一種給內文。
+       加粗是最省力但最容易濫用的強調手法，加太多等於沒有強調。 -->
+</section>
+
+<!-- ═══════════ 44｜字距與行高 ═══════════ -->
+<section class="slide" data-label="字距與行高">
+  <p class="eyebrow">Part 5｜字體排版美學</p>
+  <p class="pagedot">xliv</p>
+  <h2 class="headline reveal">letter-spacing 與 line-height：呼吸感</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal"><code>letter-spacing</code> 字距：標題加一點更透氣</li>
+        <li class="reveal"><code>line-height</code> 行高：內文 <b>1.5 到 1.6 倍</b>最舒服</li>
+        <li class="reveal">中文筆畫密，行高比英文更需要放寬</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">長文章讀起來不累的關鍵</span>
+      <div class="code"><span class="tag">h1</span> {
+  <span class="attr">letter-spacing</span>: <span class="str">2px</span>;
+}
+
+<span class="tag">p</span> {
+  <span class="attr">line-height</span>: <span class="str">1.6</span>;
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁最容易被學生低估，但投報率最高。
+       當場把 line-height 從預設值改成 1.6，讓學生自己說「哪一個讀起來比較舒服」——
+       由他們說出來，比老師講有效。 -->
+</section>
+
+<!-- ═══════════ 45｜span 精確渲染 ═══════════ -->
+<section class="slide" data-label="span 精確渲染">
+  <p class="eyebrow">Part 5｜字體排版美學</p>
+  <p class="pagedot">xlv</p>
+  <h2 class="headline reveal">span：只改段落裡的某一個詞</h2>
+  <div class="body-split">
+    <div>
+      <ul class="points">
+        <li class="reveal">想改段落裡<b>某一個詞</b>的顏色</li>
+        <li class="reveal">用 <code>&lt;span&gt;</code> 掛一個 class</li>
+        <li class="reveal"><code>&lt;span&gt;</code> 預設是 inline，<b>不會斷行</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">段落裡的重點標記</span>
+      <div class="code">&lt;p&gt;這是一段&lt;span class="<span class="str">hl</span>"&gt;重點&lt;/span&gt;文字&lt;/p&gt;
+
+<span class="attr">.hl</span> { <span class="attr">color</span>: <span class="str">#A64C7C</span>; }</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：呼應上週講過的 span——上週學它「不會斷行」，這週學它「能被 CSS 精準命中」。
+       div 做同樣的事會把段落拆成兩段，這是 span 存在的理由。 -->
+</section>
+
+<!-- ═══════════ 46｜實作 5 ═══════════ -->
+<section class="slide" data-label="實作 5 調字">
+  <p class="eyebrow">Part 5｜動手實作</p>
+  <p class="pagedot">xlvi</p>
+  <h2 class="headline reveal">實作 5：把頁面的字調順</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal">替 <code>body</code> 指定中文字型清單</li>
+      <li class="reveal">拉開標題與內文的字級差距</li>
+      <li class="reveal">內文 <code>line-height</code> 設 <b>1.6</b></li>
+      <li class="reveal">標題加上 <code>letter-spacing</code></li>
+      <li class="reveal">用 <code>&lt;span&gt;</code> 標出段落裡的一句重點</li>
+    </ul>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：做到這裡，學生的頁面應該已經明顯「像個網站」了。
+       請他們把調整前後的畫面並排比較——這個前後對照，就是本週最有力的學習證據。 -->
+</section>
+
+<!-- ═══════════ 47｜六個延伸主題 ═══════════ -->
+<section class="slide" data-label="範例總覽">
+  <p class="eyebrow">範例</p>
+  <p class="pagedot">xlvii</p>
+  <h2 class="headline reveal">課堂示範 ＋ 六個延伸主題</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal"><b>名片｜數位名片</b>——課堂一起做的那一張</li>
+      <li class="reveal"><b>A1｜個人作品集頁</b>——接案、求職都用得到的一頁</li>
+      <li class="reveal"><b>A2｜店家一頁式形象頁</b>——小店最常見的網站形式</li>
+      <li class="reveal"><b>A3｜講師個人品牌頁</b>——把專業講清楚的一頁</li>
+      <li class="reveal"><b>B1｜產品定價頁</b>——三種方案的比較頁</li>
+      <li class="reveal"><b>B2｜活動報名頁</b>——講座與工作坊的報名表</li>
+      <li class="reveal"><b>B3｜數位菜單頁</b>——餐飲業的線上菜單</li>
+    </ul>
+  </div>
+  <div class="note note--bottom reveal">
+    A 組是入門，B 組要多算一點寬度。<b>有時間就挑一題，做不完也不用擔心</b>。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這六題全部是「真的有人會付錢請你做」的頁面，不是為了練語法而設計的題目。
+       每一題都只用今天教過的五組技術，沒有新東西——差別只在組合方式與難度。
+       明確告訴學生：做多少算多少，沒做完不影響任何事，挑一個你覺得有趣的開始。
+       後面六頁是每一題的成品示範，先讓學生看一眼「原來可以做這樣」，再回頭挑。 -->
+</section>
+
+<!-- ═══════════ 48｜範例 名片 ═══════════ -->
+<section class="slide" data-label="範例 名片 數位名片">
+  <p class="eyebrow">範例｜課堂示範</p>
+  <p class="pagedot">xlviii</p>
+  <h2 class="headline reveal">範例｜數位名片</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（課堂一起做完的樣子）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-card.jpg" alt="範例 數位名片 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：頭像與名字、一句話簡介、聯絡方式列</li>
+        <li class="reveal"><b>用到今天</b>：margin auto 置中、盒模型、inline-block 聯絡列、多重 class</li>
+        <li class="reveal"><b>場景</b>：課堂跟著做的完成版，跟不上就看這一頁</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch3_card.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是課堂一起做完的成品，放在範例區的第一頁——跟不上或想重做的同學，從這裡打開就能看到六個步驟。
+       強調它不是「作業」，只是把課堂做過的東西留在這裡，隨時可以再打開來對照。 -->
+</section>
+
+<!-- ═══════════ 49｜範例 A1 個人作品集頁 ═══════════ -->
+<section class="slide" data-label="範例 A1 個人作品集頁">
+  <p class="eyebrow">延伸練習｜A 組 入門</p>
+  <p class="pagedot">xlix</p>
+  <h2 class="headline reveal">範例 A1｜個人作品集頁</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 CSS 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-a1.jpg" alt="範例 A1 個人作品集頁 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：名字與一句話定位、三張作品卡、聯絡方式列</li>
+        <li class="reveal"><b>用到今天</b>：盒模型撐開卡片、inline-block 三欄並排、字級層級</li>
+        <li class="reveal"><b>場景</b>：接案或求職時，直接給對方看的一頁</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch3_a1.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這題最貼近今天的名片，只是把「一張卡」變成「一整頁」。強調三張卡片是 inline-block 併排，不是各佔一行——這是 block 與 inline-block 的分水嶺。 -->
+</section>
+
+<!-- ═══════════ 50｜範例 A2 店家一頁式形象頁 ═══════════ -->
+<section class="slide" data-label="範例 A2 店家一頁式形象頁">
+  <p class="eyebrow">延伸練習｜A 組 入門</p>
+  <p class="pagedot">l</p>
+  <h2 class="headline reveal">範例 A2｜店家一頁式形象頁</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 CSS 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-a2.jpg" alt="範例 A2 店家一頁式形象頁 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：置頂導覽列、主視覺大字、三個賣點</li>
+        <li class="reveal"><b>用到今天</b>：fixed 定位、inline-block 導覽列、盒模型的留白節奏</li>
+        <li class="reveal"><b>場景</b>：小店、工作室最常見的「一頁式形象網站」</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch3_a2.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這題把 Part 3 與 Part 4 合起來用。導覽列是 fixed，所以要記得幫下面的內容補 padding-top，否則主視覺會被蓋住——這是學生做完 fixed 之後必踩的一步，先提醒。 -->
+</section>
+
+<!-- ═══════════ 51｜範例 A3 講師個人品牌頁 ═══════════ -->
+<section class="slide" data-label="範例 A3 講師個人品牌頁">
+  <p class="eyebrow">延伸練習｜A 組 入門</p>
+  <p class="pagedot">li</p>
+  <h2 class="headline reveal">範例 A3｜講師個人品牌頁</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 CSS 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-a3.jpg" alt="範例 A3 講師個人品牌頁 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：一張大卡片、右上角徽章、專長標籤、一段自介</li>
+        <li class="reveal"><b>用到今天</b>：relative + absolute 定位、字級層級、用 span 標出重點</li>
+        <li class="reveal"><b>場景</b>：講師、顧問、接案工作者的自我介紹頁</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch3_a3.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：右上角那顆「開放邀約中」就是 absolute。當場問學生：拿掉父層的 relative 會怎樣？讓他們回想 Part 4 示範過的「飛到視窗角落」，印象會最深。 -->
+</section>
+
+<!-- ═══════════ 52｜範例 B1 產品定價頁 ═══════════ -->
+<section class="slide" data-label="範例 B1 產品定價頁">
+  <p class="eyebrow">延伸練習｜B 組 挑戰</p>
+  <p class="pagedot">lii</p>
+  <h2 class="headline reveal">範例 B1｜產品定價頁</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 CSS 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-b1.jpg" alt="範例 B1 產品定價頁 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：三張方案卡、推薦方案加深、每張一個按鈕</li>
+        <li class="reveal"><b>用到今天</b>：inline-block 三欄、border 與圓角、用對比色拉出層級</li>
+        <li class="reveal"><b>場景</b>：SaaS、顧問服務最常被要求做的頁面</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch3_b1.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：挑戰點在「三欄寬度加間距要算得剛好」——寬度、margin、容器寬度三者要對得起來，加起來超過就會掉到第二行。讓學生自己算一次，比直接給答案有用。 -->
+</section>
+
+<!-- ═══════════ 53｜範例 B2 活動報名頁 ═══════════ -->
+<section class="slide" data-label="範例 B2 活動報名頁">
+  <p class="eyebrow">延伸練習｜B 組 挑戰</p>
+  <p class="pagedot">liii</p>
+  <h2 class="headline reveal">範例 B2｜活動報名頁</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 CSS 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-b2.jpg" alt="範例 B2 活動報名頁 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：活動資訊卡、日期標籤、表單欄位、送出按鈕</li>
+        <li class="reveal"><b>用到今天</b>：absolute 日期標籤、label 用 block 換行、按鈕的可點擊面積</li>
+        <li class="reveal"><b>場景</b>：講座、工作坊、課程的報名頁</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch3_b2.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：表單是純 HTML 就能做的東西，今天只是讓它好看。重點示範 label 為什麼要 display: block——不換行的話，輸入框會擠在標籤旁邊。送出按鈕的內距要夠大，這是 Part 2 講過的可用性問題。 -->
+</section>
+
+<!-- ═══════════ 54｜範例 B3 數位菜單頁 ═══════════ -->
+<section class="slide" data-label="範例 B3 數位菜單頁">
+  <p class="eyebrow">延伸練習｜B 組 挑戰</p>
+  <p class="pagedot">liv</p>
+  <h2 class="headline reveal">範例 B3｜數位菜單頁</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 CSS 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-b3.jpg" alt="範例 B3 數位菜單頁 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：分類標題、品項與價格、底部提醒區塊</li>
+        <li class="reveal"><b>用到今天</b>：inline-block 左右對齊、span 標重點、字距與行高</li>
+        <li class="reveal"><b>場景</b>：餐飲業的線上菜單，手機打開就看得到</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch3_b3.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：價格對齊靠的是 inline-block 加寬度，不是敲空白鍵——這是最常見的錯誤做法。示範把視窗縮小，讓學生看到空白鍵排出來的東西會歪掉。字距（letter-spacing）與行高在這一頁特別明顯，可以對照 Part 5。 -->
+</section>
+
+<!-- ═══════════ 55｜今日回顧 ═══════════ -->
+<section class="slide" data-label="今日回顧">
+  <p class="eyebrow">收尾</p>
+  <p class="pagedot">lv</p>
+  <h2 class="headline reveal">今日回顧：五個技術點，一條線</h2>
+  <div class="body-full">
+    <ul class="points">
+      <li class="reveal"><b>選取器</b>：先找得到元素，權重才決定誰贏</li>
+      <li class="reveal"><b>盒模型</b>：padding 撐自己，margin 推別人</li>
+      <li class="reveal"><b>display</b>：block 換行、inline 不換行、inline-block 兩者兼具</li>
+      <li class="reveal"><b>position</b>：absolute 記得「父層要 relative」</li>
+      <li class="reveal"><b>排版</b>：字型、字級、字距、行高，決定專業感</li>
+    </ul>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：今天教的每一個零件，最後都長在同一張名片上。
+       回去看自己的頁面，應該能指出哪一行 CSS 對應到哪一個技術點——
+       指不出來的地方，就是還需要複習的地方。 -->
+</section>
+
+<!-- ═══════════ 56｜今天帶走的東西 ═══════════ -->
+<section class="slide" data-label="今天帶走的東西">
+  <p class="eyebrow">收尾</p>
+  <p class="pagedot">lvi</p>
+  <h2 class="headline reveal">今天帶走的東西</h2>
+  <div class="body-full body-full--note">
+    <ul class="points">
+      <li class="reveal">你的資料夾裡，有一份<b>加上 CSS 的頁面</b>了</li>
+      <li class="reveal">課後 <b>30 分鐘留下來裝 VS Code</b>，裝好再回來做範例</li>
+      <li class="reveal">七個範例<b>挑有興趣的做</b>，做多少算多少</li>
+      <li class="reveal"><b>下次 CH4</b>：Tailwind CSS 快速上手與 RWD 響應式排版</li>
+    </ul>
+  </div>
+  <div class="note note--bottom reveal">
+    沒有作業、沒有進度壓力。把範例做完，就是一份<b>可以放上網路的作品集</b>。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：收尾不要提「作業」兩個字——這堂課沒有作業。
+       改講「你已經有兩個版本可以對照」，讓學生感覺自己今天真的多了一點東西。
+       六個延伸主題是給想繼續玩的人，不是必做；明確說「做多少算多少」。
+       預告下週進入 AI 工具，先埋一句：看懂 CSS 的人，才有能力判斷 AI 給的東西對不對。 -->
+</section>
+
+<!-- ═══════════ 57｜Q & A ═══════════ -->
+<section class="slide slide--accent" data-label="Q&amp;A">
+  <h2 class="closer-title reveal">Q &amp; A</h2>
+  <p class="closer-sub reveal">CSS 寫不出效果、找不到誰蓋誰的同學，留下來現場處理。</p>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：預留時間讓卡關的同學舉手，現場用開發人員工具一起找出原因。
+       本週是第一次大量寫 CSS，卡關沒清掉的話，下週的 AI 輔助會變成「只會複製貼上」。 -->
+</section>
+
+</main>
+</div>
+<a class="deck-backlink" href="../">← 回簡報總覽</a>
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter">1 / 57</div>
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編輯模式（E）">編輯</button>
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   =========================================== */
+class SlidePresentation {
+  constructor() {
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.total = this.slides.length;
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.progress = document.getElementById('progress');
+    this.counter = document.getElementById('counter');
+    this.setupStageScale();
+    this.setupNav();
+    this.show(0);
+  }
+
+  /* 固定 16:9：整個 stage 等比縮放並置中，不重排內容 */
+  setupStageScale() {
+    const scale = () => {
+      const f = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      const x = (window.innerWidth - 1920 * f) / 2;
+      const y = (window.innerHeight - 1080 * f) / 2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale();
+    window.addEventListener('resize', scale);
+  }
+
+  setupNav() {
+    document.addEventListener('keydown', (e) => {
+      if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown':
+          e.preventDefault(); this.next(); break;
+        case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+          e.preventDefault(); this.prev(); break;
+        case 'Home': e.preventDefault(); this.show(0); break;
+        case 'End': e.preventDefault(); this.show(this.total - 1); break;
+        case 'f': case 'F':
+          if (document.fullscreenElement) document.exitFullscreen();
+          else document.documentElement.requestFullscreen();
+          break;
+      }
+    });
+
+    /* 觸控滑動 */
+    let sx = 0, sy = 0;
+    document.addEventListener('touchstart', (e) => {
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    }, { passive: true });
+    document.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) dx < 0 ? this.next() : this.prev();
+    }, { passive: true });
+
+    /* 滾輪（節流） */
+    let lock = false;
+    document.addEventListener('wheel', (e) => {
+      if (lock) return;
+      if (Math.abs(e.deltaY) < 24) return;
+      lock = true;
+      e.deltaY > 0 ? this.next() : this.prev();
+      setTimeout(() => { lock = false; }, 650);
+    }, { passive: true });
+  }
+
+  next() { this.show(this.current + 1); }
+  prev() { this.show(this.current - 1); }
+
+  show(i) {
+    this.current = Math.max(0, Math.min(i, this.total - 1));
+    this.slides.forEach((s, n) => {
+      s.classList.toggle('active', n === this.current);
+      s.classList.toggle('visible', n === this.current);
+    });
+    if (this.progress) this.progress.style.width = ((this.current + 1) / this.total * 100) + '%';
+    if (this.counter) this.counter.textContent = (this.current + 1) + ' / ' + this.total;
+  }
+}
+
+/* ===========================================
+   INLINE EDITING（草稿後的微調用；E 鍵或左上角熱區）
+   =========================================== */
+class InlineEditor {
+  constructor() {
+    this.isActive = false;
+    this.toggle = document.getElementById('editToggle');
+    this.hotzone = document.querySelector('.edit-hotzone');
+    this.editableSelector = '.headline, .chapter-title, .chapter-sub, .cover-title, .cover-sub, .cover-kicker, .closer-title, .closer-sub, .points li, .code, .res__title, .res__desc, .res__kind, .eyebrow, .pagedot';
+    this.restore();
+    this.bind();
+  }
+  bind() {
+    this.toggle.addEventListener('click', () => this.toggleMode());
+    this.hotzone.addEventListener('click', () => this.toggleMode());
+    let t = null;
+    const show = () => { clearTimeout(t); this.toggle.classList.add('show'); };
+    const hide = () => { t = setTimeout(() => { if (!this.isActive) this.toggle.classList.remove('show'); }, 400); };
+    this.hotzone.addEventListener('mouseenter', show);
+    this.hotzone.addEventListener('mouseleave', hide);
+    this.toggle.addEventListener('mouseenter', show);
+    this.toggle.addEventListener('mouseleave', hide);
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'e' || e.key === 'E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable'))) {
+        this.toggleMode();
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S') && this.isActive) {
+        e.preventDefault(); this.save();
+      }
+    });
+  }
+  toggleMode() {
+    this.isActive = !this.isActive;
+    document.body.classList.toggle('editing', this.isActive);
+    this.toggle.classList.toggle('active', this.isActive);
+    this.toggle.classList.toggle('show', true);
+    document.querySelectorAll(this.editableSelector).forEach((el) => {
+      if (this.isActive) el.setAttribute('contenteditable', 'true');
+      else el.removeAttribute('contenteditable');
+    });
+    if (!this.isActive) this.save();
+  }
+  save() {
+    try { localStorage.setItem('ch3-deck-html', document.querySelector('.deck-stage').innerHTML); } catch (err) {}
+  }
+  restore() {
+    try {
+      const saved = localStorage.getItem('ch3-deck-html');
+      if (saved) document.querySelector('.deck-stage').innerHTML = saved;
+    } catch (err) {}
+  }
+}
+
+new SlidePresentation();
+new InlineEditor();
+</script>
+</body>
+</html>

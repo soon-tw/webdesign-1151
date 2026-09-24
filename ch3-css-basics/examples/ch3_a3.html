@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>範例 A3｜講師個人品牌頁 — 步驟、程式碼與即時預覽</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #F2EEDF;
+    --panel: #FBF9F2;
+    --ink: #2A241B;
+    --ink-soft: #6B6255;
+    --rule: rgba(42, 36, 27, 0.18);
+    --accent: #A64C7C;
+    --accent-soft: #F0DCE8;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ===== 上方工具列 ===== */
+  .bar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 24px;
+    padding: 11px 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar__id { display: flex; align-items: baseline; gap: 14px; }
+  .bar__code { font-size: 24px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+  .bar__id h1 { font-size: 21px; font-weight: 700; letter-spacing: 1px; }
+  .bar__meta { font-size: 12.5px; color: var(--ink-soft); flex: 1 1 auto; }
+  .bar__meta b { font-weight: 500; color: var(--ink); }
+  .bar__act { display: flex; gap: 9px; flex: 0 0 auto; }
+
+  button {
+    font: inherit; font-size: 12.5px;
+    padding: 7px 15px;
+    border: 1px solid var(--ink); border-radius: 999px;
+    background: transparent; color: var(--ink); cursor: pointer;
+  }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button.done { background: #B7C7A8; border-color: #B7C7A8; color: var(--ink); }
+
+  /* ===== 製作步驟（可切換）===== */
+  .steps { flex: 0 0 auto; padding: 11px 24px 12px; border-bottom: 1px solid var(--rule); }
+  .steps__hd {
+    display: flex; align-items: baseline; gap: 14px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    margin-bottom: 9px;
+  }
+  .steps__hd b { color: var(--ink); font-weight: 500; }
+  .steps__nav { margin-left: auto; display: flex; gap: 7px; }
+  .steps__nav button { padding: 3px 12px; font-size: 12px; }
+  .steps__nav button:disabled { opacity: 0.35; cursor: default; }
+  .steps__nav button:disabled:hover { background: transparent; color: var(--ink); }
+
+  .steps__list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .steps__list button {
+    width: 100%; height: 100%;
+    display: flex; gap: 9px; text-align: left;
+    padding: 8px 11px 9px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-size: 12.5px; line-height: 1.48;
+    color: #3A332A;
+  }
+  .steps__list button:hover { background: #FFF; color: #3A332A; border-color: var(--ink-soft); }
+  .steps__list button b {
+    flex: 0 0 auto;
+    width: 19px; height: 19px; margin-top: 1px;
+    border-radius: 999px;
+    background: #CFC7B6; color: var(--paper);
+    font-size: 11px; font-weight: 700; line-height: 19px; text-align: center;
+  }
+  .steps__list button.on {
+    background: #FFF; border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .steps__list button.on b { background: var(--accent); }
+  .steps__list button.seen b { background: var(--ink-soft); }
+
+  .steps__check {
+    margin-top: 9px;
+    font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+  }
+  .steps__check b { color: var(--ink); font-weight: 500; }
+
+  /* ===== 兩欄主體 ===== */
+  main {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+    min-height: 0;
+  }
+
+  .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+  .pane__head {
+    flex: 0 0 auto;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 9px 20px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+  }
+  .pane__head span { font-variant-numeric: tabular-nums; }
+
+  /* 左：程式碼 */
+  .pane--code { border-right: 1px solid var(--rule); }
+  .code {
+    flex: 1 1 auto; overflow: auto; margin: 0;
+    padding: 16px 20px 40px;
+    background: var(--panel);
+    font-family: "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
+    font-size: 13px; line-height: 1.68; tab-size: 2;
+    -webkit-text-size-adjust: 100%;
+  }
+  .code code { white-space: pre; display: block; }
+  .c-cmt  { color: #8A8072; }
+  .c-str  { color: #A64C7C; }
+  .c-tag  { color: #8C5A3C; }
+  .c-prop { color: #6E7F45; }
+
+  /* 右：預覽 */
+  .pane--prev { background: #E7E3D6; }
+  .stagewrap { flex: 1 1 auto; overflow: auto; padding: 16px; }
+  .stageouter { width: 1200px; }
+  .stage { width: 1200px; transform-origin: 0 0; }
+  .stage iframe {
+    display: block; width: 1200px; height: 1200px;
+    border: 0; border-radius: 10px; background: #fff;
+    box-shadow: 0 10px 30px rgba(42, 36, 27, 0.16);
+  }
+
+  .hint { font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__id">
+    <span class="bar__code">A3</span>
+    <h1>講師個人品牌頁</h1>
+  </div>
+  <p class="bar__meta"><b>A 組 入門</b>　用到今天：relative ＋ absolute 定位 ・ 字級層級 ・ span 標重點　｜　講師、顧問、接案工作者的自我介紹頁</p>
+  <div class="bar__act">
+    <button id="btnCopy">複製這一步的程式碼</button>
+    <button id="btnReload">重新整理預覽</button>
+    <button id="btnPop">開新視窗</button>
+  </div>
+</header>
+
+<section class="steps">
+  <p class="steps__hd">
+    製作步驟（<b>點任一步</b>可切換左下程式碼與右側畫面）
+    <span id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav">
+      <button id="btnPrev">◀ 上一步</button>
+      <button id="btnNext">下一步 ▶</button>
+    </span>
+  </p>
+  <ol class="steps__list" id="stepList">
+    <li><button type="button" data-i="0"><b>1</b><span>外層卡片先設 position:relative——這是等一下放徽章的定位基準</span></button></li>
+    <li><button type="button" data-i="1"><b>2</b><span>徽章設 position:absolute; top/right，就會黏在卡片的右上角</span></button></li>
+    <li><button type="button" data-i="2"><b>3</b><span>名片上半：頭像圓形 + 名字 + 一句話職稱，用 inline-block 排成同一列</span></button></li>
+    <li><button type="button" data-i="3"><b>4</b><span>拉一條虛線把卡片分成上下兩段，並加上區塊小標</span></button></li>
+    <li><button type="button" data-i="4"><b>5</b><span>專長做成標籤：li 設 inline-block + 內距 + 圓角</span></button></li>
+    <li><button type="button" data-i="5"><b>6</b><span>自介段落用 <span> 只標紅一個關鍵詞，不要整段變色</span></button></li>
+  </ol>
+</section>
+
+<main>
+  <section class="pane pane--code">
+    <div class="pane__head"><span id="codeTitle">第 1 步的程式碼</span><span id="stat"></span></div>
+    <pre class="code"><code id="code"></code></pre>
+  </section>
+
+  <section class="pane pane--prev">
+    <div class="pane__head"><span>即時預覽（由左側同一份程式碼執行）</span><span class="hint">捲動可看完整頁面</span></div>
+    <div class="stagewrap" id="wrap">
+      <div class="stageouter" id="outer">
+        <div class="stage" id="stage"><iframe id="prev" title="範例預覽"></iframe></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script id="data" type="application/json">{"docs": ["<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A3 講師個人品牌頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 主卡片 ===== */\n  .card {\n    position: relative;      /* 關鍵！先建立「定位基準」，\n                                等等要放進來的徽章才會以這張卡為準 */\n    width: 780px;\n    margin: 0 auto;          /* 有寬度才能水平置中 */\n    padding: 36px 40px 40px;\n    background: #FFFFFF;\n    border-radius: 18px;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A3 講師個人品牌頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 主卡片 ===== */\n  .card {\n    position: relative;      /* 關鍵！先建立「定位基準」，\n                                等等要放進來的徽章才會以這張卡為準 */\n    width: 780px;\n    margin: 0 auto;          /* 有寬度才能水平置中 */\n    padding: 36px 40px 40px;\n    background: #FFFFFF;\n    border-radius: 18px;\n  }\n  /* ===== ③ 右上角徽章：absolute 會往上找「最近的非 static 父層」 ===== */\n  /* 父層 .card 已經設了 relative，所以這裡的 top/right 是相對「卡片」，\n     不是相對整個網頁。父層若忘了設 relative，這顆徽章會直接飛到視窗角落。 */\n  .badge {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定座標 */\n    top: 24px;\n    right: 24px;\n    padding: 8px 20px;    /* 內距撐出藥丸形狀 */\n    background: #D6DD63;  /* 亮色，一眼看到它在講「現況」 */\n    border-radius: 999px;\n    font-size: 14px;\n    font-weight: 700;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <span class=\"badge\">開放邀約中<\/span>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A3 講師個人品牌頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 主卡片 ===== */\n  .card {\n    position: relative;      /* 關鍵！先建立「定位基準」，\n                                等等要放進來的徽章才會以這張卡為準 */\n    width: 780px;\n    margin: 0 auto;          /* 有寬度才能水平置中 */\n    padding: 36px 40px 40px;\n    background: #FFFFFF;\n    border-radius: 18px;\n  }\n  /* ===== ③ 右上角徽章：absolute 會往上找「最近的非 static 父層」 ===== */\n  /* 父層 .card 已經設了 relative，所以這裡的 top/right 是相對「卡片」，\n     不是相對整個網頁。父層若忘了設 relative，這顆徽章會直接飛到視窗角落。 */\n  .badge {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定座標 */\n    top: 24px;\n    right: 24px;\n    padding: 8px 20px;    /* 內距撐出藥丸形狀 */\n    background: #D6DD63;  /* 亮色，一眼看到它在講「現況」 */\n    border-radius: 999px;\n    font-size: 14px;\n    font-weight: 700;\n  }\n  /* ===== ④ 頭像 + 名字排成同一列 ===== */\n  .who {\n    font-size: 0;   /* 父層字級 0，消掉 inline-block 之間的空白縫隙 */\n  }\n  .avatar {\n    display: inline-block;  /* 要和右邊的文字排在同一行 */\n    vertical-align: middle; /* 垂直置中：頭像與兩行文字的中線對齊 */\n    width: 88px;\n    height: 88px;           /* 寬高相同 → 正圓 */\n    border-radius: 999px;\n    background: #E8C9B6;\n    margin-right: 20px;     /* 和名字分開一點 */\n  }\n  .who-text {\n    display: inline-block;\n    vertical-align: middle; /* 和頭像一樣的中線，兩邊才會對齊 */\n  }\n  .who-text h1 {\n    font-size: 30px;      /* 名字最大 */\n    font-weight: 700;\n    letter-spacing: 2px;\n  }\n  .who-text p {\n    font-size: 15px;      /* 職稱小一階，變成第二層 */\n    color: #5C5345;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <span class=\"badge\">開放邀約中<\/span>\n    <div class=\"who\">\n      <div class=\"avatar\"><\/div>\n      <div class=\"who-text\">\n        <h1>陳映蓉<\/h1>\n        <p>企業內訓講師 ・ 簡報設計與資料視覺化<\/p>\n      <\/div>\n    <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A3 講師個人品牌頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 主卡片 ===== */\n  .card {\n    position: relative;      /* 關鍵！先建立「定位基準」，\n                                等等要放進來的徽章才會以這張卡為準 */\n    width: 780px;\n    margin: 0 auto;          /* 有寬度才能水平置中 */\n    padding: 36px 40px 40px;\n    background: #FFFFFF;\n    border-radius: 18px;\n  }\n  /* ===== ③ 右上角徽章：absolute 會往上找「最近的非 static 父層」 ===== */\n  /* 父層 .card 已經設了 relative，所以這裡的 top/right 是相對「卡片」，\n     不是相對整個網頁。父層若忘了設 relative，這顆徽章會直接飛到視窗角落。 */\n  .badge {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定座標 */\n    top: 24px;\n    right: 24px;\n    padding: 8px 20px;    /* 內距撐出藥丸形狀 */\n    background: #D6DD63;  /* 亮色，一眼看到它在講「現況」 */\n    border-radius: 999px;\n    font-size: 14px;\n    font-weight: 700;\n  }\n  /* ===== ④ 頭像 + 名字排成同一列 ===== */\n  .who {\n    font-size: 0;   /* 父層字級 0，消掉 inline-block 之間的空白縫隙 */\n  }\n  .avatar {\n    display: inline-block;  /* 要和右邊的文字排在同一行 */\n    vertical-align: middle; /* 垂直置中：頭像與兩行文字的中線對齊 */\n    width: 88px;\n    height: 88px;           /* 寬高相同 → 正圓 */\n    border-radius: 999px;\n    background: #E8C9B6;\n    margin-right: 20px;     /* 和名字分開一點 */\n  }\n  .who-text {\n    display: inline-block;\n    vertical-align: middle; /* 和頭像一樣的中線，兩邊才會對齊 */\n  }\n  .who-text h1 {\n    font-size: 30px;      /* 名字最大 */\n    font-weight: 700;\n    letter-spacing: 2px;\n  }\n  .who-text p {\n    font-size: 15px;      /* 職稱小一階，變成第二層 */\n    color: #5C5345;\n  }\n  /* ===== ⑤ 分隔線 ===== */\n  hr {\n    border: 0;                        /* 關掉預設框線 */\n    border-top: 1px dashed #C9BEDC;   /* 只留上面那條虛線 */\n    margin: 26px 0;                   /* 上下留白 */\n  }\n\n  /* ===== ⑥ 區塊小標 ===== */\n  .label {\n    font-size: 14px;\n    font-weight: 700;\n    letter-spacing: 2px;   /* 小字加字距更清楚 */\n    color: #8A8072;\n    margin-bottom: 12px;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <span class=\"badge\">開放邀約中<\/span>\n    <div class=\"who\">\n      <div class=\"avatar\"><\/div>\n      <div class=\"who-text\">\n        <h1>陳映蓉<\/h1>\n        <p>企業內訓講師 ・ 簡報設計與資料視覺化<\/p>\n      <\/div>\n    <\/div>\n    <hr>\n\n    <p class=\"label\">專長主題<\/p>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A3 講師個人品牌頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 主卡片 ===== */\n  .card {\n    position: relative;      /* 關鍵！先建立「定位基準」，\n                                等等要放進來的徽章才會以這張卡為準 */\n    width: 780px;\n    margin: 0 auto;          /* 有寬度才能水平置中 */\n    padding: 36px 40px 40px;\n    background: #FFFFFF;\n    border-radius: 18px;\n  }\n  /* ===== ③ 右上角徽章：absolute 會往上找「最近的非 static 父層」 ===== */\n  /* 父層 .card 已經設了 relative，所以這裡的 top/right 是相對「卡片」，\n     不是相對整個網頁。父層若忘了設 relative，這顆徽章會直接飛到視窗角落。 */\n  .badge {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定座標 */\n    top: 24px;\n    right: 24px;\n    padding: 8px 20px;    /* 內距撐出藥丸形狀 */\n    background: #D6DD63;  /* 亮色，一眼看到它在講「現況」 */\n    border-radius: 999px;\n    font-size: 14px;\n    font-weight: 700;\n  }\n  /* ===== ④ 頭像 + 名字排成同一列 ===== */\n  .who {\n    font-size: 0;   /* 父層字級 0，消掉 inline-block 之間的空白縫隙 */\n  }\n  .avatar {\n    display: inline-block;  /* 要和右邊的文字排在同一行 */\n    vertical-align: middle; /* 垂直置中：頭像與兩行文字的中線對齊 */\n    width: 88px;\n    height: 88px;           /* 寬高相同 → 正圓 */\n    border-radius: 999px;\n    background: #E8C9B6;\n    margin-right: 20px;     /* 和名字分開一點 */\n  }\n  .who-text {\n    display: inline-block;\n    vertical-align: middle; /* 和頭像一樣的中線，兩邊才會對齊 */\n  }\n  .who-text h1 {\n    font-size: 30px;      /* 名字最大 */\n    font-weight: 700;\n    letter-spacing: 2px;\n  }\n  .who-text p {\n    font-size: 15px;      /* 職稱小一階，變成第二層 */\n    color: #5C5345;\n  }\n  /* ===== ⑤ 分隔線 ===== */\n  hr {\n    border: 0;                        /* 關掉預設框線 */\n    border-top: 1px dashed #C9BEDC;   /* 只留上面那條虛線 */\n    margin: 26px 0;                   /* 上下留白 */\n  }\n\n  /* ===== ⑥ 區塊小標 ===== */\n  .label {\n    font-size: 14px;\n    font-weight: 700;\n    letter-spacing: 2px;   /* 小字加字距更清楚 */\n    color: #8A8072;\n    margin-bottom: 12px;\n  }\n  /* ===== ⑦ 專長標籤 ===== */\n  .skills {\n    list-style: none;  /* 拿掉清單圓點 */\n    font-size: 0;      /* 消掉項目之間的空白縫隙 */\n  }\n  .skills li {\n    display: inline-block; /* 橫向排成一列 */\n    padding: 8px 18px;     /* 內距 = 每個標籤的寬鬆感 */\n    margin: 0 10px 10px 0; /* 右邊與下面留間距，換行時才不會黏在一起 */\n    background: #F2EEDF;   /* 淺底標籤 */\n    border-radius: 8px;    /* 一點圓角 */\n    font-size: 15px;       /* 父層是 0，要還原字級 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <span class=\"badge\">開放邀約中<\/span>\n    <div class=\"who\">\n      <div class=\"avatar\"><\/div>\n      <div class=\"who-text\">\n        <h1>陳映蓉<\/h1>\n        <p>企業內訓講師 ・ 簡報設計與資料視覺化<\/p>\n      <\/div>\n    <\/div>\n    <hr>\n\n    <p class=\"label\">專長主題<\/p>\n    <ul class=\"skills\">\n      <li>簡報結構<\/li>\n      <li>資料視覺化<\/li>\n      <li>圖表設計<\/li>\n      <li>上台表達<\/li>\n    <\/ul>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A3 講師個人品牌頁<\/title>\n<style>\n  /* ===== ① 歸零 + 整頁預設 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif;\n    font-size: 16px;\n    line-height: 1.7;\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px;   /* 四周留白 */\n  }\n\n  /* ===== ② 主卡片 ===== */\n  .card {\n    position: relative;      /* 關鍵！先建立「定位基準」，\n                                等等要放進來的徽章才會以這張卡為準 */\n    width: 780px;\n    margin: 0 auto;          /* 有寬度才能水平置中 */\n    padding: 36px 40px 40px;\n    background: #FFFFFF;\n    border-radius: 18px;\n  }\n  /* ===== ③ 右上角徽章：absolute 會往上找「最近的非 static 父層」 ===== */\n  /* 父層 .card 已經設了 relative，所以這裡的 top/right 是相對「卡片」，\n     不是相對整個網頁。父層若忘了設 relative，這顆徽章會直接飛到視窗角落。 */\n  .badge {\n    position: absolute;   /* 脫離原本的位置，改由 top/right 決定座標 */\n    top: 24px;\n    right: 24px;\n    padding: 8px 20px;    /* 內距撐出藥丸形狀 */\n    background: #D6DD63;  /* 亮色，一眼看到它在講「現況」 */\n    border-radius: 999px;\n    font-size: 14px;\n    font-weight: 700;\n  }\n  /* ===== ④ 頭像 + 名字排成同一列 ===== */\n  .who {\n    font-size: 0;   /* 父層字級 0，消掉 inline-block 之間的空白縫隙 */\n  }\n  .avatar {\n    display: inline-block;  /* 要和右邊的文字排在同一行 */\n    vertical-align: middle; /* 垂直置中：頭像與兩行文字的中線對齊 */\n    width: 88px;\n    height: 88px;           /* 寬高相同 → 正圓 */\n    border-radius: 999px;\n    background: #E8C9B6;\n    margin-right: 20px;     /* 和名字分開一點 */\n  }\n  .who-text {\n    display: inline-block;\n    vertical-align: middle; /* 和頭像一樣的中線，兩邊才會對齊 */\n  }\n  .who-text h1 {\n    font-size: 30px;      /* 名字最大 */\n    font-weight: 700;\n    letter-spacing: 2px;\n  }\n  .who-text p {\n    font-size: 15px;      /* 職稱小一階，變成第二層 */\n    color: #5C5345;\n  }\n  /* ===== ⑤ 分隔線 ===== */\n  hr {\n    border: 0;                        /* 關掉預設框線 */\n    border-top: 1px dashed #C9BEDC;   /* 只留上面那條虛線 */\n    margin: 26px 0;                   /* 上下留白 */\n  }\n\n  /* ===== ⑥ 區塊小標 ===== */\n  .label {\n    font-size: 14px;\n    font-weight: 700;\n    letter-spacing: 2px;   /* 小字加字距更清楚 */\n    color: #8A8072;\n    margin-bottom: 12px;\n  }\n  /* ===== ⑦ 專長標籤 ===== */\n  .skills {\n    list-style: none;  /* 拿掉清單圓點 */\n    font-size: 0;      /* 消掉項目之間的空白縫隙 */\n  }\n  .skills li {\n    display: inline-block; /* 橫向排成一列 */\n    padding: 8px 18px;     /* 內距 = 每個標籤的寬鬆感 */\n    margin: 0 10px 10px 0; /* 右邊與下面留間距，換行時才不會黏在一起 */\n    background: #F2EEDF;   /* 淺底標籤 */\n    border-radius: 8px;    /* 一點圓角 */\n    font-size: 15px;       /* 父層是 0，要還原字級 */\n  }\n  /* ===== ⑧ 自我介紹 ===== */\n  .bio {\n    font-size: 16px;\n    color: #3A332A;\n    line-height: 1.8;  /* 這段比較長，行高再放寬一點，讀起來比較不累 */\n    margin-top: 4px;\n  }\n  /* span 預設是 inline：只包住一個詞，不會把整段拆成兩段 */\n  .bio span {\n    color: #A64C7C;      /* 只改顏色 */\n    font-weight: 700;    /* 加粗強調。加太多等於沒有強調，一段一個就好 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"card\">\n    <span class=\"badge\">開放邀約中<\/span>\n    <div class=\"who\">\n      <div class=\"avatar\"><\/div>\n      <div class=\"who-text\">\n        <h1>陳映蓉<\/h1>\n        <p>企業內訓講師 ・ 簡報設計與資料視覺化<\/p>\n      <\/div>\n    <\/div>\n    <hr>\n\n    <p class=\"label\">專長主題<\/p>\n    <ul class=\"skills\">\n      <li>簡報結構<\/li>\n      <li>資料視覺化<\/li>\n      <li>圖表設計<\/li>\n      <li>上台表達<\/li>\n    <\/ul>\n    <p class=\"label\" style=\"margin-top:26px\">關於我<\/p>\n    <p class=\"bio\">\n      十年間在超過 <span>兩百家企業<\/span> 帶過內訓，最擅長把複雜的數據\n      整理成一頁就看得懂的圖。課程以實作為主，會帶走一份自己的作品。\n    <\/p>\n  <\/div>\n<\/body>\n<\/html>\n"]}</script>
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('data').textContent);
+  var docs = DATA.docs, total = docs.length;
+  var cur = 0;
+  var frame = document.getElementById('prev');
+  var stage = document.getElementById('stage');
+  var outer = document.getElementById('outer');
+  var wrap = document.getElementById('wrap');
+
+  /* ---- 極簡語法上色：單次掃描，避免跳脫互相破壞 ---- */
+  function highlight(src) {
+    var esc = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc.replace(
+      /(&lt;!--[\s\S]*?--&gt;|\/\*[\s\S]*?\*\/|"[^"\n]*"|&lt;\/?[a-zA-Z][\w:-]*|[a-z-]+(?=\s*:))/g,
+      function (m) {
+        var cls = m.slice(0, 4) === '&lt;' ? 'c-tag'
+                : m.slice(0, 2) === '/*' || m.slice(0, 4) === '&lt;!' ? 'c-cmt'
+                : m.charAt(0) === '"' ? 'c-str'
+                : 'c-prop';
+        return '<span class="' + cls + '">' + m + '</span>';
+      }
+    );
+  }
+
+  function render() {
+    var code = docs[cur];
+    document.getElementById('code').innerHTML = highlight(code);
+    document.getElementById('code').scrollTop = 0;
+    document.getElementById('stat').textContent = code.split('\n').length + ' 行';
+    document.getElementById('codeTitle').textContent =
+      (cur === total - 1) ? '完整程式碼（HTML ＋ CSS，附註解）' : '第 ' + (cur + 1) + ' 步的程式碼';
+    document.getElementById('pos').textContent = '第 ' + (cur + 1) + ' 步／共 ' + total + ' 步';
+
+    var btns = document.querySelectorAll('#stepList button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', i === cur);
+      btns[i].classList.toggle('seen', i < cur);
+    }
+    document.getElementById('btnPrev').disabled = cur === 0;
+    document.getElementById('btnNext').disabled = cur === total - 1;
+    run();
+  }
+
+  function run() { frame.srcdoc = docs[cur]; }
+
+  /* 內容載入後量出實際高度：量測前先把 iframe 壓到 10px，
+     scrollHeight 才會反映真正的內容高度，不會留一大段空白。 */
+  frame.addEventListener('load', function () {
+    var h = 1200;
+    try {
+      frame.style.height = '10px';
+      h = Math.ceil(frame.contentDocument.documentElement.scrollHeight) || 1200;
+    } catch (e) {}
+    if (h < 120) h = 120;
+    frame.style.height = h + 'px';
+    fit();
+  });
+
+  /* 縮放：把 1200px 寬的頁面等比塞進右欄，並讓外層捲動範圍正確 */
+  function fit() {
+    var avail = wrap.clientWidth - 32;
+    var k = Math.min(1, avail / 1200);
+    stage.style.transform = 'scale(' + k + ')';
+    outer.style.width = (1200 * k) + 'px';
+    outer.style.height = (parseFloat(frame.style.height || 1200) * k) + 'px';
+  }
+  window.addEventListener('resize', fit);
+
+  function go(i) { cur = Math.max(0, Math.min(total - 1, i)); render(); }
+
+  document.getElementById('stepList').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) go(parseInt(b.dataset.i, 10));
+  });
+  document.getElementById('btnPrev').addEventListener('click', function () { go(cur - 1); });
+  document.getElementById('btnNext').addEventListener('click', function () { go(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1); }
+  });
+
+  var btnCopy = document.getElementById('btnCopy');
+  btnCopy.addEventListener('click', function () {
+    var code = docs[cur];
+    function ok() {
+      btnCopy.textContent = '已複製';
+      btnCopy.classList.add('done');
+      setTimeout(function () {
+        btnCopy.textContent = '複製這一步的程式碼';
+        btnCopy.classList.remove('done');
+      }, 1600);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); ok(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(ok, fallback);
+    } else { fallback(); }
+  });
+
+  document.getElementById('btnReload').addEventListener('click', run);
+
+  document.getElementById('btnPop').addEventListener('click', function () {
+    var url = URL.createObjectURL(new Blob([docs[cur]], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  });
+
+  render();
+  fit();
+})();
+</script>
+</body>
+</html>

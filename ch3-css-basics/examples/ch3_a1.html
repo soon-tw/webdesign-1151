@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>範例 A1｜個人作品集頁 — 步驟、程式碼與即時預覽</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #F2EEDF;
+    --panel: #FBF9F2;
+    --ink: #2A241B;
+    --ink-soft: #6B6255;
+    --rule: rgba(42, 36, 27, 0.18);
+    --accent: #A64C7C;
+    --accent-soft: #F0DCE8;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ===== 上方工具列 ===== */
+  .bar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 24px;
+    padding: 11px 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar__id { display: flex; align-items: baseline; gap: 14px; }
+  .bar__code { font-size: 24px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+  .bar__id h1 { font-size: 21px; font-weight: 700; letter-spacing: 1px; }
+  .bar__meta { font-size: 12.5px; color: var(--ink-soft); flex: 1 1 auto; }
+  .bar__meta b { font-weight: 500; color: var(--ink); }
+  .bar__act { display: flex; gap: 9px; flex: 0 0 auto; }
+
+  button {
+    font: inherit; font-size: 12.5px;
+    padding: 7px 15px;
+    border: 1px solid var(--ink); border-radius: 999px;
+    background: transparent; color: var(--ink); cursor: pointer;
+  }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button.done { background: #B7C7A8; border-color: #B7C7A8; color: var(--ink); }
+
+  /* ===== 製作步驟（可切換）===== */
+  .steps { flex: 0 0 auto; padding: 11px 24px 12px; border-bottom: 1px solid var(--rule); }
+  .steps__hd {
+    display: flex; align-items: baseline; gap: 14px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    margin-bottom: 9px;
+  }
+  .steps__hd b { color: var(--ink); font-weight: 500; }
+  .steps__nav { margin-left: auto; display: flex; gap: 7px; }
+  .steps__nav button { padding: 3px 12px; font-size: 12px; }
+  .steps__nav button:disabled { opacity: 0.35; cursor: default; }
+  .steps__nav button:disabled:hover { background: transparent; color: var(--ink); }
+
+  .steps__list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .steps__list button {
+    width: 100%; height: 100%;
+    display: flex; gap: 9px; text-align: left;
+    padding: 8px 11px 9px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-size: 12.5px; line-height: 1.48;
+    color: #3A332A;
+  }
+  .steps__list button:hover { background: #FFF; color: #3A332A; border-color: var(--ink-soft); }
+  .steps__list button b {
+    flex: 0 0 auto;
+    width: 19px; height: 19px; margin-top: 1px;
+    border-radius: 999px;
+    background: #CFC7B6; color: var(--paper);
+    font-size: 11px; font-weight: 700; line-height: 19px; text-align: center;
+  }
+  .steps__list button.on {
+    background: #FFF; border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .steps__list button.on b { background: var(--accent); }
+  .steps__list button.seen b { background: var(--ink-soft); }
+
+  .steps__check {
+    margin-top: 9px;
+    font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+  }
+  .steps__check b { color: var(--ink); font-weight: 500; }
+
+  /* ===== 兩欄主體 ===== */
+  main {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+    min-height: 0;
+  }
+
+  .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+  .pane__head {
+    flex: 0 0 auto;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 9px 20px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+  }
+  .pane__head span { font-variant-numeric: tabular-nums; }
+
+  /* 左：程式碼 */
+  .pane--code { border-right: 1px solid var(--rule); }
+  .code {
+    flex: 1 1 auto; overflow: auto; margin: 0;
+    padding: 16px 20px 40px;
+    background: var(--panel);
+    font-family: "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
+    font-size: 13px; line-height: 1.68; tab-size: 2;
+    -webkit-text-size-adjust: 100%;
+  }
+  .code code { white-space: pre; display: block; }
+  .c-cmt  { color: #8A8072; }
+  .c-str  { color: #A64C7C; }
+  .c-tag  { color: #8C5A3C; }
+  .c-prop { color: #6E7F45; }
+
+  /* 右：預覽 */
+  .pane--prev { background: #E7E3D6; }
+  .stagewrap { flex: 1 1 auto; overflow: auto; padding: 16px; }
+  .stageouter { width: 1200px; }
+  .stage { width: 1200px; transform-origin: 0 0; }
+  .stage iframe {
+    display: block; width: 1200px; height: 1200px;
+    border: 0; border-radius: 10px; background: #fff;
+    box-shadow: 0 10px 30px rgba(42, 36, 27, 0.16);
+  }
+
+  .hint { font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__id">
+    <span class="bar__code">A1</span>
+    <h1>個人作品集頁</h1>
+  </div>
+  <p class="bar__meta"><b>A 組 入門</b>　用到今天：盒模型撐開卡片 ・ inline-block 三欄並排 ・ 字級層級　｜　接案或求職時，直接給對方看的一頁</p>
+  <div class="bar__act">
+    <button id="btnCopy">複製這一步的程式碼</button>
+    <button id="btnReload">重新整理預覽</button>
+    <button id="btnPop">開新視窗</button>
+  </div>
+</header>
+
+<section class="steps">
+  <p class="steps__hd">
+    製作步驟（<b>點任一步</b>可切換左下程式碼與右側畫面）
+    <span id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav">
+      <button id="btnPrev">◀ 上一步</button>
+      <button id="btnNext">下一步 ▶</button>
+    </span>
+  </p>
+  <ol class="steps__list" id="stepList">
+    <li><button type="button" data-i="0"><b>1</b><span>設定整頁文字與底色，再用 .wrap 固定寬度 + margin:0 auto 把所有內容置中</span></button></li>
+    <li><button type="button" data-i="1"><b>2</b><span>放上名字與一句話定位，兩者字級拉開，視線就會先看到名字</span></button></li>
+    <li><button type="button" data-i="2"><b>3</b><span>用 <hr> 拉分隔線、加上區塊小標，把頁面切成「作品集」與「找我」兩塊</span></button></li>
+    <li><button type="button" data-i="3"><b>4</b><span>先做「一張」作品卡：白底、內距、圓角，並設好固定寬度與 inline-block</span></button></li>
+    <li><button type="button" data-i="4"><b>5</b><span>把同一張卡複製成三張——因為已經設了 inline-block 與固定寬度，三張會自動並排</span></button></li>
+    <li><button type="button" data-i="5"><b>6</b><span>最後做聯絡列：同樣是把 li 改成 inline-block，壓成膠囊按鈕</span></button></li>
+  </ol>
+</section>
+
+<main>
+  <section class="pane pane--code">
+    <div class="pane__head"><span id="codeTitle">第 1 步的程式碼</span><span id="stat"></span></div>
+    <pre class="code"><code id="code"></code></pre>
+  </section>
+
+  <section class="pane pane--prev">
+    <div class="pane__head"><span>即時預覽（由左側同一份程式碼執行）</span><span class="hint">捲動可看完整頁面</span></div>
+    <div class="stagewrap" id="wrap">
+      <div class="stageouter" id="outer">
+        <div class="stage" id="stage"><iframe id="prev" title="範例預覽"></iframe></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script id="data" type="application/json">{"docs": ["<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A1 個人作品集頁<\/title>\n<style>\n  /* ===== ① 先歸零，再設定整頁的文字 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif; /* 最後一個是保底字型 */\n    font-size: 16px;    /* 內文基準字級 */\n    line-height: 1.7;   /* 行高 1.7 倍，中文才不會擠 */\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px; /* 上下 56、左右 40：四周留白，內容不貼邊 */\n  }\n\n  /* ===== ② 內容容器：整頁的內容都靠它置中 ===== */\n  .wrap {\n    width: 760px;    /* 一定要有寬度，下面的 auto 才有依據 */\n    margin: 0 auto;  /* 左右自動平均分配 → 水平置中 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"wrap\">\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A1 個人作品集頁<\/title>\n<style>\n  /* ===== ① 先歸零，再設定整頁的文字 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif; /* 最後一個是保底字型 */\n    font-size: 16px;    /* 內文基準字級 */\n    line-height: 1.7;   /* 行高 1.7 倍，中文才不會擠 */\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px; /* 上下 56、左右 40：四周留白，內容不貼邊 */\n  }\n\n  /* ===== ② 內容容器：整頁的內容都靠它置中 ===== */\n  .wrap {\n    width: 760px;    /* 一定要有寬度，下面的 auto 才有依據 */\n    margin: 0 auto;  /* 左右自動平均分配 → 水平置中 */\n  }\n  /* ===== ③ 名字：這一頁最大的字 ===== */\n  .name {\n    font-size: 44px;      /* 比內文大將近三倍，一打開就看到 */\n    font-weight: 700;     /* 粗體 */\n    letter-spacing: 2px;  /* 標題加字距，透氣一點 */\n  }\n\n  /* ===== ④ 定位句：小一階、灰一點，變成第二層 ===== */\n  .tagline {\n    font-size: 17px;\n    color: #5C5345;   /* 灰色 = 比較弱，但仍讀得到 */\n    margin-top: 6px;  /* 和名字稍微分開 */\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"wrap\">\n    <p class=\"name\">林彥廷<\/p>\n    <p class=\"tagline\">前端切版 ・ 一頁式形象網站 ・ 接案中<\/p>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A1 個人作品集頁<\/title>\n<style>\n  /* ===== ① 先歸零，再設定整頁的文字 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif; /* 最後一個是保底字型 */\n    font-size: 16px;    /* 內文基準字級 */\n    line-height: 1.7;   /* 行高 1.7 倍，中文才不會擠 */\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px; /* 上下 56、左右 40：四周留白，內容不貼邊 */\n  }\n\n  /* ===== ② 內容容器：整頁的內容都靠它置中 ===== */\n  .wrap {\n    width: 760px;    /* 一定要有寬度，下面的 auto 才有依據 */\n    margin: 0 auto;  /* 左右自動平均分配 → 水平置中 */\n  }\n  /* ===== ③ 名字：這一頁最大的字 ===== */\n  .name {\n    font-size: 44px;      /* 比內文大將近三倍，一打開就看到 */\n    font-weight: 700;     /* 粗體 */\n    letter-spacing: 2px;  /* 標題加字距，透氣一點 */\n  }\n\n  /* ===== ④ 定位句：小一階、灰一點，變成第二層 ===== */\n  .tagline {\n    font-size: 17px;\n    color: #5C5345;   /* 灰色 = 比較弱，但仍讀得到 */\n    margin-top: 6px;  /* 和名字稍微分開 */\n  }\n  /* ===== ⑤ 分隔線：把頁面切成上下兩塊 ===== */\n  hr {\n    border: 0;                     /* 關掉預設立體框線 */\n    border-top: 2px solid #2A241B; /* 只留這條實線 */\n    margin: 26px 0 30px;           /* 上下留白，兩塊才有區隔感 */\n  }\n\n  /* ===== ⑥ 區塊小標：比內文小，但用字距與顏色區隔出「這是標題」 ===== */\n  .section-title {\n    font-size: 15px;\n    font-weight: 700;\n    letter-spacing: 2px;\n    color: #8A8072;      /* 小標不需要搶戲，用灰色就好 */\n    margin-bottom: 16px;\n  }\n<\/style>\n<\/head>\n<body>\n  <div class=\"wrap\">\n    <p class=\"name\">林彥廷<\/p>\n    <p class=\"tagline\">前端切版 ・ 一頁式形象網站 ・ 接案中<\/p>\n    <hr>\n\n    <p class=\"section-title\">作品集<\/p>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A1 個人作品集頁<\/title>\n<style>\n  /* ===== ① 先歸零，再設定整頁的文字 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif; /* 最後一個是保底字型 */\n    font-size: 16px;    /* 內文基準字級 */\n    line-height: 1.7;   /* 行高 1.7 倍，中文才不會擠 */\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px; /* 上下 56、左右 40：四周留白，內容不貼邊 */\n  }\n\n  /* ===== ② 內容容器：整頁的內容都靠它置中 ===== */\n  .wrap {\n    width: 760px;    /* 一定要有寬度，下面的 auto 才有依據 */\n    margin: 0 auto;  /* 左右自動平均分配 → 水平置中 */\n  }\n  /* ===== ③ 名字：這一頁最大的字 ===== */\n  .name {\n    font-size: 44px;      /* 比內文大將近三倍，一打開就看到 */\n    font-weight: 700;     /* 粗體 */\n    letter-spacing: 2px;  /* 標題加字距，透氣一點 */\n  }\n\n  /* ===== ④ 定位句：小一階、灰一點，變成第二層 ===== */\n  .tagline {\n    font-size: 17px;\n    color: #5C5345;   /* 灰色 = 比較弱，但仍讀得到 */\n    margin-top: 6px;  /* 和名字稍微分開 */\n  }\n  /* ===== ⑤ 分隔線：把頁面切成上下兩塊 ===== */\n  hr {\n    border: 0;                     /* 關掉預設立體框線 */\n    border-top: 2px solid #2A241B; /* 只留這條實線 */\n    margin: 26px 0 30px;           /* 上下留白，兩塊才有區隔感 */\n  }\n\n  /* ===== ⑥ 區塊小標：比內文小，但用字距與顏色區隔出「這是標題」 ===== */\n  .section-title {\n    font-size: 15px;\n    font-weight: 700;\n    letter-spacing: 2px;\n    color: #8A8072;      /* 小標不需要搶戲，用灰色就好 */\n    margin-bottom: 16px;\n  }\n  /* ===== ⑦ 三張卡片要橫向排開：先用 inline-block 把卡片變成「可以並排的方塊」 ===== */\n  .works {\n    font-size: 0; /* 技巧：inline-block 之間的空隙來自空白字元，父層設 0 就沒有縫 */\n  }\n\n  .card {\n    display: inline-block;   /* 可以並排（inline），又能調寬高與內距（block） */\n    vertical-align: top;     /* 並排時以「頂端」對齊，不然高度不同會歪掉 */\n    width: 232px;            /* 固定寬度：232 × 3 + 間距 × 2 = 760，剛好等於容器寬度 */\n    padding: 20px 20px 24px; /* 內距把卡片撐開，內容不會貼著邊 */\n    margin: 0 16px 16px 0;   /* 右邊與下面留間距，卡片之間才不會黏在一起 */\n    background: #FFFFFF;\n    border-radius: 14px;\n  }\n  /* 每一列的第三張不要右間距，否則會多出 16px 而換行 */\n  .card:nth-child(3n) { margin-right: 0; }\n\n  /* ===== ⑧ 卡片的縮圖：一樣用空盒子 + 圓角 ===== */\n  .thumb {\n    height: 96px;\n    border-radius: 10px;\n    margin-bottom: 14px;\n  }\n  /* 三張卡各給一個顏色，看得出是三件不同的作品 */\n  .c1 .thumb { background: #E1A4C2; }\n  .c2 .thumb { background: #D6DD63; }\n  .c3 .thumb { background: #B7C7A8; }\n\n  /* ===== ⑨ 卡片裡的文字：標題大一階，說明小一階 ===== */\n  .card h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }\n  .card p  { font-size: 14px; color: #5C5345; line-height: 1.6; }\n<\/style>\n<\/head>\n<body>\n  <div class=\"wrap\">\n    <p class=\"name\">林彥廷<\/p>\n    <p class=\"tagline\">前端切版 ・ 一頁式形象網站 ・ 接案中<\/p>\n    <hr>\n\n    <p class=\"section-title\">作品集<\/p>\n    <div class=\"works\">\n      <div class=\"card c1\">\n        <div class=\"thumb\"><\/div>\n        <h3>咖啡品牌官網<\/h3>\n        <p>品牌故事、菜單與門市資訊，單頁式設計。<\/p>\n      <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A1 個人作品集頁<\/title>\n<style>\n  /* ===== ① 先歸零，再設定整頁的文字 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif; /* 最後一個是保底字型 */\n    font-size: 16px;    /* 內文基準字級 */\n    line-height: 1.7;   /* 行高 1.7 倍，中文才不會擠 */\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px; /* 上下 56、左右 40：四周留白，內容不貼邊 */\n  }\n\n  /* ===== ② 內容容器：整頁的內容都靠它置中 ===== */\n  .wrap {\n    width: 760px;    /* 一定要有寬度，下面的 auto 才有依據 */\n    margin: 0 auto;  /* 左右自動平均分配 → 水平置中 */\n  }\n  /* ===== ③ 名字：這一頁最大的字 ===== */\n  .name {\n    font-size: 44px;      /* 比內文大將近三倍，一打開就看到 */\n    font-weight: 700;     /* 粗體 */\n    letter-spacing: 2px;  /* 標題加字距，透氣一點 */\n  }\n\n  /* ===== ④ 定位句：小一階、灰一點，變成第二層 ===== */\n  .tagline {\n    font-size: 17px;\n    color: #5C5345;   /* 灰色 = 比較弱，但仍讀得到 */\n    margin-top: 6px;  /* 和名字稍微分開 */\n  }\n  /* ===== ⑤ 分隔線：把頁面切成上下兩塊 ===== */\n  hr {\n    border: 0;                     /* 關掉預設立體框線 */\n    border-top: 2px solid #2A241B; /* 只留這條實線 */\n    margin: 26px 0 30px;           /* 上下留白，兩塊才有區隔感 */\n  }\n\n  /* ===== ⑥ 區塊小標：比內文小，但用字距與顏色區隔出「這是標題」 ===== */\n  .section-title {\n    font-size: 15px;\n    font-weight: 700;\n    letter-spacing: 2px;\n    color: #8A8072;      /* 小標不需要搶戲，用灰色就好 */\n    margin-bottom: 16px;\n  }\n  /* ===== ⑦ 三張卡片要橫向排開：先用 inline-block 把卡片變成「可以並排的方塊」 ===== */\n  .works {\n    font-size: 0; /* 技巧：inline-block 之間的空隙來自空白字元，父層設 0 就沒有縫 */\n  }\n\n  .card {\n    display: inline-block;   /* 可以並排（inline），又能調寬高與內距（block） */\n    vertical-align: top;     /* 並排時以「頂端」對齊，不然高度不同會歪掉 */\n    width: 232px;            /* 固定寬度：232 × 3 + 間距 × 2 = 760，剛好等於容器寬度 */\n    padding: 20px 20px 24px; /* 內距把卡片撐開，內容不會貼著邊 */\n    margin: 0 16px 16px 0;   /* 右邊與下面留間距，卡片之間才不會黏在一起 */\n    background: #FFFFFF;\n    border-radius: 14px;\n  }\n  /* 每一列的第三張不要右間距，否則會多出 16px 而換行 */\n  .card:nth-child(3n) { margin-right: 0; }\n\n  /* ===== ⑧ 卡片的縮圖：一樣用空盒子 + 圓角 ===== */\n  .thumb {\n    height: 96px;\n    border-radius: 10px;\n    margin-bottom: 14px;\n  }\n  /* 三張卡各給一個顏色，看得出是三件不同的作品 */\n  .c1 .thumb { background: #E1A4C2; }\n  .c2 .thumb { background: #D6DD63; }\n  .c3 .thumb { background: #B7C7A8; }\n\n  /* ===== ⑨ 卡片裡的文字：標題大一階，說明小一階 ===== */\n  .card h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }\n  .card p  { font-size: 14px; color: #5C5345; line-height: 1.6; }\n<\/style>\n<\/head>\n<body>\n  <div class=\"wrap\">\n    <p class=\"name\">林彥廷<\/p>\n    <p class=\"tagline\">前端切版 ・ 一頁式形象網站 ・ 接案中<\/p>\n    <hr>\n\n    <p class=\"section-title\">作品集<\/p>\n    <div class=\"works\">\n      <div class=\"card c1\">\n        <div class=\"thumb\"><\/div>\n        <h3>咖啡品牌官網<\/h3>\n        <p>品牌故事、菜單與門市資訊，單頁式設計。<\/p>\n      <\/div>\n      <div class=\"card c2\">\n        <div class=\"thumb\"><\/div>\n        <h3>課程報名頁<\/h3>\n        <p>活動說明、講師介紹與報名表單。<\/p>\n      <\/div>\n      <div class=\"card c3\">\n        <div class=\"thumb\"><\/div>\n        <h3>甜點店價目表<\/h3>\n        <p>分類菜單與價格，適合手機瀏覽。<\/p>\n      <\/div>\n    <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<title>A1 個人作品集頁<\/title>\n<style>\n  /* ===== ① 先歸零，再設定整頁的文字 ===== */\n  * {\n    margin: 0;              /* 清掉預設外距 */\n    padding: 0;             /* 清掉預設內距 */\n    box-sizing: border-box; /* 讓 width 含內距與邊框，算寬度才不會爆掉 */\n  }\n\n  body {\n    font-family: \"PingFang TC\", \"Microsoft JhengHei\", sans-serif; /* 最後一個是保底字型 */\n    font-size: 16px;    /* 內文基準字級 */\n    line-height: 1.7;   /* 行高 1.7 倍，中文才不會擠 */\n    color: #2A241B;\n    background: #F2EEDF;\n    padding: 56px 40px; /* 上下 56、左右 40：四周留白，內容不貼邊 */\n  }\n\n  /* ===== ② 內容容器：整頁的內容都靠它置中 ===== */\n  .wrap {\n    width: 760px;    /* 一定要有寬度，下面的 auto 才有依據 */\n    margin: 0 auto;  /* 左右自動平均分配 → 水平置中 */\n  }\n  /* ===== ③ 名字：這一頁最大的字 ===== */\n  .name {\n    font-size: 44px;      /* 比內文大將近三倍，一打開就看到 */\n    font-weight: 700;     /* 粗體 */\n    letter-spacing: 2px;  /* 標題加字距，透氣一點 */\n  }\n\n  /* ===== ④ 定位句：小一階、灰一點，變成第二層 ===== */\n  .tagline {\n    font-size: 17px;\n    color: #5C5345;   /* 灰色 = 比較弱，但仍讀得到 */\n    margin-top: 6px;  /* 和名字稍微分開 */\n  }\n  /* ===== ⑤ 分隔線：把頁面切成上下兩塊 ===== */\n  hr {\n    border: 0;                     /* 關掉預設立體框線 */\n    border-top: 2px solid #2A241B; /* 只留這條實線 */\n    margin: 26px 0 30px;           /* 上下留白，兩塊才有區隔感 */\n  }\n\n  /* ===== ⑥ 區塊小標：比內文小，但用字距與顏色區隔出「這是標題」 ===== */\n  .section-title {\n    font-size: 15px;\n    font-weight: 700;\n    letter-spacing: 2px;\n    color: #8A8072;      /* 小標不需要搶戲，用灰色就好 */\n    margin-bottom: 16px;\n  }\n  /* ===== ⑦ 三張卡片要橫向排開：先用 inline-block 把卡片變成「可以並排的方塊」 ===== */\n  .works {\n    font-size: 0; /* 技巧：inline-block 之間的空隙來自空白字元，父層設 0 就沒有縫 */\n  }\n\n  .card {\n    display: inline-block;   /* 可以並排（inline），又能調寬高與內距（block） */\n    vertical-align: top;     /* 並排時以「頂端」對齊，不然高度不同會歪掉 */\n    width: 232px;            /* 固定寬度：232 × 3 + 間距 × 2 = 760，剛好等於容器寬度 */\n    padding: 20px 20px 24px; /* 內距把卡片撐開，內容不會貼著邊 */\n    margin: 0 16px 16px 0;   /* 右邊與下面留間距，卡片之間才不會黏在一起 */\n    background: #FFFFFF;\n    border-radius: 14px;\n  }\n  /* 每一列的第三張不要右間距，否則會多出 16px 而換行 */\n  .card:nth-child(3n) { margin-right: 0; }\n\n  /* ===== ⑧ 卡片的縮圖：一樣用空盒子 + 圓角 ===== */\n  .thumb {\n    height: 96px;\n    border-radius: 10px;\n    margin-bottom: 14px;\n  }\n  /* 三張卡各給一個顏色，看得出是三件不同的作品 */\n  .c1 .thumb { background: #E1A4C2; }\n  .c2 .thumb { background: #D6DD63; }\n  .c3 .thumb { background: #B7C7A8; }\n\n  /* ===== ⑨ 卡片裡的文字：標題大一階，說明小一階 ===== */\n  .card h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }\n  .card p  { font-size: 14px; color: #5C5345; line-height: 1.6; }\n  /* ===== ⑩ 聯絡方式：和名片的做法一模一樣 ===== */\n  .contact {\n    list-style: none;   /* 拿掉清單圓點 */\n    font-size: 0;       /* 消除 inline-block 之間的空白縫隙 */\n    margin-top: 8px;\n  }\n  .contact li {\n    display: inline-block; /* 並排 + 可調內距 = 按鈕 */\n    padding: 10px 22px;    /* 可點擊的面積 */\n    margin-right: 10px;\n    background: #2A241B;\n    color: #F2EEDF;\n    font-size: 15px;       /* 父層是 0，這裡要還原字級 */\n    border-radius: 999px;  /* 膠囊形 */\n  }\n  /* 第二個 class 只改外框，基礎樣式沿用上面 */\n  .contact li.ghost { background: transparent; color: #2A241B; border: 2px solid #2A241B; }\n<\/style>\n<\/head>\n<body>\n  <div class=\"wrap\">\n    <p class=\"name\">林彥廷<\/p>\n    <p class=\"tagline\">前端切版 ・ 一頁式形象網站 ・ 接案中<\/p>\n    <hr>\n\n    <p class=\"section-title\">作品集<\/p>\n    <div class=\"works\">\n      <div class=\"card c1\">\n        <div class=\"thumb\"><\/div>\n        <h3>咖啡品牌官網<\/h3>\n        <p>品牌故事、菜單與門市資訊，單頁式設計。<\/p>\n      <\/div>\n      <div class=\"card c2\">\n        <div class=\"thumb\"><\/div>\n        <h3>課程報名頁<\/h3>\n        <p>活動說明、講師介紹與報名表單。<\/p>\n      <\/div>\n      <div class=\"card c3\">\n        <div class=\"thumb\"><\/div>\n        <h3>甜點店價目表<\/h3>\n        <p>分類菜單與價格，適合手機瀏覽。<\/p>\n      <\/div>\n    <\/div>\n    <p class=\"section-title\" style=\"margin-top:28px\">找我<\/p>\n    <ul class=\"contact\">\n      <li>Email<\/li>\n      <li class=\"ghost\">GitHub<\/li>\n      <li class=\"ghost\">作品集<\/li>\n    <\/ul>\n  <\/div>\n<\/body>\n<\/html>\n"]}</script>
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('data').textContent);
+  var docs = DATA.docs, total = docs.length;
+  var cur = 0;
+  var frame = document.getElementById('prev');
+  var stage = document.getElementById('stage');
+  var outer = document.getElementById('outer');
+  var wrap = document.getElementById('wrap');
+
+  /* ---- 極簡語法上色：單次掃描，避免跳脫互相破壞 ---- */
+  function highlight(src) {
+    var esc = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc.replace(
+      /(&lt;!--[\s\S]*?--&gt;|\/\*[\s\S]*?\*\/|"[^"\n]*"|&lt;\/?[a-zA-Z][\w:-]*|[a-z-]+(?=\s*:))/g,
+      function (m) {
+        var cls = m.slice(0, 4) === '&lt;' ? 'c-tag'
+                : m.slice(0, 2) === '/*' || m.slice(0, 4) === '&lt;!' ? 'c-cmt'
+                : m.charAt(0) === '"' ? 'c-str'
+                : 'c-prop';
+        return '<span class="' + cls + '">' + m + '</span>';
+      }
+    );
+  }
+
+  function render() {
+    var code = docs[cur];
+    document.getElementById('code').innerHTML = highlight(code);
+    document.getElementById('code').scrollTop = 0;
+    document.getElementById('stat').textContent = code.split('\n').length + ' 行';
+    document.getElementById('codeTitle').textContent =
+      (cur === total - 1) ? '完整程式碼（HTML ＋ CSS，附註解）' : '第 ' + (cur + 1) + ' 步的程式碼';
+    document.getElementById('pos').textContent = '第 ' + (cur + 1) + ' 步／共 ' + total + ' 步';
+
+    var btns = document.querySelectorAll('#stepList button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', i === cur);
+      btns[i].classList.toggle('seen', i < cur);
+    }
+    document.getElementById('btnPrev').disabled = cur === 0;
+    document.getElementById('btnNext').disabled = cur === total - 1;
+    run();
+  }
+
+  function run() { frame.srcdoc = docs[cur]; }
+
+  /* 內容載入後量出實際高度：量測前先把 iframe 壓到 10px，
+     scrollHeight 才會反映真正的內容高度，不會留一大段空白。 */
+  frame.addEventListener('load', function () {
+    var h = 1200;
+    try {
+      frame.style.height = '10px';
+      h = Math.ceil(frame.contentDocument.documentElement.scrollHeight) || 1200;
+    } catch (e) {}
+    if (h < 120) h = 120;
+    frame.style.height = h + 'px';
+    fit();
+  });
+
+  /* 縮放：把 1200px 寬的頁面等比塞進右欄，並讓外層捲動範圍正確 */
+  function fit() {
+    var avail = wrap.clientWidth - 32;
+    var k = Math.min(1, avail / 1200);
+    stage.style.transform = 'scale(' + k + ')';
+    outer.style.width = (1200 * k) + 'px';
+    outer.style.height = (parseFloat(frame.style.height || 1200) * k) + 'px';
+  }
+  window.addEventListener('resize', fit);
+
+  function go(i) { cur = Math.max(0, Math.min(total - 1, i)); render(); }
+
+  document.getElementById('stepList').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) go(parseInt(b.dataset.i, 10));
+  });
+  document.getElementById('btnPrev').addEventListener('click', function () { go(cur - 1); });
+  document.getElementById('btnNext').addEventListener('click', function () { go(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1); }
+  });
+
+  var btnCopy = document.getElementById('btnCopy');
+  btnCopy.addEventListener('click', function () {
+    var code = docs[cur];
+    function ok() {
+      btnCopy.textContent = '已複製';
+      btnCopy.classList.add('done');
+      setTimeout(function () {
+        btnCopy.textContent = '複製這一步的程式碼';
+        btnCopy.classList.remove('done');
+      }, 1600);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); ok(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(ok, fallback);
+    } else { fallback(); }
+  });
+
+  document.getElementById('btnReload').addEventListener('click', run);
+
+  document.getElementById('btnPop').addEventListener('click', function () {
+    var url = URL.createObjectURL(new Blob([docs[cur]], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  });
+
+  render();
+  fit();
+})();
+</script>
+</body>
+</html>
