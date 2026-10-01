@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>互動式網頁設計 CH4｜Tailwind 快速上手與響應式排版</title>
+
+<style>
+/* ===========================================================
+   CH2 簡報樣式 — soft-editorial
+   由 output/簡報建置/build.py 內嵌字型後寫入簡報檔案。
+   修改樣式請改本檔，再重跑 build.py。
+   =========================================================== */
+
+/* ===== 內嵌字型子集（離線可用；由 build.py 產生） ===== */
+
+/* ===========================================
+   1. THEME TOKENS
+   =========================================== */
+:root {
+  /* Colors */
+  --paper:        #F2EEDF;
+  --paper-2:      #ECE6D2;
+  --ink:          #2A241B;
+  --ink-soft:     #5C5345;
+  --pink:         #E1A4C2;
+  --lemon:        #D6DD63;
+  --blush:        #E8C9B6;
+  --sage:         #B7C7A8;
+  --lilac:        #C9BEDC;
+  --card:         rgba(255, 255, 255, 0.55);
+  --rule-soft:    rgba(42, 36, 27, 0.18);
+  --rule-medium:  rgba(42, 36, 27, 0.35);
+
+  /* 程式碼語法色（同一色票的加深版） */
+  --code-tag: #8C5A3C;
+  --code-attr: #6E7F45;
+  --code-str: #A64C7C;
+  --code-cmt: #8A8072;
+
+  /* Fonts — 全部內嵌，離線可用 */
+  --f-display: 'Cormorant Garamond', 'LXGW WenKai TC', 'Noto Serif TC', serif;
+  --f-body:    'Work Sans', 'Noto Serif TC', serif;
+  --f-sans:    'Work Sans', 'Noto Sans TC', sans-serif;
+  --f-code:    'JetBrains Mono', 'Noto Sans TC', monospace;
+  --f-icons:   'Material Symbols Outlined';
+
+  /* Type scale（1920×1080 stage；字級下限見 CLAUDE.md 規範） */
+  --t-display:  168px;
+  --t-chapter:  132px;
+  --t-headline: 76px;
+  --t-subhead:  48px;
+  --t-body:     38px;
+  --t-body-sm:  34px;
+  --t-code:     32px;
+  --t-min:      28px;
+  --t-eyebrow:  30px;
+
+  --pad-outer: 80px;
+  --pad-top: 60px;
+  --pad-bottom: 50px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.6s;
+
+  --stage-bg: #1a1713;
+  --slide-bg: var(--paper);
+}
+
+/* ===========================================
+   2. BASE（viewport-base.css 全文強制納入）
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html,
+body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-stage {
+  position: absolute; left: 0; top: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  background: var(--slide-bg, #fff);
+}
+.slide {
+  position: absolute; inset: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  display: block;
+  visibility: hidden; opacity: 0; pointer-events: none;
+  background: var(--slide-bg, #fff);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+
+@media print {
+  html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+  .deck-viewport { position: static; overflow: visible; background: #fff; }
+  .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+  .slide {
+    position: relative; display: block !important; visibility: visible !important;
+    opacity: 1 !important; pointer-events: auto !important;
+    width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   3. SLIDE CHROME
+   =========================================== */
+.eyebrow {
+  position: absolute; top: var(--pad-top); left: var(--pad-outer);
+  font-family: var(--f-sans); font-size: var(--t-eyebrow); font-weight: 400;
+  color: var(--ink);
+}
+.pagedot {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.footer {
+  position: absolute; bottom: var(--pad-bottom); left: var(--pad-outer); right: var(--pad-outer);
+  display: flex; justify-content: space-between;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+
+/* ===========================================
+   4. LAYOUT PRIMITIVES
+   =========================================== */
+.headline {
+  position: absolute; top: 128px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-headline);
+  line-height: 1.24; color: var(--ink);
+}
+.headline em { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+/* 標題下方的極細分隔線（編輯排版手法，非裝飾卡片） */
+.headline::after {
+  content: ''; display: block; width: 160px; height: 1px;
+  background: var(--rule-medium); margin-top: 26px;
+}
+
+.body-split {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; grid-template-columns: 44% minmax(0, 1fr); gap: 44px; align-items: start;
+}
+.body-split--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+/* 範例頁：截圖給 58%，投影時字才看得清楚 */
+.body-split--shot { grid-template-columns: 58% minmax(0, 1fr); }
+.body-full {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; gap: 34px; align-content: start;
+}
+
+/* 要點條列 — 單一墨色短橫線標記，不做彩色圓點循環 */
+.points { list-style: none; display: grid; gap: 24px; }
+.points li {
+  position: relative; padding-left: 40px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.62; color: var(--ink);
+}
+.points li::before {
+  content: ''; position: absolute; left: 0; top: 0.74em;
+  width: 22px; height: 2px; background: var(--ink); opacity: 0.34;
+}
+.points b, .points strong { font-weight: 500; }
+.points code {
+  font-family: var(--f-code); font-size: 0.92em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* ===========================================
+   5. CODE PANEL
+   =========================================== */
+.code-label {
+  display: block; margin-bottom: 14px;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.code {
+  font-family: var(--f-code); font-size: var(--t-code); line-height: 1.62;
+  color: var(--ink);
+  background: var(--card); border-radius: 22px;
+  padding: 38px 42px;
+  white-space: pre; overflow: hidden;
+}
+.code .tag  { color: var(--code-tag); }
+.code .attr { color: var(--code-attr); }
+.code .str  { color: var(--code-str); }
+.code .cmt  { color: var(--code-cmt); }
+.code .ok   { color: var(--code-attr); }
+.code .no   { color: var(--code-str); }
+
+/* 程式碼一律顯示原始字元：JetBrains Mono 的連字會把 <!-- 畫成箭頭，對初學者是反效果 */
+.code, code, .keys__k, .tbl__el, .dgm .t-code, .dgm .t-mono {
+  font-variant-ligatures: none;
+}
+
+/* ===========================================
+   6. 推薦資源 — 編輯式出處行（無外框、無彩色邊條）
+   =========================================== */
+.res {
+  margin-top: 34px; padding-top: 18px;
+  border-top: 1px dashed var(--rule-medium);
+}
+.res__kind {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.res__kind::before {
+  font-family: var(--f-icons); font-size: 30px; font-weight: normal;
+  font-style: normal; line-height: 1; color: var(--ink-soft);
+}
+.res__title {
+  display: block; margin-top: 8px;
+  font-family: var(--f-display); font-size: var(--t-body-sm); font-weight: 500; color: var(--ink);
+}
+.res__desc {
+  font-family: var(--f-body); font-size: 28px; line-height: 1.55;
+  color: var(--ink-soft); margin-top: 4px;
+}
+.res--card   .res__kind::before { content: "\e8e7"; }  /* bookmark */
+.res--video  .res__kind::before { content: "\e1c4"; }  /* play_circle */
+.res--mind   .res__kind::before { content: "\e97a"; }  /* account_tree */
+.res--chart  .res__kind::before { content: "\e26b"; }  /* bar_chart */
+.res--audio  .res__kind::before { content: "\f01f"; }  /* headphones */
+.res--slides .res__kind::before { content: "\e41b"; }  /* slideshow */
+.res--quiz   .res__kind::before { content: "\f04c"; }  /* quiz */
+.res--check  .res__kind::before { content: "\e2e6"; }  /* task_alt */
+
+/* ===========================================
+   7. 行內小圖示與狀態藥丸
+   =========================================== */
+.ic {
+  font-family: var(--f-icons); font-style: normal; font-weight: normal;
+  line-height: 1; vertical-align: -0.14em; display: inline-block;
+}
+.ic--warn::before  { content: "\f083"; }  /* warning */
+.ic--check::before { content: "\e2e6"; }  /* task_alt */
+.ic--no::before    { content: "\e888"; }  /* cancel */
+.ic--tip::before   { content: "\e90f"; }  /* lightbulb */
+.ic--info::before  { content: "\e88e"; }  /* info */
+
+.pill {
+  display: inline-block; border-radius: 999px; padding: 1px 18px 3px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink);
+}
+.pill--yes { background: var(--lemon); }
+.pill--no  { background: var(--pink); }
+
+/* ===========================================
+   8. 章節頁 / 封面 / 收尾
+   =========================================== */
+.chapter-num {
+  position: absolute; top: 250px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-weight: 500;
+  font-size: 120px; color: var(--blush);
+}
+.chapter-title {
+  position: absolute; top: 400px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-chapter);
+  line-height: 1.22; color: var(--ink);
+}
+.chapter-title::after {
+  content: ''; display: block; width: 240px; height: 1px;
+  background: var(--rule-medium); margin-top: 34px;
+}
+.chapter-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink-soft);
+}
+
+.cover-kicker {
+  position: absolute; top: 240px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-subhead);
+  color: var(--ink-soft);
+}
+.cover-title {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-display);
+  line-height: 1.16; color: var(--ink);
+}
+.cover-sub {
+  position: absolute; top: 560px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 64px;
+  line-height: 1.3; color: var(--ink-soft);
+}
+.cover-swatches {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  display: flex; gap: 20px;
+}
+.cover-swatches span { width: 56px; height: 56px; border-radius: 50%; display: block; }
+.cover-swatches span:nth-child(1) { background: var(--pink); }
+.cover-swatches span:nth-child(2) { background: var(--lemon); }
+.cover-swatches span:nth-child(3) { background: var(--sage); }
+
+.slide--accent { background: var(--pink); }
+.closer-title {
+  position: absolute; top: 380px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 140px;
+  line-height: 1.2; color: var(--ink);
+}
+.closer-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink);
+}
+
+/* ===========================================
+   9. ANIMATION
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(28px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal:nth-child(1) { transition-delay: 0.08s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: 0.16s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: 0.24s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: 0.32s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: 0.40s; }
+
+/* ===========================================
+   10. DECK CHROME（舞台外）
+   =========================================== */
+.progress {
+  position: fixed; left: 0; bottom: 0; height: 4px; width: 0;
+  background: var(--pink); z-index: 1001; transition: width 0.3s var(--ease);
+}
+.counter {
+  position: fixed; right: 18px; bottom: 14px; z-index: 1001;
+  font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+  position: fixed; top: 16px; left: 16px; z-index: 10001;
+  font-size: 18px; line-height: 1; padding: 10px 12px; border: 0; border-radius: 12px;
+  background: var(--paper); color: var(--ink); cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); outline-offset: 4px; }
+
+/* ===========================================
+   11. 補充元件（備注／步驟／雙平台快捷鍵表）
+   =========================================== */
+/* 頁尾備注：虛線細規 + 小字，用於補充說明 */
+.note {
+  margin-top: 28px; padding-top: 16px;
+  border-top: 1px dashed var(--rule-medium);
+  font-family: var(--f-body); font-size: var(--t-min); line-height: 1.6;
+  color: var(--ink-soft);
+}
+.note b { color: var(--ink); font-weight: 500; }
+.note code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 編號步驟：斜體羅馬數字，符合 soft-editorial 的步驟記號 */
+.steps { list-style: none; counter-reset: step; display: grid; gap: 18px; }
+.steps li {
+  position: relative; padding-left: 76px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.6; color: var(--ink);
+}
+.steps li::before {
+  counter-increment: step; content: counter(step, lower-roman) ".";
+  position: absolute; left: 0; top: 0;
+  font-family: var(--f-display); font-style: italic; font-size: 32px; color: var(--ink-soft);
+}
+.steps code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 雙平台快速鍵表 */
+.keys { display: grid; gap: 0; }
+.keys__row {
+  display: grid; grid-template-columns: 1fr 300px 300px; gap: 18px;
+  align-items: baseline; padding: 13px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-min);
+}
+.keys__row:last-child { border-bottom: 0; }
+.keys__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.keys__fn { font-family: var(--f-body); color: var(--ink); }
+.keys__k  { font-family: var(--f-code); font-size: var(--t-min); color: var(--code-tag); }
+
+/* 行內連結（CodePen、數位學習平台等） */
+.points a, .note a, .res__desc a, .code a {
+  color: var(--code-tag);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+/* 頁尾備注：佔用固定底槽，主體區域讓出空間 */
+.body-split--note, .body-full--note { bottom: 232px; }
+.note--bottom {
+  position: absolute; left: var(--pad-outer); right: var(--pad-outer); bottom: 120px;
+  margin: 0;
+}
+
+/* ===========================================
+   12. 內容表格（常用元素速查）
+   =========================================== */
+.tbl { display: grid; }
+.tbl__row {
+  display: grid; grid-template-columns: 420px 1fr 1.3fr; gap: 28px;
+  align-items: baseline; padding: 15px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-body);
+}
+.tbl__row:last-child { border-bottom: 0; }
+.tbl__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.tbl__el { font-family: var(--f-code); color: var(--code-tag); }
+.tbl__use { font-family: var(--f-body); line-height: 1.45; color: var(--ink); }
+.tbl__row--head .tbl__el { color: var(--ink-soft); }
+
+/* ===========================================
+   13. 作業範例的成品截圖
+   =========================================== */
+.shot {
+  display: block; width: auto; max-width: 100%; max-height: 560px;
+  border-radius: 12px; background: #fff;
+}
+.shot-frame {
+  background: var(--card); border-radius: 22px; padding: 22px;
+  display: inline-block; max-width: 100%;
+}
+
+/* ===========================================
+   14. 內嵌圖解（語彙取自 archify：格線底、泳道標頭、
+       節點卡、語意色票、箭頭先用 marker 定義）
+       —— 只用 CSS class 上色，不寫 inline fill，
+          換主題時整組跟著變
+   =========================================== */
+.dgm { display: block; width: 100%; height: auto; }
+
+.dgm .d-grid   { fill: none; stroke: rgba(42, 36, 27, 0.07); stroke-width: 1; }
+
+/* 節點卡：一律「先遮罩、再上色」兩層，避免半透明底色讓線穿過去 */
+.dgm .d-mask   { fill: var(--paper); stroke: none; }
+.dgm .d-card   { fill: rgba(255, 255, 255, 0.72); stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-margin { fill: rgba(232, 201, 182, 0.40); stroke: var(--blush); stroke-width: 2; stroke-dasharray: 9 7; }
+.dgm .d-border { fill: none; stroke: var(--ink); stroke-width: 4; }
+.dgm .d-padding{ fill: rgba(183, 199, 168, 0.45); stroke: var(--sage); stroke-width: 2; }
+.dgm .d-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-hot    { fill: rgba(225, 164, 194, 0.35); stroke: var(--pink); stroke-width: 2; }
+.dgm .d-cool   { fill: rgba(201, 190, 220, 0.35); stroke: var(--lilac); stroke-width: 2; }
+.dgm .d-soft   { fill: rgba(214, 221, 99, 0.32);  stroke: var(--lemon); stroke-width: 2; }
+
+/* 文字：字級已按「1920×1080 舞台的 28px 下限」放大，不沿用 archify 的 7–12px */
+.dgm .t-head { font-family: var(--f-display); font-style: italic; font-size: 30px; fill: var(--ink-soft); }
+.dgm .t-lab  { font-family: var(--f-sans);  font-size: 30px; fill: var(--ink); }
+.dgm .t-bold { font-family: var(--f-sans);  font-size: 30px; font-weight: 700; fill: var(--ink); }
+.dgm .t-code { font-family: var(--f-code);  font-size: 28px; fill: var(--code-tag); }
+.dgm .t-note { font-family: var(--f-body);  font-size: 28px; fill: var(--ink-soft); }
+.dgm .t-mono { font-family: var(--f-code);  font-size: 28px; fill: var(--ink-soft); }
+
+/* 色票小方塊（圖例用） */
+.dgm .sw-margin { fill: var(--blush); }
+.dgm .sw-border { fill: var(--ink); }
+.dgm .sw-padding{ fill: var(--sage); }
+.dgm .sw-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+
+/* 流程線與箭頭（marker 在各圖的 <defs> 內定義） */
+.dgm .a-line     { fill: none; stroke: var(--ink-soft); stroke-width: 2.5; }
+.dgm .a-line-soft{ fill: none; stroke: var(--rule-medium); stroke-width: 2; }
+.dgm .d-arrowhead{ fill: var(--ink-soft); }
+
+/* 原位／預設位置的虛線殘影 */
+.dgm .d-ghost { fill: none; stroke: var(--rule-medium); stroke-width: 2; stroke-dasharray: 7 7; }
+
+/* 小標籤（狀態、勝出、標記用） */
+.dgm .d-pill   { fill: rgba(214, 221, 99, 0.55); stroke: var(--lemon); stroke-width: 1.5; }
+.dgm .d-pill-w { fill: rgba(225, 164, 194, 0.45); stroke: var(--pink); stroke-width: 1.5; }
+
+/* 面板底色（比較用的分格） */
+.dgm .d-panel  { fill: rgba(255, 255, 255, 0.55); stroke: var(--rule-soft); stroke-width: 1.5; }
+.dgm .d-slot   { fill: rgba(42, 36, 27, 0.06); stroke: var(--rule-medium); stroke-width: 1.5; }
+
+</style>
+<link rel="stylesheet" href="../assets/deck-fonts.css">
+<link rel="stylesheet" href="../assets/deck-site.css">
+</head>
+<body>
+
+<!-- ===========================================
+     DECK
+     =========================================== -->
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ═══════════ 1｜封面 ═══════════ -->
+<section class="slide s-cover active" data-label="封面">
+  <div class="cover-swatches reveal"><span></span><span></span><span></span></div>
+  <p class="cover-kicker reveal">勤益科大進修部 115 學年度第 1 學期</p>
+  <h1 class="cover-title reveal">互動式網頁設計</h1>
+  <p class="cover-sub reveal">CH4｜Tailwind 快速上手與響應式排版<br><em style="font-style:italic">把整份 CSS，拆成一句一句的詞</em></p>
+  <div class="footer"><span>2026.10.01</span><span>CH4</span></div>
+  <!-- 講述重點：上週你會「一個屬性一個屬性」地寫 CSS 了。今天換個思路：
+       不自己從零造規則，而是把 CSS 拆成一小段一小段的 class，在 HTML 裡直接組合。 -->
+</section>
+
+<!-- ═══════════ 2｜今日目標 ═══════════ -->
+<section class="slide" data-label="今日目標">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">ii</p>
+  <h2 class="headline reveal">今日目標</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>Utility-first</b>：把 CSS 拆成一行行 class</li>
+        <li class="reveal"><b>核心 Class</b>：間距、Flex、Grid、文字、顏色</li>
+        <li class="reveal"><b>響應式 RWD</b>：斷點與 mobile-first</li>
+        <li class="reveal"><b>產出</b>：把上週名片改成 Tailwind 版</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">今天會寫到的 class</span>
+      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"mx-auto max-w-md
+  rounded-2xl bg-white p-7
+  shadow-sm grid gap-5
+  sm:grid-cols-2
+  text-slate-600 hover:bg-slate-50"</span><span class="tag">&gt;</span>
+  <span class="cmt">← 今天學的都在這裡</span>
+<span class="tag">&lt;/div&gt;</span></div>
+      <svg class="dgm" style="max-width:640px; margin-top:22px" viewBox="0 0 640 130" role="img" aria-label="示意：今天課程的四個部分">
+        <rect class="d-soft" x="0" y="16" width="140" height="58" rx="12"/>
+        <text class="t-mono" x="70" y="52" text-anchor="middle" font-size="28">Utility</text>
+        <rect class="d-soft" x="160" y="16" width="140" height="58" rx="12"/>
+        <text class="t-mono" x="230" y="52" text-anchor="middle" font-size="28">核心 class</text>
+        <rect class="d-soft" x="320" y="16" width="140" height="58" rx="12"/>
+        <text class="t-mono" x="390" y="52" text-anchor="middle" font-size="28">RWD</text>
+        <rect class="d-soft" x="480" y="16" width="140" height="58" rx="12"/>
+        <text class="t-mono" x="550" y="52" text-anchor="middle" font-size="28">產出</text>
+        <text class="t-mono" x="0" y="118" font-size="28" fill="var(--ink-soft)">四段都服務同一個目標：寫頁面不用再從零想 CSS</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先給地圖。今天四個技術點，全部服務一個目標——
+       讓你之後寫頁面不再「從零想 CSS」，而是「撈現成的詞來組」。
+       右邊那段 class 是「預告」，今天學完回頭看會全部認得。 -->
+</section>
+
+<!-- ═══════════ 3｜回顧 CH3 ═══════════ -->
+<section class="slide" data-label="回顧 CH3">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">iii</p>
+  <h2 class="headline reveal">回顧上週：你會寫 CSS 了</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>選取器與權重</b>：誰蓋掉誰</li>
+        <li class="reveal"><b>盒模型</b>：padding、margin、border</li>
+        <li class="reveal"><b>display／position</b>：導覽列、釘住頂端</li>
+        <li class="reveal"><b>產出</b>：一張純 CSS 的數位名片</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">上週這樣寫</span>
+      <div class="code"><span class="cmt">/* style.css */</span>
+<span class="tag">.card</span> {
+  <span class="attr">max-width</span>: 420px;
+  <span class="attr">margin</span>: 0 auto;
+  <span class="attr">padding</span>: 28px;
+  <span class="attr">border-radius</span>: 16px;
+}</div>
+      <svg class="dgm" style="max-width:640px; margin-top:22px" viewBox="0 0 640 120" role="img" aria-label="示意：上週手寫的四行 CSS 今天會換成 class">
+        <text class="t-head" x="0" y="22" font-size="28">今天換成一句</text>
+        <text class="t-code" x="0" y="70" font-size="28">mx-auto max-w-md p-7 rounded-2xl</text>
+        <text class="t-mono" x="0" y="106" font-size="28" fill="var(--ink-soft)">同一張名片，結果一模一樣</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是橋樑。讓學生重開上週的名片。
+       右邊對照是關鍵：上面 style.css 的四行，下面就是今天的四個 class，結果一樣。
+       建立「同一張卡，上週手寫 CSS、今天用 class 組」的對比，後面講 utility-first 才有依附。 -->
+</section>
+
+<!-- ═══════════ 4｜為什麼要 Tailwind ═══════════ -->
+<section class="slide" data-label="為什麼 Tailwind">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">iv</p>
+  <h2 class="headline reveal">上週做數位名片時，這些多半會踩到</h2>
+  <div class="body-full body-full--note">
+    <ul class="points">
+      <li class="reveal">「置中」只有一個寫法，但<b>每個頁面都要重寫一遍</b></li>
+      <li class="reveal">自己取的 class 名——<code>.box1</code>、<code>.temp</code>——<b>一週後就忘了是什麼</b></li>
+      <li class="reveal">想微調間距，只能<b>一個值一個值慢慢試</b>，不知道要試幾個</li>
+      <li class="reveal">改一個 <code>.card</code>，<b>會不會連帶影響到別人</b>，得整頁自己檢查</li>
+    </ul>
+  </div>
+  <div class="note note--bottom reveal">
+    Tailwind 的解法很直白：<b>把 CSS 拆成一小段一小段的 class</b>，你在 HTML 裡直接組合，不再另外維護一份樣式檔。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先戳痛點，讓學生回想上週做名片時的實際感受。
+       這四條全部對應上週真的做過的事：.card 用 margin: 0 auto 置中、
+       自己發明的 class 名、微調 padding/margin 要一個值一個值試、
+       改一處怕影響到其他區塊。不要說「寫了三個星期 CSS」——CSS 只學了一週，
+       而且是在 CodePen 上做，說成三個星期會讓學生覺得在編故事。 -->
+</section>
+
+<!-- ═══════════ 5｜三個里程碑 ═══════════ -->
+<section class="slide" data-label="三個里程碑">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">v</p>
+  <h2 class="headline reveal">做到這三個，今天就成功</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>讀得懂</b>：看到 <code>p-4</code> 就知道內距 4</li>
+        <li class="reveal"><b>組得出</b>：用 Flex、Grid 加間距排版面</li>
+        <li class="reveal"><b>響應得出</b>：手機、平板、桌面各自好看</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">三個檢查點</span>
+      <svg class="dgm" style="max-width:640px; margin-top:10px" viewBox="0 0 640 260" role="img" aria-label="示意：今天的三個成功標準，由浅到深">
+        <rect class="d-mask" x="0" y="10" width="600" height="60" rx="12"/>
+        <rect class="d-soft" x="0" y="10" width="600" height="60" rx="12"/>
+        <text x="24" y="47" font-size="30" fill="#2A241B" font-family="Noto Serif TC">讀得懂</text>
+        <text class="t-mono" x="576" y="47" font-size="28" text-anchor="end">基礎</text>
+
+        <rect class="d-mask" x="0" y="82" width="600" height="60" rx="12"/>
+        <rect class="d-card" x="0" y="82" width="600" height="60" rx="12"/>
+        <text x="24" y="119" font-size="30" fill="#2A241B" font-family="Noto Serif TC">組得出</text>
+        <text class="t-mono" x="576" y="119" font-size="28" text-anchor="end">手氣</text>
+
+        <rect class="d-mask" x="0" y="154" width="600" height="60" rx="12"/>
+        <rect class="d-card" x="0" y="154" width="600" height="60" rx="12"/>
+        <text x="24" y="191" font-size="30" fill="#2A241B" font-family="Noto Serif TC">響應得出</text>
+        <text class="t-mono" x="576" y="191" font-size="28" text-anchor="end">加分</text>
+
+        <text class="t-mono" x="0" y="248" font-size="28" fill="var(--ink-soft)">由淺到深，做到第三個就會排網站了</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：把「成功」具體化，讓學生知道自己要做到哪。
+       讀得懂是基礎、組得出是手氣、響應得出是加分——第三個做到就會排網站了。 -->
+</section>
+
+<!-- ═══════════ 6｜Chapter 0 ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 0 章節頁">
+  <p class="chapter-num reveal">0.</p>
+  <h2 class="chapter-title reveal">先把環境準備好</h2>
+  <p class="chapter-sub reveal">上週的 VS Code ＋ 今天多加一個擴充</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 0</span></div>
+  <!-- 講述重點：這一段是今天寫 class 之前的前置，不講 class 本身。
+       兩句話帶過就好，重點是讓學生知道「環境已經準備好了，可以專心學 class」。 -->
+</section>
+
+<!-- ═══════════ 7｜上週裝好的 ═══════════ -->
+<section class="slide" data-label="上週裝好的">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">vi</p>
+  <h2 class="headline reveal">上週裝好的，今天繼續用</h2>
+  <div class="body-full body-full--note">
+    <ul class="points">
+      <li class="reveal"><b>編輯器</b>：VS Code，開上週的 <code>my-site</code> 資料夾</li>
+      <li class="reveal"><b>Live Server</b>：存檔自動重整，邊改邊看</li>
+      <li class="reveal"><b>三個擴充套件</b>：HTML CSS Support、Live Server、Prettier</li>
+    </ul>
+  </div>
+  <div class="note note--bottom reveal">
+    今天只多一樣東西，<b>不用重裝</b>，也不用跑任何指令；<b>上週沒裝成的今天補裝</b>就好。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是承接，不是重教。CH3 已經教過 VS Code 安裝與那三個擴充。
+       讓學生確認自己的環境還在，然後告訴他們今天只多一個。 -->
+</section>
+
+<!-- ═══════════ 8｜為什麼再裝一個 ═══════════ -->
+<section class="slide" data-label="為什麼再裝一個">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">vii</p>
+  <h2 class="headline reveal">打 class 這件事，還可以更省力</h2>
+  <div class="body-full body-full--note">
+    <ul class="points">
+      <li class="reveal">Tailwind 的 class <b>上千個</b>，靠背一定會錯</li>
+      <li class="reveal"><code>text-slate-500</code> 打成 <code>text-slate-550</code>，畫面就不變</li>
+      <li class="reveal">上週的 HTML CSS Support <b>只認得我寫過的 class</b></li>
+      <li class="reveal">有一個擴充，專門把 Tailwind 的 class 變成可以選</li>
+    </ul>
+  </div>
+  <div class="note note--bottom reveal">
+    這是為幾週後的正式專案<b>先養著</b>，今天先裝上、留著之後用。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這一頁要嘛打斷「我上週裝的不就有提示」——HTML CSS Support 只認得自己寫過的 class，
+       不認得 Tailwind 的。這樣第四頁裝這個擴充才有意義。 -->
+</section>
+
+<!-- ═══════════ 9｜安裝 IntelliSense ═══════════ -->
+<section class="slide" data-label="安裝 IntelliSense">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">viii</p>
+  <h2 class="headline reveal">今天多裝一個擴充</h2>
+  <div class="body-full body-full--note">
+    <ol class="steps">
+      <li>左側「擴充」圖示 → 搜尋 <code>Tailwind CSS IntelliSense</code></li>
+      <li>找作者是 <b>Tailwind Labs</b> 的那一個，按 Install</li>
+      <li>右下角提示 <b>重新載入視窗</b> → 按下去</li>
+      <li>打開今天的 <code>index.html</code>，先不管它有沒有反應</li>
+    </ol>
+  </div>
+  <div class="note note--bottom reveal">
+    擴充 ID：<code>bradlc.vscode-tailwindcss</code>。看別人的教學對不上，就比這串字。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁讓學生當場裝，時間抓 3 分鐘。老師在教室走動，確認每個人都裝到。
+       最後一步刻意寫「先不管它有沒有反應」——因為下一頁就是講這件事。 -->
+</section>
+
+<!-- ═══════════ 10｜確認有沒有醒 ═══════════ -->
+<section class="slide" data-label="確認有沒有醒">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">ix</p>
+  <h2 class="headline reveal">確認它有沒有「醒」過來</h2>
+  <div class="body-full body-full--note">
+    <ol class="steps">
+      <li>指令面板：<code>Cmd/Ctrl</code> + <code>Shift</code> + <code>P</code></li>
+      <li>打 <code>Tailwind</code> → 看得到 <b>Tailwind CSS: Show Output</b> 就是裝好了</li>
+      <li>輸出面板今天是<b>空的，正常</b></li>
+    </ol>
+  </div>
+  <div class="note note--bottom reveal">
+    它要「認得 Tailwind 專案」才會工作；今天是 CDN，<b>還沒輪到它</b>。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先講「會通過的檢查」，再講輸出面板是空的。順序反了會嚇到學生。
+       關鍵句：指令面板找得到這道指令 = 擴充有載入 = 裝成功了。 -->
+</section>
+
+<!-- ═══════════ 11｜編輯器設定 ═══════════ -->
+<section class="slide" data-label="編輯器設定">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">x</p>
+  <h2 class="headline reveal">再打開一個設定</h2>
+  <div class="body-split body-split--note">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">這行是<b>在字串裡也開自動提示</b></li>
+        <li class="reveal"><code>class="…"</code> 就是字串，不開不跳</li>
+        <li class="reveal">整個學期受用</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">加進 settings.json</span>
+      <div class="code"><span class="cmt">// VS Code 設定檔</span>
+<span class="tag">"editor.quickSuggestions"</span>: {
+  <span class="attr">"strings"</span>: <span class="str">"on"</span>
+}</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是 8 頁裡最弱的一頁——今天設定，今天也看不到效果（理由同上一頁）。
+       所以刻意不放底行、講得快，告訴學生「到提示真的跳出來那天你就懂它的用處」。
+       設定位置：Cmd/Ctrl + Shift + P → Preferences: Open User Settings (JSON)。 -->
+</section>
+
+<!-- ═══════════ 12｜兩種模式對照 ═══════════ -->
+<section class="slide" data-label="兩種模式對照">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">xi</p>
+  <h2 class="headline reveal">同一套 class，兩種裝法</h2>
+  <div class="body-full body-full--note">
+    <div class="tbl">
+      <div class="tbl__row tbl__row--head"><span class="tbl__el">裝法</span><span>你要準備什麼</span><span class="tbl__use">今天做到哪</span></div>
+      <div class="tbl__row"><span class="tbl__el">CDN（今天）</span><span>一行 script，存檔就有效</span><span class="tbl__use">已經在做</span></div>
+      <div class="tbl__row"><span class="tbl__el">npm（之後）</span><span>要有 Node.js 與 tailwindcss</span><span class="tbl__use">還沒到</span></div>
+      <div class="tbl__row"><span class="tbl__el">換不換都一樣</span><span>class 名稱規則一樣</span><span class="tbl__use">都得會寫</span></div>
+      <div class="tbl__row"><span class="tbl__el">什麼時候用</span><span>今天的作業、練習</span><span class="tbl__use">真正上線的專案</span></div>
+    </div>
+  </div>
+  <div class="note note--bottom reveal">
+    換的只是「東西從哪裡來」，<b>class 怎麼寫不用改</b>。npm 的指令等一下會講。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是整個環境段的重點——解除學生的焦慮。npm 路線不是「更進階所以現在學不會」，
+       而是「之後換工作時的正式做法」，兩條路的 class 寫法一樣。 -->
+</section>
+
+<!-- ═══════════ 13｜沒生效怎麼辦 ═══════════ -->
+<section class="slide" data-label="沒生效怎麼辦">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">xii</p>
+  <h2 class="headline reveal">今天沒跳出來，是正常的</h2>
+  <div class="body-full body-full--note">
+    <ul class="points">
+      <li class="reveal"><span class="ic ic--tip"></span> 這個擴充要<b>認得 Tailwind 專案</b>才會工作</li>
+      <li class="reveal">我們今天是 <b>CDN 路線</b>，沒有專案檔 → 它還在睡</li>
+      <li class="reveal"><b>沒反應不是壞掉</b>，是還沒輪到它</li>
+      <li class="reveal"><span class="ic ic--info"></span> 什麼時候會亮：之後裝了 <code>tailwindcss</code> 的那一週</li>
+    </ul>
+  </div>
+  <div class="note note--bottom reveal">
+    這週請<b>照 CDN 路線做</b>；擴充先放著，等之後有 npm 版 Tailwind 時它才有作用。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是防止學生課堂上誤判「裝壞了」而回家刪掉。
+       講完這頁，回到第 20 頁今天的 CDN 做法，馬上讓他們看到 class 真的有效。 -->
+</section>
+
+<!-- ═══════════ 14｜今天怎麼做（CDN） ═══════════ -->
+<section class="slide" data-label="今天怎麼做">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">xiii</p>
+  <h2 class="headline reveal">今天不安裝建置工具，用 CDN</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">用上週的 <b>VS Code ＋ Live Server</b> 開 <code>index.html</code></li>
+        <li class="reveal">在 <code>&lt;head&gt;</code> 放<b>一行</b> Tailwind 的 CDN script</li>
+        <li class="reveal">存檔、自動重整，<b>邊改邊看</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">貼到 &lt;head&gt; 裡就行</span>
+      <div class="code"><span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="str">"https://cdn.jsdelivr.net/npm/
+@tailwindcss/browser@4"</span><span class="tag">&gt;&lt;/script&gt;</span></div>
+      <svg class="dgm" style="max-width:660px; margin-top:26px" viewBox="0 0 660 250" role="img" aria-label="示意：專案資料夾結構，標出今天唯一要動的檔案">
+        <text class="t-lab" x="0" y="26" font-size="28">資料夾長這樣</text>
+        <text class="t-mono" x="0" y="72" font-size="27">my-site/</text>
+
+        <rect class="d-mask" x="76" y="93" width="176" height="38" rx="8"/>
+        <rect class="d-soft" x="76" y="93" width="176" height="38" rx="8"/>
+        <text class="t-mono" x="34" y="118" font-size="27">├─ index.html</text>
+        <text class="t-code" x="266" y="120" font-size="26">← 今天只動這個檔案</text>
+
+        <text class="t-mono" x="34" y="170" font-size="27">└─ images/</text>
+
+        <text class="t-mono" x="0" y="232" font-size="26" fill="var(--ink-soft)">沒有 package.json、沒有 node_modules</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先安撫——今天不裝任何東西、不跑 npm。一行 script 就能玩 Tailwind。
+       正式專案之後會用 Vite 建置（更快、檔案更小），那是 Angular 週的事，今天先把概念打通。
+       下一頁補 npm 寫法，讓學生知道「正式專案長這樣」，但今天不做。 -->
+</section>
+
+<!-- ═══════════ 15｜PLAY ═══════════ -->
+<section class="slide" data-label="線上試玩">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">xiv</p>
+  <h2 class="headline reveal">不想開檔？先在網頁上玩</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">開 <a href="https://play.tailwindcss.com/" target="_blank"><code>play.tailwindcss.com</code></a>，<b>免安裝、免註冊</b></li>
+        <li class="reveal">左邊寫 class，右邊<b>立刻看到效果</b></li>
+        <li class="reveal">拉視窗寬度＝<b>直接看手機／桌機差別</b></li>
+        <li class="reveal">按 <b>Share</b> 會給你一個網址，可以傳給同學</li>
+      </ul>
+      <div class="note reveal">
+        <span class="ic ic--tip"></span> 練習的時候先用這裡試，<b>確定要留下來了再搬回 VS Code</b>。
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">網址</span>
+      <div class="code"><span class="tag">play</span><span class="str">.tailwindcss.com</span></div>
+      <svg class="dgm" style="max-width:660px; margin-top:26px" viewBox="0 0 660 210" role="img" aria-label="示意：線上 playground 的三欄介面與寬度切換">
+        <rect class="d-mask" x="10" y="14" width="640" height="150" rx="16"/>
+        <rect class="d-card" x="10" y="14" width="640" height="150" rx="16"/>
+        <line x1="230" y1="14" x2="230" y2="164" stroke="var(--rule-medium)" stroke-width="1.5"/>
+        <line x1="430" y1="14" x2="430" y2="164" stroke="var(--rule-medium)" stroke-width="1.5"/>
+
+        <text class="t-mono" x="120" y="60" text-anchor="middle" font-size="28">寫 class</text>
+        <rect class="d-soft" x="52" y="82" width="136" height="26" rx="6"/>
+        <rect class="d-soft" x="52" y="118" width="136" height="26" rx="6"/>
+
+        <text class="t-mono" x="330" y="60" text-anchor="middle" font-size="28">預覽</text>
+        <rect class="d-soft" x="262" y="82" width="136" height="26" rx="6"/>
+        <rect class="d-soft" x="262" y="118" width="136" height="26" rx="6"/>
+
+        <text class="t-mono" x="540" y="60" text-anchor="middle" font-size="28">拉寬度</text>
+        <rect class="d-soft" x="472" y="82" width="136" height="26" rx="6"/>
+        <rect class="d-soft" x="472" y="118" width="60" height="26" rx="6"/>
+
+        <text class="t-mono" x="330" y="196" text-anchor="middle" font-size="28">拉窄＝手機　　拉寬＝桌機</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是給「還不想在本機開檔」的學生一個零門檻入口。
+       2026-10 實測：play.tailwindcss.com 正常運作，版本 v4.3.3（和今天 CDN 用的是同一版），
+       右上角有 Share 按鈕可以產生可分享的網址。
+       這是 Tailwind 官方提供的 playground，不是第三方位，也不用註冊。
+       實戰時的定位：Part 1「一句 class 做一件事」那頁，讓學生立刻在這裡打一次 flex p-6 rounded-xl。 -->
+</section>
+
+<!-- ═══════════ 16｜NPM ═══════════ -->
+<section class="slide" data-label="npm 安裝">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">xv</p>
+  <h2 class="headline reveal">另一種裝法：npm（今天不做）</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">正式專案用 <b>npm</b>，不是 CDN</li>
+        <li class="reveal">要有 <b>Node.js</b>——今天機器上還沒裝</li>
+        <li class="reveal">裝完會產生 <code>node_modules</code>，<b>不能刪</b></li>
+        <li class="reveal">好處：檔案小很多、<b>能自訂</b>色票與樣式</li>
+      </ul>
+      <div class="note reveal">
+        <span class="ic ic--tip"></span> 這三行等之後接 Vite／Angular 時會真的用到，<b>今天只要看懂就好</b>。
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">終端機（cmd / Terminal）</span>
+      <div class="code"><span class="cmt"># 1. 進到專案資料夾</span>
+<span class="tag">cd</span> my-site
+
+<span class="cmt"># 2. 安裝</span>
+<span class="tag">npm install</span> tailwindcss @tailwindcss/cli
+
+<span class="cmt"># 3. 產生 CSS（改檔自動重跑）</span>
+<span class="tag">npx</span> @tailwindcss/cli -i input.css
+  -o output.css <span class="attr">--watch</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是「預告」，不是「作業」。目標只有一個：讓學生知道正式專案怎麼裝，
+       之後看到 package.json、node_modules、終端機指令不會害怕。
+       這三行都實測過（tailwindcss 與 @tailwindcss/cli 都是 4.3.3，
+       @tailwindcss/cli 提供 tailwindcss 執行檔，-i/-o/--watch 可正常運作），
+       但課堂上不要要求學生安裝——Node.js 是之後週次的事。
+       另外要有一個 input.css，內容只有一行 @import "tailwindcss";（下一頁）。 -->
+</section>
+
+<!-- ═══════════ 17｜Flowbite ═══════════ -->
+<section class="slide" data-label="Flowbite">
+  <p class="eyebrow">開場</p>
+  <p class="pagedot">xvi</p>
+  <h2 class="headline reveal">Flowbite：可以參考的模板樣式</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">Tailwind 的官方元件庫，<b>建立在 Tailwind 之上</b></li>
+        <li class="reveal">每個元件頁都有<b>可參考的模板樣式</b></li>
+        <li class="reveal">56 種以上元件：導覽列、按鈕、卡片、表單、下拉選單…</li>
+        <li class="reveal">想不出長相時，<b>去那裡看一眼</b></li>
+      </ul>
+      <div class="note reveal">
+        <span class="ic ic--tip"></span> 今天不逐個元件教學——<b>把它當字典就好</b>。
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">範例樣式長這樣</span>
+      <div class="code"><span class="cmt">/* 官網元件頁給的模板 */</span>
+<span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="str">"rounded-lg
+  bg-blue-600 px-5 py-2.5
+  text-white font-medium"</span><span class="tag">&gt;</span>
+  開始使用
+<span class="tag">&lt;/button&gt;</span></div>
+      <svg class="dgm" style="max-width:640px; margin-top:24px" viewBox="0 0 640 210" role="img" aria-label="示意：從官網模板挑樣式，換成自己的色票">
+        <rect class="d-mask" x="0" y="10" width="300" height="58" rx="12"/>
+        <rect x="0" y="10" width="300" height="58" rx="12" fill="#2563EB"/>
+        <text x="150" y="47" text-anchor="middle" font-size="30" fill="#FFFFFF" font-family="Noto Sans TC">開始使用</text>
+        <text class="t-code" x="330" y="46" font-size="28">bg-blue-600</text>
+
+        <text class="t-mono" x="0" y="112" font-size="28" fill="var(--ink-soft)">↓ 換成自己的色票</text>
+
+        <rect class="d-mask" x="0" y="128" width="300" height="58" rx="12"/>
+        <rect x="0" y="128" width="300" height="58" rx="12" fill="#F59E0B"/>
+        <text x="150" y="165" text-anchor="middle" font-size="30" fill="#2A241B" font-family="Noto Sans TC">開始使用</text>
+        <text class="t-code" x="330" y="164" font-size="28">bg-amber-500</text>
+
+        <text class="t-mono" x="0" y="208" font-size="28" fill="var(--ink-soft)">文字也換成自己的</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：Flowbite 這頁只做一件事——告訴學生「想不出元件長相時，有個官方字典可以查」。
+       不教安裝、不教 data 屬性、不逐個元件示範，那些都拿掉了。
+       官方 introduction 頁自己寫的：an open-source library of UI components based on the
+       utility-first Tailwind CSS framework，over 56 types of UI components。
+       官網：https://flowbite.com/docs/components/
+       右邊示範的重點是「模板可以抄，但色碼要換成自己的」——呼應今天 60-30-10 的配色。 -->
+</section>
+
+<!-- ═══════════ 18｜Chapter I ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 1 章節頁">
+  <p class="chapter-num reveal">I.</p>
+  <h2 class="chapter-title reveal">Utility-first 是什麼</h2>
+  <p class="chapter-sub reveal">一句 class 做一件事，組合出整個版面</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 1</span></div>
+  <!-- 講述重點：這一段回答「Tailwind 到底怎麼運作」。 -->
+</section>
+
+<!-- ═══════════ 19｜一句 class 做一件事 ═══════════ -->
+<section class="slide" data-label="一句 class 做一件事">
+  <p class="eyebrow">Part 1｜Utility-first</p>
+  <p class="pagedot">xvii</p>
+  <h2 class="headline reveal">一句 class，只做一件事</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><code>flex</code> → 用 Flex 排版</li>
+        <li class="reveal"><code>p-6</code> → 四周加內距</li>
+        <li class="reveal"><code>rounded-xl</code> → 圓角</li>
+        <li class="reveal"><code>text-2xl</code> → 加大字級</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">同一個框，四個 class 疊出來</span>
+      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"flex p-6 rounded-xl"</span><span class="tag">&gt;</span>
+  內容
+<span class="tag">&lt;/div&gt;</span></div>
+      <svg class="dgm" style="max-width:700px; margin-top:26px" viewBox="0 0 700 300" role="img" aria-label="示意：p-6 內距與 rounded-xl 圓角的效果">
+        <text class="t-lab" x="0" y="26" font-size="28">實際排出來長這樣</text>
+        <rect class="d-mask" x="20" y="48" width="420" height="180" rx="26"/>
+        <rect class="d-soft" x="20" y="48" width="420" height="180" rx="26"/>
+        <rect class="d-card" x="62" y="90" width="336" height="96" rx="14"/>
+        <text class="t-mono" x="230" y="147" text-anchor="middle">內容</text>
+        <text class="t-code" x="272" y="76" text-anchor="middle" font-size="26">p-6</text>
+        <line x1="486" y1="90" x2="528" y2="90" stroke="var(--rule-medium)" stroke-width="1.5"/>
+        <text class="t-code" x="536" y="97" font-size="26">rounded-xl</text>
+        <text class="t-mono" x="0" y="266" font-size="26" fill="var(--ink-soft)">黃色 = 內距　白框 = 內容</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先建立最小單位。一個 class 只負責一件事，你要什麼就放什麼。
+       複雜版面不是「更強的 class」，而是「更多小 class 疊起來」。 -->
+</section>
+
+<!-- ═══════════ 20｜傳統 CSS vs Utility ═══════════ -->
+<section class="slide" data-label="CSS vs Utility">
+  <p class="eyebrow">Part 1｜Utility-first</p>
+  <p class="pagedot">xviii</p>
+  <h2 class="headline reveal">同一個卡片，兩種寫法</h2>
+  <div class="body-split body-split--even">
+    <div class="reveal">
+      <span class="code-label"><span class="pill pill--no">慢</span> 傳統 CSS（另存一檔）</span>
+      <div class="code"><span class="cmt">/* style.css */</span>
+<span class="tag">.card</span> {
+  <span class="attr">display</span>: flex;
+  <span class="attr">padding</span>: 24px;
+  <span class="attr">border-radius</span>: 12px;
+}
+<span class="cmt">/* index.html */</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"card"</span><span class="tag">&gt;</span></div>
+    </div>
+    <div class="reveal">
+      <span class="code-label"><span class="pill pill--yes">快</span> Utility（就在 HTML 上）</span>
+      <div class="code"><span class="cmt">/* index.html — 沒有 style.css */</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"flex p-6 rounded-xl"</span><span class="tag">&gt;</span>
+  內容
+<span class="tag">&lt;/div&gt;</span></div>
+      <svg class="dgm" style="max-width:620px; margin-top:22px" viewBox="0 0 620 150" role="img" aria-label="示意：結果完全相同">
+        <rect class="d-mask" x="10" y="20" width="270" height="104" rx="16"/>
+        <rect class="d-card" x="10" y="20" width="270" height="104" rx="16"/>
+        <text class="t-mono" x="145" y="66" text-anchor="middle" font-size="27">內容</text>
+        <text class="t-mono" x="145" y="100" text-anchor="middle" font-size="26" fill="var(--ink-soft)">兩邊長得一樣</text>
+        <text class="t-lab" x="310" y="80" font-size="30" fill="var(--ink-soft)">＝</text>
+        <rect class="d-mask" x="350" y="20" width="270" height="104" rx="16"/>
+        <rect class="d-card" x="350" y="20" width="270" height="104" rx="16"/>
+        <text class="t-mono" x="485" y="66" text-anchor="middle" font-size="27">內容</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁是全課核心。左邊要「想名字＋寫 CSS＋連兩檔」，右邊只有一行、就在元件上。
+       強調：不是誰對誰錯，是兩種分工——utility 把「樣式」貼在「結構」旁邊，改的地方就是看的地方。 -->
+</section>
+
+<!-- ═══════════ 21｜class 即文件 ═══════════ -->
+<section class="slide" data-label="class 即文件">
+  <p class="eyebrow">Part 1｜Utility-first</p>
+  <p class="pagedot">xix</p>
+  <h2 class="headline reveal">class 名字就是文件</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">上週的 <code>.box1</code>、<code>.temp</code> 要查 CSS 才知道</li>
+        <li class="reveal">Tailwind 的 class <b>看到名字就知道效果</b></li>
+        <li class="reveal">AI 讀得懂、你也讀得懂——<b>vibe coding 的好底子</b></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">看名字就知道在做什麼</span>
+      <svg class="dgm" style="max-width:660px; margin-top:8px" viewBox="0 0 660 290" role="img" aria-label="示意：有意義的 class 名稱與不知所以然的名稱比較">
+        <text class="t-head" x="0" y="22" font-size="28">上週：.box1</text>
+        <rect class="d-mask" x="0" y="36" width="300" height="72" rx="12"/>
+        <rect class="d-card" x="0" y="36" width="300" height="72" rx="12"/>
+        <text class="t-mono" x="20" y="80" font-size="28" fill="var(--ink-soft)">要翻 CSS 才知道</text>
+        <text x="330" y="86" font-size="40" fill="var(--ink-soft)" font-family="Noto Serif TC">？</text>
+
+        <text class="t-head" x="0" y="162" font-size="28">今天：rounded-xl border p-6</text>
+        <rect class="d-mask" x="0" y="176" width="300" height="86" rx="12"/>
+        <rect class="d-soft" x="0" y="176" width="300" height="86" rx="12"/>
+        <rect class="d-card" x="24" y="198" width="252" height="42" rx="9"/>
+        <text class="t-mono" x="150" y="226" text-anchor="middle" font-size="28">內容</text>
+        <text x="330" y="230" font-size="40" fill="#5C5345" font-family="Noto Serif TC">✓</text>
+
+        <text class="t-mono" x="0" y="286" font-size="28" fill="var(--ink-soft)">不用查，看了就懂</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：誠實講取捨，不要只講好處。utility 的 class 較長是真實代價。
+       右邊示意是這頁的關鍵：上面「.box1 要翻 CSS」，下面「rounded-xl border p-6 看了就懂」——
+       這就是 vibe coding 的底子，AI 也讀得懂。 -->
+</section>
+
+<!-- ═══════════ 22｜語法長相 ═══════════ -->
+<section class="slide" data-label="語法長相">
+  <p class="eyebrow">Part 1｜Utility-first</p>
+  <p class="pagedot">xx</p>
+  <h2 class="headline reveal">長出來大概像這樣</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <span class="code-label">一個「功能卡」的完整寫法</span>
+      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"rounded-2xl
+  bg-slate-50 p-7
+  border border-slate-100"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"text-3xl font-bold
+    text-amber-500"</span><span class="tag">&gt;</span>01<span class="tag">&lt;/div&gt;</span>
+  <span class="tag">&lt;h3</span> <span class="attr">class</span>=<span class="str">"mt-3 text-lg
+    font-semibold"</span><span class="tag">&gt;</span>自動匯入<span class="tag">&lt;/h3&gt;</span>
+  <span class="tag">&lt;p</span> <span class="attr">class</span>=<span class="str">"mt-2
+    text-slate-500"</span><span class="tag">&gt;</span>接上來源。
+<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+    <div class="reveal">
+      <span class="code-label">排出來長這樣</span>
+      <svg class="dgm" style="max-width:620px; margin-top:10px" viewBox="0 0 620 300" role="img" aria-label="示意：程式碼排出來的樣子">
+        <rect class="d-mask" x="0" y="10" width="600" height="270" rx="16"/>
+        <rect class="d-soft" x="0" y="10" width="600" height="270" rx="16"/>
+        <rect class="d-card" x="24" y="34" width="552" height="222" rx="12"/>
+        <text x="52" y="106" font-size="46" fill="#D97706" font-family="Noto Serif TC" font-weight="700">01</text>
+        <text x="52" y="158" font-size="34" fill="#2A241B" font-family="Noto Serif TC" font-weight="600">自動匯入</text>
+        <text x="52" y="202" font-size="28" fill="#5C5345" font-family="Noto Serif TC">接上來源，自動整理成表格。</text>
+        <text class="t-code" x="596" y="34" font-size="28" text-anchor="end">功能卡</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：讓學生看到「真實的、會出現在專案裡的 Tailwind 長相」。
+       不用背，只要知道：每一行 class 都是「一個視覺決定」，照著改數字就能調。
+       右邊示意就是左邊那段 code 的結果——對照著看，學生就會信任這些 class 確實有效。 -->
+</section>
+
+<!-- ═══════════ 23｜Chapter II ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 2 章節頁">
+  <p class="chapter-num reveal">II.</p>
+  <h2 class="chapter-title reveal">常用 Class</h2>
+  <p class="chapter-sub reveal">間距 · Flex · Grid · 文字 · 顏色</p>
+  <div class="footer"><span>互動式網頁設計</span><span>Part 2</span></div>
+  <!-- 講述重點：這一段是今天的主力。五組 class 會了，90% 的版面都排得出來。 -->
+</section>
+
+<!-- ═══════════ 24｜間距 scale ═══════════ -->
+<section class="slide" data-label="間距">
+  <p class="eyebrow">Part 2｜常用 Class</p>
+  <p class="pagedot">xxi</p>
+  <h2 class="headline reveal">間距：p 與 m，共用一套數字</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><code>p-*</code> 內距（padding）、<code>m-*</code> 外距（margin）</li>
+        <li class="reveal">數字是<b>4 的倍數</b>：<code>p-1</code>=4px、<code>p-4</code>=16px、<code>p-8</code>=32px</li>
+        <li class="reveal">可指邊：<code>px-4</code> 左右、<code>py-2</code> 上下</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">置中卡片：margin auto ＋ 內距</span>
+      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"mx-auto p-8"</span><span class="tag">&gt;</span>
+  <span class="cmt">← mx-auto 水平置中</span>
+<span class="tag">&lt;/div&gt;</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"mt-6 mb-4"</span><span class="tag">&gt;</span>
+  <span class="cmt">← 上 6、下 4 的間距</span>
+<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：上週學過盒模型的 padding/margin，這裡是它的 class 版。
+       強調「4 的倍數」這套節奏——數字固定，版面才有規律、不隨便。 -->
+</section>
+
+<!-- ═══════════ 25｜Flex ═══════════ -->
+<section class="slide" data-label="Flex">
+  <p class="eyebrow">Part 2｜常用 Class</p>
+  <p class="pagedot">xxii</p>
+  <h2 class="headline reveal">Flex：最常用的一行</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><code>flex</code> → 開啟 Flex 排版</li>
+        <li class="reveal"><code>items-center</code> → 垂直置中</li>
+        <li class="reveal"><code>justify-between</code> → 一左一右</li>
+        <li class="reveal"><code>gap-4</code> → 子項之間的間距</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">導覽列：logo 靠左、連結靠右</span>
+      <div class="code"><span class="tag">&lt;nav</span> <span class="attr">class</span>=<span class="str">"flex items-center
+  justify-between gap-8"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;a&gt;</span>LUMEN<span class="tag">&lt;/a&gt;</span>
+  <span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"flex gap-6"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;a&gt;</span>功能<span class="tag">&lt;/a&gt;</span> <span class="tag">&lt;a&gt;</span>價格<span class="tag">&lt;/a&gt;</span>
+  <span class="tag">&lt;/div&gt;</span>
+<span class="tag">&lt;/nav&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：Flex 是上週 inline-block 的現代替代，功能更強、更好調。
+       四個 class（flex/items-center/justify-between/gap）會了，導覽列、列排版就搞定了。 -->
+</section>
+
+<!-- ═══════════ 26｜Grid ═══════════ -->
+<section class="slide" data-label="Grid">
+  <p class="eyebrow">Part 2｜常用 Class</p>
+  <p class="pagedot">xxiii</p>
+  <h2 class="headline reveal">Grid：要「多欄等寬」就用它</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><code>grid</code> → 開啟 Grid</li>
+        <li class="reveal"><code>grid-cols-3</code> → 三欄</li>
+        <li class="reveal"><code>gap-6</code> → 欄與欄的間距</li>
+        <li class="reveal">跟 Flex 的分工：Flex 排「一列」、Grid 排「格線」</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">三張卡片，一格一格</span>
+      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"grid grid-cols-3 gap-6"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;div&gt;</span>卡 1<span class="tag">&lt;/div&gt;</span>
+  <span class="tag">&lt;div&gt;</span>卡 2<span class="tag">&lt;/div&gt;</span>
+  <span class="tag">&lt;div&gt;</span>卡 3<span class="tag">&lt;/div&gt;</span>
+<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：Flex 適合「一列的東西」（導覽列、按鈕列），Grid 適合「矩陣」（卡片牆、作品集）。
+       一句分工記號：一列用 Flex、格線用 Grid。 -->
+</section>
+
+<!-- ═══════════ 27｜尺寸與任意值 ═══════════ -->
+<section class="slide" data-label="尺寸與任意值">
+  <p class="eyebrow">Part 2｜常用 Class</p>
+  <p class="pagedot">xxiv</p>
+  <h2 class="headline reveal">尺寸：寬高，和自訂數字</h2>
+  <div class="body-split body-split--note">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><code>w-*</code> 寬、<code>h-*</code> 高</li>
+        <li class="reveal"><code>size-14</code> 寬高一起給（v4 新寫法）</li>
+        <li class="reveal">括號寫死：<code>w-[180px]</code></li>
+        <li class="reveal"><code>w-1/2</code> 一半、<code>h-screen</code> 滿畫面</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">常用尺寸寫法</span>
+      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"w-full h-40"</span><span class="tag">&gt;</span>
+  <span class="cmt">← 滿寬、高 160px</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"w-1/2 size-14"</span><span class="tag">&gt;</span>
+  <span class="cmt">← 一半寬、正方形</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"w-[180px]"</span><span class="tag">&gt;</span>
+  <span class="cmt">← 括號裡可以塞任何值</span>
+<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：括號是 Tailwind 的萬用逃生門——設定值裡沒有你要的數字時，直接寫死。
+       讓學生記住 w-full / w-1/2 / h-screen 這三個就夠用了。 -->
+</section>
+
+<!-- ═══════════ 28｜互動狀態 ═══════════ -->
+<section class="slide" data-label="互動狀態">
+  <p class="eyebrow">Part 2｜常用 Class</p>
+  <p class="pagedot">xxv</p>
+  <h2 class="headline reveal">hover 與 focus：滑過、點到時</h2>
+  <div class="body-split body-split--even">
+    <div class="reveal">
+      <span class="code-label"><span class="pill pill--yes">滑過</span> 滑鼠移上去</span>
+      <div class="code"><span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="str">"px-6 py-3
+    rounded-xl bg-slate-900
+    text-white
+    hover:bg-amber-500"</span><span class="tag">&gt;</span>
+  開始使用
+<span class="tag">&lt;/button&gt;</span></div>
+    </div>
+    <div class="reveal">
+      <span class="code-label"><span class="pill pill--yes">點到</span> 鍵盤或輸入框被選取</span>
+      <div class="code"><span class="tag">&lt;input</span> <span class="attr">class</span>=<span class="str">"w-full rounded-lg
+    border border-slate-300
+    px-4 py-3
+    focus:border-amber-500
+    focus:outline-none"</span><span class="tag">&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這兩頁是 Part 3 的伏筆——hover: focus: md: dark: 全部是同一個形狀，
+       只是「條件」不同。請學生把這個形狀記住，Part 3 講 md: 時會直接指回來對照。 -->
+  <svg class="dgm" style="position:absolute; left:var(--pad-outer); right:var(--pad-outer); bottom:150px; max-width:1080px; margin:0 auto" viewBox="0 0 1080 190" role="img" aria-label="示意：hover 與 focus 的前後變化">
+    <rect class="d-mask" x="120" y="20" width="360" height="90" rx="14"/>
+    <rect class="d-card" x="120" y="20" width="360" height="90" rx="14"/>
+    <rect x="152" y="42" width="150" height="46" rx="12" fill="#2A241B"/>
+    <text x="227" y="72" text-anchor="middle" font-size="28" fill="#F2EEDF" font-family="Noto Sans TC">開始使用</text>
+    <text class="t-mono" x="300" y="146" text-anchor="middle" font-size="28">滑過之前</text>
+    <text class="t-lab" x="500" y="74" font-size="30" fill="var(--ink-soft)">→</text>
+    <rect class="d-mask" x="540" y="20" width="360" height="90" rx="14"/>
+    <rect class="d-card" x="540" y="20" width="360" height="90" rx="14"/>
+    <rect x="572" y="42" width="150" height="46" rx="12" fill="#D6DD63"/>
+    <text x="647" y="72" text-anchor="middle" font-size="28" fill="#2A241B" font-family="Noto Sans TC">開始使用</text>
+    <text class="t-mono" x="720" y="146" text-anchor="middle" font-size="28">滑過之後</text>
+    <text class="t-code" x="930" y="74" font-size="28">hover:</text>
+    <text class="t-mono" x="930" y="120" font-size="28" fill="var(--ink-soft)">換掉底色</text>
+  </svg>
+</section>
+
+<!-- ═══════════ 29｜文字字級 ═══════════ -->
+<section class="slide" data-label="文字字級">
+  <p class="eyebrow">Part 2｜常用 Class</p>
+  <p class="pagedot">xxvi</p>
+  <h2 class="headline reveal">文字：字級、字重、顏色</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><code>text-*</code> 字級／<code>font-*</code> 字重</li>
+        <li class="reveal"><code>text-slate-*</code> 字色</li>
+        <li class="reveal"><code>tracking-*</code> 字距</li>
+        <li class="reveal"><code>leading-*</code> 行高</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">層級就是這樣排</span>
+      <svg class="dgm" style="max-width:700px; margin-top:8px" viewBox="0 0 780 300" role="img" aria-label="示意：文字層級由字級、字重、顏色三招建立">
+        <rect class="d-mask" x="0" y="0" width="780" height="96" rx="14"/>
+        <rect class="d-card" x="0" y="0" width="780" height="96" rx="14"/>
+        <text x="24" y="64" font-size="50" fill="#2A241B" font-family="Noto Serif TC">張小明</text>
+        <text class="t-code" x="740" y="38" font-size="28" text-anchor="end">text-4xl</text>
+        <text class="t-code" x="740" y="70" font-size="28" text-anchor="end">font-bold</text>
+
+        <rect class="d-mask" x="0" y="106" width="780" height="72" rx="14"/>
+        <rect class="d-card" x="0" y="106" width="780" height="72" rx="14"/>
+        <text x="24" y="152" font-size="36" fill="#2A241B" font-family="Noto Serif TC">前端工程師</text>
+        <text class="t-code" x="740" y="150" font-size="28" text-anchor="end">text-xl</text>
+
+        <rect class="d-mask" x="0" y="188" width="780" height="66" rx="14"/>
+        <rect class="d-card" x="0" y="188" width="780" height="66" rx="14"/>
+        <text x="24" y="230" font-size="30" fill="#5C5345" font-family="Noto Serif TC">一句話簡介</text>
+        <text class="t-code" x="740" y="228" font-size="28" text-anchor="end">text-slate-500</text>
+
+        <text class="t-mono" x="0" y="290" font-size="28" fill="var(--ink-soft)">字級＋字重＋字色，三招一起用</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：把上週「字級層級」的觀念搬過來——資訊層級靠三招，不靠換字體。
+       右邊示意是重點：名字最大最深、職稱次之、簡介最小最淡，三層一眼看出來。
+       學生最容易犯的錯是三層用一樣的字級，只換顏色，結果還是分不出主次。 -->
+</section>
+
+<!-- ═══════════ 30｜顏色 + 60-30-10 ═══════════ -->
+<section class="slide" data-label="顏色 60-30-10">
+  <p class="eyebrow">Part 2｜常用 Class</p>
+  <p class="pagedot">xxvii</p>
+  <h2 class="headline reveal">顏色：一套色票＋ 60-30-10</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">Tailwind 內建色票：<code>slate</code>、<code>amber</code>、<code>rose</code>…每色 50–900</li>
+        <li class="reveal"><code>bg-*</code> 背景、<code>text-*</code> 字色</li>
+        <li class="reveal"><b>60-30-10</b>：60% 主色、30% 副色、10% 點綴</li>
+        <li class="reveal">點綴色只用少量（CTA 按鈕），整頁立刻有精神</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">一張卡的配色分配</span>
+      <div class="code"><span class="cmt">/* 60% 主：白底 */</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"bg-white"</span><span class="tag">&gt;</span>
+  <span class="cmt">/* 30% 副：淺灰區塊 */</span>
+  <span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"bg-slate-100"</span><span class="tag">&gt;</span>…<span class="tag">&lt;/div&gt;</span>
+  <span class="cmt">/* 10% 點綴：琥珀 CTA */</span>
+  <span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="str">"bg-amber-500
+    text-white"</span><span class="tag">&gt;</span>開始<span class="tag">&lt;/button&gt;</span>
+<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：60-30-10 是上週 UI/UX 那段的配色原則，這裡落到 Tailwind 的色票上。
+       重點：不要每樣都換顏色，一個點綴色用對地方，比滿版彩有效。 -->
+</section>
+
+<!-- ═══════════ 31｜Chapter III ═══════════ -->
+<section class="slide slide--chapter" data-label="Part 3 章節頁">
+  <p class="chapter-num reveal">III.</p>
+  <h2 class="chapter-title reveal">響應式 RWD</h2>
+  <p class="chapter-sub reveal">斷點 · mobile-first · 前綴</p>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：同一份頁面，三種螢幕都好看。這一段是今天的重點之一。 -->
+</section>
+
+<!-- ═══════════ 32｜斷點（SVG） ═══════════ -->
+<section class="slide" data-label="斷點">
+  <p class="eyebrow">Part 3｜響應式 RWD</p>
+  <p class="pagedot">xxviii</p>
+  <h2 class="headline reveal">五個斷點，由小往上疊</h2>
+  <div class="body-full">
+    <div class="reveal">
+      <svg class="dgm" style="max-width:790px; margin:0 auto" viewBox="0 0 860 300" role="img" aria-label="Tailwind 斷點階梯">
+        <rect class="d-mask" x="20" y="14"  width="240" height="46" rx="12"/>
+        <rect class="d-soft" x="20" y="14" width="240" height="46" rx="12"/>
+        <text class="t-bold" x="44" y="44">base（手機）</text>
+
+        <rect class="d-mask" x="20" y="70"  width="360" height="46" rx="12"/>
+        <rect class="d-card" x="20" y="70" width="360" height="46" rx="12"/>
+        <text class="t-lab"  x="44" y="100">sm — 640px（平板直式）</text>
+
+        <rect class="d-mask" x="20" y="126" width="480" height="46" rx="12"/>
+        <rect class="d-card" x="20" y="126" width="480" height="46" rx="12"/>
+        <text class="t-lab"  x="44" y="156">md — 768px（平板橫式）</text>
+
+        <rect class="d-mask" x="20" y="182" width="620" height="46" rx="12"/>
+        <rect class="d-card" x="20" y="182" width="620" height="46" rx="12"/>
+        <text class="t-lab"  x="44" y="212">lg — 1024px（筆電）</text>
+
+        <rect class="d-mask" x="20" y="238" width="780" height="46" rx="12"/>
+        <rect class="d-card" x="20" y="238" width="780" height="46" rx="12"/>
+        <text class="t-lab"  x="44" y="268">xl — 1280px（桌面）</text>
+      </svg>
+
+      <svg class="dgm" style="max-width:700px; margin:16px auto 0" viewBox="0 0 1080 150" role="img" aria-label="示意：同一份頁面在手機與桌面上排成不同欄數">
+        <rect class="d-mask" x="52" y="8" width="120" height="102" rx="16"/>
+        <rect class="d-card" x="52" y="8" width="120" height="102" rx="16"/>
+        <rect class="d-soft" x="68" y="22" width="88" height="22" rx="5"/>
+        <rect class="d-soft" x="68" y="50" width="88" height="22" rx="5"/>
+        <rect class="d-soft" x="68" y="78" width="88" height="22" rx="5"/>
+
+        <rect class="d-mask" x="700" y="8" width="330" height="102" rx="16"/>
+        <rect class="d-card" x="700" y="8" width="330" height="102" rx="16"/>
+        <rect class="d-soft" x="722" y="22" width="88" height="74" rx="5"/>
+        <rect class="d-soft" x="822" y="22" width="88" height="74" rx="5"/>
+        <rect class="d-soft" x="922" y="22" width="88" height="74" rx="5"/>
+
+        <text class="t-mono" x="112" y="142" text-anchor="middle" font-size="28">手機：一欄</text>
+        <text class="t-mono" x="865" y="142" text-anchor="middle" font-size="28">桌面：三欄</text>
+      </svg>
+    </div>
+    <div class="note reveal">
+      每往上一階，就<b>多支援一種更大的螢幕</b>。base 是手機預設，往上用前綴逐步升級（下兩頁）。
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先用圖建立「階梯」直覺——不是五份頁面，是同一份頁面套上五個門檻。 -->
+</section>
+
+<!-- ═══════════ 33｜Mobile-first ═══════════ -->
+<section class="slide" data-label="Mobile-first">
+  <p class="eyebrow">Part 3｜響應式 RWD</p>
+  <p class="pagedot">xxix</p>
+  <h2 class="headline reveal">Mobile-first：先寫手機</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">先寫<b>最小螢幕（base）</b>，再往上「加」</li>
+        <li class="reveal">不是先寫桌面再縮到手機——<b>方向反了會很累</b></li>
+        <li class="reveal">手機是<b>最少</b>的版面，往上只加欄數、加寬度</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">同一頁，兩個方向差很多</span>
+      <svg class="dgm" style="max-width:660px; margin-top:10px" viewBox="0 0 660 290" role="img" aria-label="示意：先寫手機往上疊，和先寫桌面往下縮，兩種做法的工作量不同">
+        <text class="t-head" x="0" y="24" font-size="28">✓ 手機優先：往上加</text>
+        <rect class="d-mask" x="0" y="38" width="120" height="96" rx="14"/>
+        <rect class="d-card" x="0" y="38" width="120" height="96" rx="14"/>
+        <rect class="d-soft" x="16" y="54" width="88" height="20" rx="5"/>
+        <rect class="d-soft" x="16" y="80" width="88" height="20" rx="5"/>
+        <rect class="d-soft" x="16" y="106" width="88" height="20" rx="5"/>
+        <text class="t-mono" x="66" y="164" text-anchor="middle" font-size="28">先做這個</text>
+        <text class="t-mono" x="200" y="164" font-size="28" fill="var(--ink-soft)">→</text>
+        <rect class="d-mask" x="250" y="38" width="180" height="96" rx="14"/>
+        <rect class="d-card" x="250" y="38" width="180" height="96" rx="14"/>
+        <rect class="d-soft" x="266" y="54" width="148" height="20" rx="5"/>
+        <rect class="d-soft" x="266" y="80" width="148" height="20" rx="5"/>
+        <rect class="d-soft" x="266" y="106" width="148" height="20" rx="5"/>
+        <text class="t-mono" x="340" y="164" text-anchor="middle" font-size="28">加寬度</text>
+
+        <text class="t-head" x="0" y="224" font-size="28" fill="var(--ink-soft)">桌面優先：回頭改</text>
+        <rect class="d-mask" x="0" y="238" width="180" height="42" rx="12"/>
+        <rect class="d-card" x="0" y="238" width="180" height="42" rx="12"/>
+        <text class="t-mono" x="90" y="266" text-anchor="middle" font-size="28">拆掉重做</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：mobile-first 是思考順序，不是技術限制。先畫手機，再問「平板要多一欄嗎？」
+       右邊示意：手機優先是「往右加寬」，桌面優先是「拆掉重做」——工作量差很多。 -->
+</section>
+
+<!-- ═══════════ 34｜前綴語法 ═══════════ -->
+<section class="slide" data-label="前綴語法">
+  <p class="eyebrow">Part 3｜響應式 RWD</p>
+  <p class="pagedot">xxx</p>
+  <h2 class="headline reveal">前綴：在 class 前面加斷點</h2>
+  <div class="body-full">
+    <div class="reveal">
+      <span class="code-label">同一個 class，加前綴就「只在那個螢幕以上生效」</span>
+      <div class="code"><span class="cmt">/* 手機：一欄、垂直 */</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"flex flex-col"</span><span class="tag">&gt;</span>
+<span class="cmt">/* 平板以上(md)：改橫排 */</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"flex flex-col md:flex-row"</span><span class="tag">&gt;</span>
+<span class="cmt">/* 筆電以上(lg)：三欄 */</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"grid grid-cols-1 lg:grid-cols-3"</span><span class="tag">&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：前綴就是 RWD 的全部秘密。base 寫預設，md: / lg: 覆寫更大的螢幕。同一個 class 出現兩次是正常的。 -->
+</section>
+
+<!-- ═══════════ 35｜一欄到多欄 ═══════════ -->
+<section class="slide" data-label="一欄到多欄">
+  <p class="eyebrow">Part 3｜響應式 RWD</p>
+  <p class="pagedot">xxxi</p>
+  <h2 class="headline reveal">最常做的：一欄 → 多欄</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">手機：<code>grid-cols-1</code>（一欄到底）</li>
+        <li class="reveal">平板：<code>sm:grid-cols-2</code>（兩欄）</li>
+        <li class="reveal">桌面：<code>lg:grid-cols-3</code>（三欄）</li>
+        <li class="reveal">一行寫完，三種螢幕各就各位</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">卡片牆，一行搞定響應式</span>
+      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"grid gap-5
+  grid-cols-1
+  sm:grid-cols-2
+  lg:grid-cols-3"</span><span class="tag">&gt;</span>
+  <span class="cmt">/* 卡片…卡片…卡片 */</span>
+<span class="tag">&lt;/div&gt;</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這是實戰最高頻的版型。讓學生把這一行記熟，之後做卡片、作品、商品都靠它。 -->
+</section>
+
+<!-- ═══════════ 36｜Dark mode ═══════════ -->
+<section class="slide" data-label="Dark mode">
+  <p class="eyebrow">Part 3｜響應式 RWD</p>
+  <p class="pagedot">xxxii</p>
+  <h2 class="headline reveal">加碼：Dark Mode 也是前綴</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">跟斷點同一招：<code>dark:</code> 前綴</li>
+        <li class="reveal"><code>bg-white dark:bg-slate-900</code> → 淺色白底、深色深底</li>
+        <li class="reveal">跟系統「深色模式」連動，或自己切</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">淺色 vs 深色</span>
+      <div class="code"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"bg-white
+    dark:bg-slate-900
+    text-slate-800
+    dark:text-slate-100"</span><span class="tag">&gt;</span>
+  內容
+<span class="tag">&lt;/div&gt;</span></div>
+      <svg class="dgm" style="max-width:640px; margin-top:22px" viewBox="0 0 640 140" role="img" aria-label="示意：同一段 class 在淺色與深色模式下的對比">
+        <rect class="d-mask" x="0" y="10" width="280" height="110" rx="14"/>
+        <rect class="d-card" x="0" y="10" width="280" height="110" rx="14"/>
+        <text x="140" y="60" text-anchor="middle" font-size="30" fill="#2A241B" font-family="Noto Serif TC">淺色模式</text>
+        <text class="t-mono" x="140" y="98" text-anchor="middle" font-size="28" fill="var(--ink-soft)">白底深字</text>
+
+        <rect x="360" y="10" width="280" height="110" rx="14" fill="#1E293B"/>
+        <text x="500" y="60" text-anchor="middle" font-size="30" fill="#F1F5F9" font-family="Noto Serif TC">深色模式</text>
+        <text x="500" y="98" text-anchor="middle" font-size="28" fill="#94A3B8">深底淺字</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：讓學生看到「前綴」是通用概念，不只有斷點。dark: 是同一招的延伸。
+       一句話總結：md: 和 dark: 都是「在什麼條件下生效」，只是條件不同。 -->
+</section>
+
+
+
+<!-- ═══════════ 37｜範例總覽 ═══════════ -->
+<section class="slide" data-label="範例總覽">
+  <p class="eyebrow">範例</p>
+  <p class="pagedot">xxxiii</p>
+  <h2 class="headline reveal">課堂示範 ＋ 六個延伸主題</h2>
+  <div class="body-full body-full--note">
+    <ul class="points">
+      <li class="reveal"><b>名片｜數位名片</b>——課堂一起做的那一張（Tailwind 版）</li>
+      <li class="reveal"><b>A1｜個人作品集</b>——響應式卡片牆，手機 1 欄到桌面 3 欄</li>
+      <li class="reveal"><b>A2｜一頁式形象頁</b>——導覽列＋Hero＋三卡＋CTA</li>
+      <li class="reveal"><b>A3｜商品卡集合</b>——同一套 class 排四張商品卡</li>
+      <li class="reveal"><b>B1｜產品定價頁</b>——三種方案的比較頁</li>
+      <li class="reveal"><b>B2｜活動報名表單</b>——講座與工作坊的報名表</li>
+      <li class="reveal"><b>B3｜深色模式頁</b>——<code>dark:</code> 前綴，同一組 class 兩種主題</li>
+    </ul>
+  </div>
+  <div class="note note--bottom reveal">
+    七份都<b>只有 HTML ＋ CDN</b>，沒有另存 CSS。每一頁點「開啟完整程式碼與即時預覽」都能看到 <b>6 個製作步驟</b>；<b>做不完不影響任何事</b>。
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：先給全景。七題全用今天教過的 class，沒有新東西——差別只在組合方式與難度。
+       名片是課堂一起做的；A 組入門、B 組多一點挑戰。明確告訴學生：做多少算多少，
+       挑一個有趣的開始，先在瀏覽器把成品打開看一眼「原來可以做這樣」再回頭挑。 -->
+</section>
+
+<!-- ═══════════ 38｜範例 名片 ═══════════ -->
+<section class="slide" data-label="範例 名片 數位名片">
+  <p class="eyebrow">範例｜課堂示範</p>
+  <p class="pagedot">xxxiv</p>
+  <h2 class="headline reveal">範例｜數位名片（Tailwind 版）</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（課堂一起做完的樣子）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-card.jpg" alt="範例 數位名片（Tailwind 版）的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：頭像、名字、一句話、標籤列、按鈕</li>
+        <li class="reveal"><b>用到今天</b>：<code>min-h-screen</code> 置中、Flex 標籤列、圓角、<code>text-slate-*</code> 字色階</li>
+        <li class="reveal"><b>對比上週</b>：不用 style.css，一行行 class 就成型</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch4_card.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：全課的收尾實作——同一張名片，上週手寫 CSS、今天用 Tailwind。
+       讓學生親眼看到「同一個結果、兩種寫法」。→ 課堂一起做完。 -->
+</section>
+
+<!-- ═══════════ 39｜範例 A1 個人作品集 ═══════════ -->
+<section class="slide" data-label="範例 A1 個人作品集">
+  <p class="eyebrow">延伸練習｜A 組 入門</p>
+  <p class="pagedot">xxxv</p>
+  <h2 class="headline reveal">範例 A1｜個人作品集（響應式卡片牆）</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 class 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-a1.jpg" alt="範例 A1 個人作品集 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：頁首名字＋一句話、三張作品卡、頁尾連結</li>
+        <li class="reveal"><b>用到今天</b>：Grid 響應式 1→2→3 欄、<code>sm:</code>／<code>lg:</code> 斷點、深色配色、hover 抬升</li>
+        <li class="reveal"><b>場景</b>：求職或接案時，直接給對方看的一頁</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch4_portfolio.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這題最該強調的就是那一行三個斷點——grid-cols-1 sm:grid-cols-2 lg:grid-cols-3，
+       它是 mobile-first 的完整示範。整頁深色，點綴色只用在標題與連結（60-30-10 的 10%）。 -->
+</section>
+
+<!-- ═══════════ 40｜範例 A2 一頁式形象頁 ═══════════ -->
+<section class="slide" data-label="範例 A2 一頁式形象頁">
+  <p class="eyebrow">延伸練習｜A 組 入門</p>
+  <p class="pagedot">xxxvi</p>
+  <h2 class="headline reveal">範例 A2｜一頁式形象頁（Landing）</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 class 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-a2.jpg" alt="範例 A2 一頁式形象頁 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：導覽列、Hero 大字＋兩顆按鈕、三個賣點、CTA</li>
+        <li class="reveal"><b>用到今天</b>：Flex ＋ <code>hidden md:flex</code>、響應式字級 <code>text-5xl md:text-6xl</code>、Grid 三欄</li>
+        <li class="reveal"><b>場景</b>：小店、工作室最常見的「一頁式形象網站」</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch4_landing.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：把「導覽列＋Hero＋三卡＋CTA」記成一個固定套路——接案最常被要求的頁型。
+       導覽連結用 hidden md:flex，手機先收起，這正是 mobile-first 的減法。 -->
+</section>
+
+<!-- ═══════════ 41｜範例 A3 商品卡集合 ═══════════ -->
+<section class="slide" data-label="範例 A3 商品卡集合">
+  <p class="eyebrow">延伸練習｜A 組 入門</p>
+  <p class="pagedot">xxxvii</p>
+  <h2 class="headline reveal">範例 A3｜商品卡集合（四卡一排）</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 class 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-a3.jpg" alt="範例 A3 商品卡集合 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：頁首、四張商品卡（縮圖／品名／價格／按鈕）</li>
+        <li class="reveal"><b>用到今天</b>：Grid 1→2→4 欄、<code>flex justify-between</code> 價格列、hover 抬升</li>
+        <li class="reveal"><b>場景</b>：小店、市集、電商的商品列表</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch4_cards.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：商品卡是「卡片＋Grid」最典型的應用。強調四張卡共用同一套 class、只換內容，
+       這就是元件化思維的雛形——之後的 Angular 元件就是從這裡長出來的。 -->
+</section>
+
+<!-- ═══════════ 42｜範例 B1 產品定價頁 ═══════════ -->
+<section class="slide" data-label="範例 B1 產品定價頁">
+  <p class="eyebrow">延伸練習｜B 組 挑戰</p>
+  <p class="pagedot">xxxviii</p>
+  <h2 class="headline reveal">範例 B1｜產品定價頁（三方案）</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 class 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-b1.jpg" alt="範例 B1 產品定價頁 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：標題、三張方案卡、中間的推薦方案</li>
+        <li class="reveal"><b>用到今天</b>：Grid 三欄、<code>ring-2</code> 加粗強調、Flex 清單打勾、<code>tabular-nums</code> 對齊數字</li>
+        <li class="reveal"><b>場景</b>：SaaS、顧問服務最常被要求做的比較頁</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch4_pricing.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：三張裡只有一張被強調——加粗外框、頂端徽章、按鈕換實心色，就是 60-30-10 的 10%。
+       tabular-nums 讓三個價格位數對齊，這是一個很容易被忽略、但一眼就看得出來的小細節。 -->
+</section>
+
+<!-- ═══════════ 43｜範例 B2 活動報名表單 ═══════════ -->
+<section class="slide" data-label="範例 B2 活動報名表單">
+  <p class="eyebrow">延伸練習｜B 組 挑戰</p>
+  <p class="pagedot">xxxix</p>
+  <h2 class="headline reveal">範例 B2｜活動報名表單</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（只用今天的 class 就做得到）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-b2.jpg" alt="範例 B2 活動報名表單 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：左邊活動資訊、右邊報名表（姓名／Email／程度／人數）</li>
+        <li class="reveal"><b>用到今天</b>：Grid 兩欄版面、<code>label for</code> 連結輸入框、<code>focus:ring</code> 狀態、按鈕可點擊面積</li>
+        <li class="reveal"><b>場景</b>：講座、工作坊、課程的報名頁</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch4_signup.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：表單是純 HTML 就能做的東西，今天只是讓它好看。重點示範 label 為什麼要用 for 綁定 id——
+       點標籤就能聚焦輸入框；以及 focus:ring 讓「游標在哪個欄位」一目了然。 -->
+</section>
+
+<!-- ═══════════ 44｜範例 B3 深色模式頁 ═══════════ -->
+<section class="slide" data-label="範例 B3 深色模式頁">
+  <p class="eyebrow">延伸練習｜B 組 挑戰</p>
+  <p class="pagedot">xl</p>
+  <h2 class="headline reveal">範例 B3｜深色模式頁（<code>dark:</code>）</h2>
+  <div class="body-split body-split--shot">
+    <div class="reveal">
+      <span class="code-label">成品長相（深色模式，由系統外觀決定）</span>
+      <div class="shot-frame"><img class="shot" src="assets/shot-b3.jpg" alt="範例 B3 深色模式頁 的成品畫面"></div>
+    </div>
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>要做的區塊</b>：頁首、三張統計卡、設定開關卡、橘色升級區</li>
+        <li class="reveal"><b>用到今天</b>：<code>dark:</code> 前綴、同一組 class 兩種主題、表面色階、跟系統連動</li>
+        <li class="reveal"><b>場景</b>：任何需要「白天黑夜都好看」的介面</li>
+      </ul>
+      <div class="note reveal"><a href="examples/ch4_darkmode.html" target="_blank">開啟完整程式碼與即時預覽</a>（附 6 個製作步驟）</div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：dark: 和 md: 是完全同一套機制——「在什麼條件下生效」，只是條件換成深色模式。
+       把系統外觀切成深色，整頁會跟著變；同一組 class、不用改任何一行。這一頁就是第 36 頁伏筆的收尾。 -->
+</section>
+
+<!-- ═══════════ 45｜用 AI Agent 組 class ═══════════ -->
+<section class="slide" data-label="AI 組 class">
+  <p class="eyebrow">延伸</p>
+  <p class="pagedot">xli</p>
+  <h2 class="headline reveal">用 AI Agent 幫你組 class</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal">class <b>自解釋</b>，AI 讀得懂、也寫得準</li>
+        <li class="reveal">一句話描述版面，AI 直接給 class 組合</li>
+        <li class="reveal">你的角色變成<b>審美與調整</b>：換色、調間距、改斷點</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">你說 → AI 給 → 你改</span>
+      <svg class="dgm" style="max-width:640px; margin-top:10px" viewBox="0 0 640 250" role="img" aria-label="示意：用 AI 產生 class 初稿，人負責審美與調整">
+        <rect class="d-mask" x="0" y="10" width="600" height="56" rx="12"/>
+        <rect class="d-card" x="0" y="10" width="600" height="56" rx="12"/>
+        <text x="20" y="45" font-size="28" fill="#2A241B" font-family="Noto Serif TC">「做一張三欄的卡片牆」</text>
+
+        <text class="t-mono" x="300" y="92" text-anchor="middle" font-size="28">↓</text>
+
+        <rect class="d-mask" x="0" y="108" width="600" height="80" rx="12"/>
+        <rect class="d-soft" x="0" y="108" width="600" height="80" rx="12"/>
+        <text class="t-code" x="20" y="142" font-size="28">grid gap-5 sm:grid-cols-2 lg:grid-cols-3</text>
+        <text class="t-mono" x="20" y="174" font-size="28" fill="var(--ink-soft)">← AI 的初稿</text>
+
+        <text class="t-mono" x="300" y="216" text-anchor="middle" font-size="28">↓ 你改</text>
+        <text class="t-mono" x="300" y="244" text-anchor="middle" font-size="28" fill="var(--ink-soft)">換色 · 調間距 · 改斷點</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：把今天的 Tailwind 接回課程主軸——AI 輔助。強調「讀得懂」是能不能駕馭 AI 的分水嶺。
+       前提一定要講：AI 給的是初稿，審美與調整還是你。看不懂它在組什麼，就改不動。 -->
+</section>
+
+<!-- ═══════════ 46｜常見錯誤 ═══════════ -->
+<section class="slide" data-label="常見錯誤">
+  <p class="eyebrow">延伸</p>
+  <p class="pagedot">xlii</p>
+  <h2 class="headline reveal">幾個最常踩的坑</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><span class="ic ic--warn"></span> 忘記加 CDN → <b>所有 class 都沒效果</b></li>
+        <li class="reveal"><span class="ic ic--warn"></span> <code>md-flex</code> 少冒號 → 斷點<b>完全不起作用</b></li>
+        <li class="reveal"><span class="ic ic--tip"></span> 用開發人員工具看 class 有沒有套上</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">錯的寫法 vs 對的寫法</span>
+      <div class="code"><span class="cmt">/* 少冒號：斷點失效 */</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"md-flex-row"</span><span class="tag">&gt;</span>
+
+<span class="cmt">/* 有冒號：md 以上才橫排 */</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="str">"flex md:flex-row"</span><span class="tag">&gt;</span></div>
+      <svg class="dgm" style="max-width:660px; margin-top:22px" viewBox="0 0 660 150" role="img" aria-label="示意：冒號決定 class 是否在斷點以上生效">
+        <rect class="d-mask" x="0" y="8" width="300" height="60" rx="12"/>
+        <rect class="d-card" x="0" y="8" width="300" height="60" rx="12"/>
+        <text class="t-mono" x="150" y="46" text-anchor="middle" font-size="28" fill="var(--ink-soft)">手機：直排</text>
+        <rect class="d-mask" x="360" y="8" width="300" height="60" rx="12"/>
+        <rect class="d-soft" x="360" y="8" width="300" height="60" rx="12"/>
+        <text class="t-mono" x="510" y="46" text-anchor="middle" font-size="28">平板以上：橫排</text>
+        <text class="t-mono" x="0" y="122" font-size="28" fill="var(--ink-soft)">沒有冒號＝兩邊都橫排</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：把最常見的兩種「為什麼沒生效」一次講完，跟 CH3 的除錯手法串起來。
+       右邊對照是重點：md-flex 少一個冒號，結果是「到處都橫排」而不是「到處都直排」——
+       學生常以為只是沒生效，實際上是錯亂，更難debug。 -->
+</section>
+
+<!-- ═══════════ 47｜今日速查表 ═══════════ -->
+<section class="slide" data-label="今日速查表">
+  <p class="eyebrow">收尾</p>
+  <p class="pagedot">xliii</p>
+  <h2 class="headline reveal">今天的 class，一頁查</h2>
+  <div class="body-full">
+    <div class="tbl">
+      <div class="tbl__row tbl__row--head"><span class="tbl__el">class</span><span>作用</span><span class="tbl__use">常見搭檔</span></div>
+      <div class="tbl__row"><span class="tbl__el">p-6</span><span>內距（m-6 外距）</span><span class="tbl__use">px-4、mx-auto</span></div>
+      <div class="tbl__row"><span class="tbl__el">flex items-center</span><span>一列、垂直置中</span><span class="tbl__use">justify-between、gap-4</span></div>
+      <div class="tbl__row"><span class="tbl__el">grid grid-cols-3</span><span>格線、幾欄</span><span class="tbl__use">gap-6、sm:grid-cols-2</span></div>
+      <div class="tbl__row"><span class="tbl__el">text-2xl</span><span>字級</span><span class="tbl__use">font-bold、text-slate-500</span></div>
+      <div class="tbl__row"><span class="tbl__el">md:flex-row</span><span>平板以上才橫排</span><span class="tbl__use">dark:、hover:</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：這頁不講解，只讓學生拍照或截圖。重點是「常見搭檔」那一欄——
+       Tailwind 的 class 都是可以疊加的，這一欄就是今天整堂課的縮影。
+       刻意不加分頁，讓它跟下一頁「本週帶走的四件事」分工不同：一頁查、一頁回顧。 -->
+</section>
+
+<!-- ═══════════ 48｜本週重點 ═══════════ -->
+<section class="slide" data-label="本週重點">
+  <p class="eyebrow">收尾</p>
+  <p class="pagedot">xliv</p>
+  <h2 class="headline reveal">本週帶走的四件事</h2>
+  <div class="body-split">
+    <div class="reveal">
+      <ul class="points">
+        <li class="reveal"><b>Utility-first</b>：不另存 CSS</li>
+        <li class="reveal"><b>核心 class</b>：間距、Flex、Grid、尺寸、文字、顏色</li>
+        <li class="reveal"><b>RWD</b>：先寫手機，前綴往上疊</li>
+        <li class="reveal"><b>工具</b>：CDN／npm、Flowbite 當字典</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <span class="code-label">下週從這裡接著走</span>
+      <svg class="dgm" style="max-width:640px; margin-top:10px" viewBox="0 0 640 280" role="img" aria-label="示意：本週所學如何接到之後的正式專案路線">
+        <rect class="d-mask" x="0" y="10" width="600" height="72" rx="14"/>
+        <rect class="d-soft" x="0" y="10" width="600" height="72" rx="14"/>
+        <text class="t-mono" x="20" y="42" font-size="28">本週：CDN 寫 class</text>
+        <text class="t-mono" x="20" y="70" font-size="28" fill="var(--ink-soft)">學會語法</text>
+
+        <text class="t-mono" x="300" y="112" text-anchor="middle" font-size="28">↓</text>
+
+        <rect class="d-mask" x="0" y="128" width="600" height="72" rx="14"/>
+        <rect class="d-card" x="0" y="128" width="600" height="72" rx="14"/>
+        <text class="t-mono" x="20" y="160" font-size="28">之後：npm ＋ Vite</text>
+        <text class="t-mono" x="20" y="188" font-size="28" fill="var(--ink-soft)">同樣的 class，不用改</text>
+
+        <text class="t-mono" x="300" y="230" text-anchor="middle" font-size="28">↓</text>
+
+        <rect class="d-mask" x="0" y="246" width="600" height="34" rx="12"/>
+        <rect class="d-card" x="0" y="246" width="600" height="34" rx="12"/>
+        <text class="t-mono" x="20" y="270" font-size="28">Angular：元件化</text>
+      </svg>
+    </div>
+  </div>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：收尾 recap，讓學生離場前能自我檢查。
+       右邊是「本週學的怎麼接下去」——重點是 class 語言不變，換的只是安裝方式，
+       這正是第 16 頁兩種模式對照頁要傳達的訊息。 -->
+</section>
+
+<!-- ═══════════ 49｜Q & A ═══════════ -->
+<section class="slide slide--accent" data-label="Q&A">
+  <h2 class="closer-title reveal">Q &amp; A</h2>
+  <p class="closer-sub reveal">class 沒生效、斷點不作用的同學，留下來用開發人員工具一起找。</p>
+  <div class="footer"><span>互動式網頁設計</span><span>勤益科大進修部</span></div>
+  <!-- 講述重點：預留時間讓卡關的同學舉手。本週第一次大量寫 class，除錯手法跟 CH3 相通，卡住要趁早清掉。 -->
+</section>
+
+</main>
+</div>
+<a class="deck-backlink" href="../">← 回簡報總覽</a>
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter">1 / 49</div>
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編輯模式（E）">編輯</button>
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   =========================================== */
+class SlidePresentation {
+  constructor() {
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.total = this.slides.length;
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.progress = document.getElementById('progress');
+    this.counter = document.getElementById('counter');
+    this.setupStageScale();
+    this.setupNav();
+    this.show(0);
+  }
+
+  /* 固定 16:9：整個 stage 等比縮放並置中，不重排內容 */
+  setupStageScale() {
+    const scale = () => {
+      const f = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      const x = (window.innerWidth - 1920 * f) / 2;
+      const y = (window.innerHeight - 1080 * f) / 2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale();
+    window.addEventListener('resize', scale);
+  }
+
+  setupNav() {
+    document.addEventListener('keydown', (e) => {
+      if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown':
+          e.preventDefault(); this.next(); break;
+        case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+          e.preventDefault(); this.prev(); break;
+        case 'Home': e.preventDefault(); this.show(0); break;
+        case 'End': e.preventDefault(); this.show(this.total - 1); break;
+        case 'f': case 'F':
+          if (document.fullscreenElement) document.exitFullscreen();
+          else document.documentElement.requestFullscreen();
+          break;
+      }
+    });
+
+    /* 觸控滑動 */
+    let sx = 0, sy = 0;
+    document.addEventListener('touchstart', (e) => {
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    }, { passive: true });
+    document.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) dx < 0 ? this.next() : this.prev();
+    }, { passive: true });
+
+    /* 滾輪（節流） */
+    let lock = false;
+    document.addEventListener('wheel', (e) => {
+      if (lock) return;
+      if (Math.abs(e.deltaY) < 24) return;
+      lock = true;
+      e.deltaY > 0 ? this.next() : this.prev();
+      setTimeout(() => { lock = false; }, 650);
+    }, { passive: true });
+  }
+
+  next() { this.show(this.current + 1); }
+  prev() { this.show(this.current - 1); }
+
+  show(i) {
+    this.current = Math.max(0, Math.min(i, this.total - 1));
+    this.slides.forEach((s, n) => {
+      s.classList.toggle('active', n === this.current);
+      s.classList.toggle('visible', n === this.current);
+    });
+    if (this.progress) this.progress.style.width = ((this.current + 1) / this.total * 100) + '%';
+    if (this.counter) this.counter.textContent = (this.current + 1) + ' / ' + this.total;
+  }
+}
+
+/* ===========================================
+   INLINE EDITING（草稿後的微調用；E 鍵或左上角熱區）
+   =========================================== */
+class InlineEditor {
+  constructor() {
+    this.isActive = false;
+    this.toggle = document.getElementById('editToggle');
+    this.hotzone = document.querySelector('.edit-hotzone');
+    this.editableSelector = '.headline, .chapter-title, .chapter-sub, .cover-title, .cover-sub, .cover-kicker, .closer-title, .closer-sub, .points li, .code, .res__title, .res__desc, .res__kind, .eyebrow, .pagedot';
+    this.restore();
+    this.bind();
+  }
+  bind() {
+    this.toggle.addEventListener('click', () => this.toggleMode());
+    this.hotzone.addEventListener('click', () => this.toggleMode());
+    let t = null;
+    const show = () => { clearTimeout(t); this.toggle.classList.add('show'); };
+    const hide = () => { t = setTimeout(() => { if (!this.isActive) this.toggle.classList.remove('show'); }, 400); };
+    this.hotzone.addEventListener('mouseenter', show);
+    this.hotzone.addEventListener('mouseleave', hide);
+    this.toggle.addEventListener('mouseenter', show);
+    this.toggle.addEventListener('mouseleave', hide);
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'e' || e.key === 'E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable'))) {
+        this.toggleMode();
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S') && this.isActive) {
+        e.preventDefault(); this.save();
+      }
+    });
+  }
+  toggleMode() {
+    this.isActive = !this.isActive;
+    document.body.classList.toggle('editing', this.isActive);
+    this.toggle.classList.toggle('active', this.isActive);
+    this.toggle.classList.toggle('show', true);
+    document.querySelectorAll(this.editableSelector).forEach((el) => {
+      if (this.isActive) el.setAttribute('contenteditable', 'true');
+      else el.removeAttribute('contenteditable');
+    });
+    if (!this.isActive) this.save();
+  }
+  save() {
+    try { localStorage.setItem('ch4-deck-html-v2', document.querySelector('.deck-stage').innerHTML); } catch (err) {}
+  }
+  restore() {
+    try {
+      const saved = localStorage.getItem('ch4-deck-html-v2');
+      if (saved) document.querySelector('.deck-stage').innerHTML = saved;
+    } catch (err) {}
+  }
+}
+
+new SlidePresentation();
+new InlineEditor();
+</script>
+</body>
+</html>

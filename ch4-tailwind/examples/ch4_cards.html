@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>範例 A3｜商品卡集合（四卡一排） — 步驟、程式碼與即時預覽</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #F2EEDF;
+    --panel: #FBF9F2;
+    --ink: #2A241B;
+    --ink-soft: #6B6255;
+    --rule: rgba(42, 36, 27, 0.18);
+    --accent: #A64C7C;
+    --accent-soft: #F0DCE8;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ===== 上方工具列 ===== */
+  .bar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 24px;
+    padding: 11px 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar__id { display: flex; align-items: baseline; gap: 14px; }
+  .bar__code { font-size: 24px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+  .bar__id h1 { font-size: 21px; font-weight: 700; letter-spacing: 1px; }
+  .bar__meta { font-size: 12.5px; color: var(--ink-soft); flex: 1 1 auto; }
+  .bar__meta b { font-weight: 500; color: var(--ink); }
+  .bar__act { display: flex; gap: 9px; flex: 0 0 auto; }
+
+  button {
+    font: inherit; font-size: 12.5px;
+    padding: 7px 15px;
+    border: 1px solid var(--ink); border-radius: 999px;
+    background: transparent; color: var(--ink); cursor: pointer;
+  }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button.done { background: #B7C7A8; border-color: #B7C7A8; color: var(--ink); }
+
+  /* ===== 製作步驟（可切換）===== */
+  .steps { flex: 0 0 auto; padding: 11px 24px 12px; border-bottom: 1px solid var(--rule); }
+  .steps__hd {
+    display: flex; align-items: baseline; gap: 14px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    margin-bottom: 9px;
+  }
+  .steps__hd b { color: var(--ink); font-weight: 500; }
+  .steps__nav { margin-left: auto; display: flex; gap: 7px; }
+  .steps__nav button { padding: 3px 12px; font-size: 12px; }
+  .steps__nav button:disabled { opacity: 0.35; cursor: default; }
+  .steps__nav button:disabled:hover { background: transparent; color: var(--ink); }
+
+  .steps__list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .steps__list button {
+    width: 100%; height: 100%;
+    display: flex; gap: 9px; text-align: left;
+    padding: 8px 11px 9px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-size: 12.5px; line-height: 1.48;
+    color: #3A332A;
+  }
+  .steps__list button:hover { background: #FFF; color: #3A332A; border-color: var(--ink-soft); }
+  .steps__list button b {
+    flex: 0 0 auto;
+    width: 19px; height: 19px; margin-top: 1px;
+    border-radius: 999px;
+    background: #CFC7B6; color: var(--paper);
+    font-size: 11px; font-weight: 700; line-height: 19px; text-align: center;
+  }
+  .steps__list button.on {
+    background: #FFF; border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .steps__list button.on b { background: var(--accent); }
+  .steps__list button.seen b { background: var(--ink-soft); }
+
+  .steps__check {
+    margin-top: 9px;
+    font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+  }
+  .steps__check b { color: var(--ink); font-weight: 500; }
+
+  /* ===== 兩欄主體 ===== */
+  main {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+    min-height: 0;
+  }
+
+  .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+  .pane__head {
+    flex: 0 0 auto;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 9px 20px;
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+  }
+  .pane__head span { font-variant-numeric: tabular-nums; }
+
+  /* 左：程式碼 */
+  .pane--code { border-right: 1px solid var(--rule); }
+  .code {
+    flex: 1 1 auto; overflow: auto; margin: 0;
+    padding: 16px 20px 40px;
+    background: var(--panel);
+    font-family: "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
+    font-size: 13px; line-height: 1.68; tab-size: 2;
+    -webkit-text-size-adjust: 100%;
+  }
+  .code code { white-space: pre; display: block; }
+  .c-cmt  { color: #8A8072; }
+  .c-str  { color: #A64C7C; }
+  .c-tag  { color: #8C5A3C; }
+  .c-prop { color: #6E7F45; }
+
+  /* 右：預覽 */
+  .pane--prev { background: #E7E3D6; }
+  .stagewrap { flex: 1 1 auto; overflow: auto; padding: 16px; }
+  .stageouter { width: 1200px; }
+  .stage { width: 1200px; transform-origin: 0 0; }
+  .stage iframe {
+    display: block; width: 1200px; height: 1200px;
+    border: 0; border-radius: 10px; background: #fff;
+    box-shadow: 0 10px 30px rgba(42, 36, 27, 0.16);
+  }
+
+  .hint { font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__id">
+    <span class="bar__code">A3</span>
+    <h1>商品卡集合（四卡一排）</h1>
+  </div>
+  <p class="bar__meta"><b>延伸練習｜A 組 入門</b>　用到今天：grid 四欄 ・ 卡片元件 ・ flex justify-between 價格列 ・ hover 抬升　｜　小店、市集、電商的商品列表；同一套 class 複製四份</p>
+  <div class="bar__act">
+    <button id="btnCopy">複製這一步的程式碼</button>
+    <button id="btnReload">重新整理預覽</button>
+    <button id="btnPop">開新視窗</button>
+  </div>
+</header>
+
+<section class="steps">
+  <p class="steps__hd">
+    製作步驟（<b>點任一步</b>可切換左下程式碼與右側畫面）
+    <span id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav">
+      <button id="btnPrev">◀ 上一步</button>
+      <button id="btnNext">下一步 ▶</button>
+    </span>
+  </p>
+  <ol class="steps__list" id="stepList">
+    <li><button type="button" data-i="0"><b>1</b><span>頁首：左邊標題、右邊一顆按鈕；flex 加上 sm: 斷點，手機上下堆疊、桌面左右分開</span></button></li>
+    <li><button type="button" data-i="1"><b>2</b><span>開好格線（grid-cols-1 sm:grid-cols-2 lg:grid-cols-4），先放第一張商品卡：縮圖、品名、說明</span></button></li>
+    <li><button type="button" data-i="2"><b>3</b><span>把同一張卡再複製兩張 —— 內容換掉，class 完全不用動</span></button></li>
+    <li><button type="button" data-i="3"><b>4</b><span>放第四張卡並關掉格線；hover:-translate-y-1 ＋ hover:shadow-lg 讓卡片滑過時浮起來</span></button></li>
+    <li><button type="button" data-i="4"><b>5</b><span>格線下方補一句說明，並關掉主內容容器</span></button></li>
+    <li><button type="button" data-i="5"><b>6</b><span>最後放頁尾，整頁完成</span></button></li>
+  </ol>
+  <p class="steps__check"><b>做完自己檢查：</b>手機一欄、平板兩欄、桌面四欄 ・ 價格與按鈕在同一列且左右分開 ・ 滑過卡片會浮起來 ・ 有一張帶『熱銷』標籤</p>
+</section>
+
+<main>
+  <section class="pane pane--code">
+    <div class="pane__head"><span id="codeTitle">第 1 步的程式碼</span><span id="stat"></span></div>
+    <pre class="code"><code id="code"></code></pre>
+  </section>
+
+  <section class="pane pane--prev">
+    <div class="pane__head"><span>即時預覽（由左側同一份程式碼執行）</span><span class="hint">捲動可看完整頁面</span></div>
+    <div class="stagewrap" id="wrap">
+      <div class="stageouter" id="outer">
+        <div class="stage" id="stage"><iframe id="prev" title="範例預覽"></iframe></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script id="data" type="application/json">{"docs": ["<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>A3 商品卡集合（四卡一排）<\/title>\n<!-- 一行 CDN 就能用 Tailwind：不用安裝、不用建置，存檔重整就看得到 -->\n<script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4\"><\/script>\n<\/head>\n<body class=\"bg-slate-50 text-slate-900 antialiased\">\n  <!-- ① flex-col sm:flex-row 讓「標題」與「按鈕」手機上下堆疊、桌面並排；\n       sm:items-end 讓兩者在底部對齊，看起來像同一條基準線 -->\n  <header class=\"mx-auto flex max-w-6xl flex-col gap-4 px-6 pt-14 pb-8 sm:flex-row sm:items-end sm:justify-between\">\n    <div>\n      <h1 class=\"text-3xl font-bold tracking-tight\">本週新品<\/h1>\n      <p class=\"mt-1 text-slate-500\">四張卡片，同一套 Tailwind class 排出來<\/p>\n    <\/div>\n    <button class=\"self-start rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 sm:self-auto\">看全部<\/button>\n  <\/header>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>A3 商品卡集合（四卡一排）<\/title>\n<!-- 一行 CDN 就能用 Tailwind：不用安裝、不用建置，存檔重整就看得到 -->\n<script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4\"><\/script>\n<\/head>\n<body class=\"bg-slate-50 text-slate-900 antialiased\">\n  <!-- ① flex-col sm:flex-row 讓「標題」與「按鈕」手機上下堆疊、桌面並排；\n       sm:items-end 讓兩者在底部對齊，看起來像同一條基準線 -->\n  <header class=\"mx-auto flex max-w-6xl flex-col gap-4 px-6 pt-14 pb-8 sm:flex-row sm:items-end sm:justify-between\">\n    <div>\n      <h1 class=\"text-3xl font-bold tracking-tight\">本週新品<\/h1>\n      <p class=\"mt-1 text-slate-500\">四張卡片，同一套 Tailwind class 排出來<\/p>\n    <\/div>\n    <button class=\"self-start rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 sm:self-auto\">看全部<\/button>\n  <\/header>\n  <!-- ② 一張商品卡＝一個 <article>：白底、圓角、內距都在這一層；\n       價格列用 flex items-center justify-between 把「價格」推左、「加入」推右，中間自動留空 -->\n  <main class=\"mx-auto max-w-6xl px-6 pb-16\">\n    <div class=\"grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4\">\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-rose-200 to-amber-100\"><\/div>\n        <span class=\"absolute left-3 top-3 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white\">熱銷<\/span>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">經典白瓷杯<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">厚實手感，日常必備<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 320<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>A3 商品卡集合（四卡一排）<\/title>\n<!-- 一行 CDN 就能用 Tailwind：不用安裝、不用建置，存檔重整就看得到 -->\n<script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4\"><\/script>\n<\/head>\n<body class=\"bg-slate-50 text-slate-900 antialiased\">\n  <!-- ① flex-col sm:flex-row 讓「標題」與「按鈕」手機上下堆疊、桌面並排；\n       sm:items-end 讓兩者在底部對齊，看起來像同一條基準線 -->\n  <header class=\"mx-auto flex max-w-6xl flex-col gap-4 px-6 pt-14 pb-8 sm:flex-row sm:items-end sm:justify-between\">\n    <div>\n      <h1 class=\"text-3xl font-bold tracking-tight\">本週新品<\/h1>\n      <p class=\"mt-1 text-slate-500\">四張卡片，同一套 Tailwind class 排出來<\/p>\n    <\/div>\n    <button class=\"self-start rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 sm:self-auto\">看全部<\/button>\n  <\/header>\n  <!-- ② 一張商品卡＝一個 <article>：白底、圓角、內距都在這一層；\n       價格列用 flex items-center justify-between 把「價格」推左、「加入」推右，中間自動留空 -->\n  <main class=\"mx-auto max-w-6xl px-6 pb-16\">\n    <div class=\"grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4\">\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-rose-200 to-amber-100\"><\/div>\n        <span class=\"absolute left-3 top-3 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white\">熱銷<\/span>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">經典白瓷杯<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">厚實手感，日常必備<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 320<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-sky-200 to-emerald-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">冷萃濾杯<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">冰鎮夏日特調<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 480<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-violet-200 to-indigo-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">細口手沖壺<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">精準控流不亂噴<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 620<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>A3 商品卡集合（四卡一排）<\/title>\n<!-- 一行 CDN 就能用 Tailwind：不用安裝、不用建置，存檔重整就看得到 -->\n<script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4\"><\/script>\n<\/head>\n<body class=\"bg-slate-50 text-slate-900 antialiased\">\n  <!-- ① flex-col sm:flex-row 讓「標題」與「按鈕」手機上下堆疊、桌面並排；\n       sm:items-end 讓兩者在底部對齊，看起來像同一條基準線 -->\n  <header class=\"mx-auto flex max-w-6xl flex-col gap-4 px-6 pt-14 pb-8 sm:flex-row sm:items-end sm:justify-between\">\n    <div>\n      <h1 class=\"text-3xl font-bold tracking-tight\">本週新品<\/h1>\n      <p class=\"mt-1 text-slate-500\">四張卡片，同一套 Tailwind class 排出來<\/p>\n    <\/div>\n    <button class=\"self-start rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 sm:self-auto\">看全部<\/button>\n  <\/header>\n  <!-- ② 一張商品卡＝一個 <article>：白底、圓角、內距都在這一層；\n       價格列用 flex items-center justify-between 把「價格」推左、「加入」推右，中間自動留空 -->\n  <main class=\"mx-auto max-w-6xl px-6 pb-16\">\n    <div class=\"grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4\">\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-rose-200 to-amber-100\"><\/div>\n        <span class=\"absolute left-3 top-3 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white\">熱銷<\/span>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">經典白瓷杯<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">厚實手感，日常必備<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 320<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-sky-200 to-emerald-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">冷萃濾杯<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">冰鎮夏日特調<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 480<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-violet-200 to-indigo-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">細口手沖壺<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">精準控流不亂噴<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 620<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-amber-200 to-orange-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">手搖研磨器<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">免電力，風味自己調<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 980<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n    <\/div>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>A3 商品卡集合（四卡一排）<\/title>\n<!-- 一行 CDN 就能用 Tailwind：不用安裝、不用建置，存檔重整就看得到 -->\n<script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4\"><\/script>\n<\/head>\n<body class=\"bg-slate-50 text-slate-900 antialiased\">\n  <!-- ① flex-col sm:flex-row 讓「標題」與「按鈕」手機上下堆疊、桌面並排；\n       sm:items-end 讓兩者在底部對齊，看起來像同一條基準線 -->\n  <header class=\"mx-auto flex max-w-6xl flex-col gap-4 px-6 pt-14 pb-8 sm:flex-row sm:items-end sm:justify-between\">\n    <div>\n      <h1 class=\"text-3xl font-bold tracking-tight\">本週新品<\/h1>\n      <p class=\"mt-1 text-slate-500\">四張卡片，同一套 Tailwind class 排出來<\/p>\n    <\/div>\n    <button class=\"self-start rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 sm:self-auto\">看全部<\/button>\n  <\/header>\n  <!-- ② 一張商品卡＝一個 <article>：白底、圓角、內距都在這一層；\n       價格列用 flex items-center justify-between 把「價格」推左、「加入」推右，中間自動留空 -->\n  <main class=\"mx-auto max-w-6xl px-6 pb-16\">\n    <div class=\"grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4\">\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-rose-200 to-amber-100\"><\/div>\n        <span class=\"absolute left-3 top-3 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white\">熱銷<\/span>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">經典白瓷杯<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">厚實手感，日常必備<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 320<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-sky-200 to-emerald-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">冷萃濾杯<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">冰鎮夏日特調<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 480<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-violet-200 to-indigo-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">細口手沖壺<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">精準控流不亂噴<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 620<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-amber-200 to-orange-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">手搖研磨器<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">免電力，風味自己調<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 980<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n    <\/div>\n    <!-- ⑤ 四張卡從頭到尾只有一套 class，差別只在內容——\n         這正是「同一套 class 重複用」＝元件化的起點 -->\n    <p class=\"mt-10 text-center text-sm text-slate-400\">四張卡，共用同一套 class ─ 這就是元件化的雛形<\/p>\n  <\/main>\n<\/body>\n<\/html>\n", "<!DOCTYPE html>\n<html lang=\"zh-TW\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>A3 商品卡集合（四卡一排）<\/title>\n<!-- 一行 CDN 就能用 Tailwind：不用安裝、不用建置，存檔重整就看得到 -->\n<script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4\"><\/script>\n<\/head>\n<body class=\"bg-slate-50 text-slate-900 antialiased\">\n  <!-- ① flex-col sm:flex-row 讓「標題」與「按鈕」手機上下堆疊、桌面並排；\n       sm:items-end 讓兩者在底部對齊，看起來像同一條基準線 -->\n  <header class=\"mx-auto flex max-w-6xl flex-col gap-4 px-6 pt-14 pb-8 sm:flex-row sm:items-end sm:justify-between\">\n    <div>\n      <h1 class=\"text-3xl font-bold tracking-tight\">本週新品<\/h1>\n      <p class=\"mt-1 text-slate-500\">四張卡片，同一套 Tailwind class 排出來<\/p>\n    <\/div>\n    <button class=\"self-start rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 sm:self-auto\">看全部<\/button>\n  <\/header>\n  <!-- ② 一張商品卡＝一個 <article>：白底、圓角、內距都在這一層；\n       價格列用 flex items-center justify-between 把「價格」推左、「加入」推右，中間自動留空 -->\n  <main class=\"mx-auto max-w-6xl px-6 pb-16\">\n    <div class=\"grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4\">\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-rose-200 to-amber-100\"><\/div>\n        <span class=\"absolute left-3 top-3 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white\">熱銷<\/span>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">經典白瓷杯<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">厚實手感，日常必備<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 320<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-sky-200 to-emerald-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">冷萃濾杯<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">冰鎮夏日特調<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 480<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-violet-200 to-indigo-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">細口手沖壺<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">精準控流不亂噴<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 620<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n      <article class=\"group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg\">\n        <div class=\"h-36 rounded-xl bg-gradient-to-br from-amber-200 to-orange-100\"><\/div>\n        <h3 class=\"mt-4 font-semibold tracking-tight\">手搖研磨器<\/h3>\n        <p class=\"mt-1 text-sm text-slate-500\">免電力，風味自己調<\/p>\n        <div class=\"mt-4 flex items-center justify-between\">\n          <span class=\"text-lg font-bold tabular-nums\">NT$ 980<\/span>\n          <button class=\"rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-600 hover:text-white\">加入<\/button>\n        <\/div>\n      <\/article>\n    <\/div>\n    <!-- ⑤ 四張卡從頭到尾只有一套 class，差別只在內容——\n         這正是「同一套 class 重複用」＝元件化的起點 -->\n    <p class=\"mt-10 text-center text-sm text-slate-400\">四張卡，共用同一套 class ─ 這就是元件化的雛形<\/p>\n  <\/main>\n  <!-- ⑥ 頁尾：一行小字收尾 -->\n  <footer class=\"mx-auto max-w-6xl border-t border-slate-200 px-6 py-8 text-center text-sm text-slate-400\">\n    本週新品 · 04 件\n  <\/footer>\n<\/body>\n<\/html>\n"]}</script>
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('data').textContent);
+  var docs = DATA.docs, total = docs.length;
+  var cur = 0;
+  var frame = document.getElementById('prev');
+  var stage = document.getElementById('stage');
+  var outer = document.getElementById('outer');
+  var wrap = document.getElementById('wrap');
+
+  /* ---- 極簡語法上色：單次掃描，避免跳脫互相破壞 ---- */
+  function highlight(src) {
+    var esc = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc.replace(
+      /(&lt;!--[\s\S]*?--&gt;|\/\*[\s\S]*?\*\/|"[^"\n]*"|&lt;\/?[a-zA-Z][\w:-]*|[a-z-]+(?=\s*:))/g,
+      function (m) {
+        var cls = m.slice(0, 4) === '&lt;' ? 'c-tag'
+                : m.slice(0, 2) === '/*' || m.slice(0, 4) === '&lt;!' ? 'c-cmt'
+                : m.charAt(0) === '"' ? 'c-str'
+                : 'c-prop';
+        return '<span class="' + cls + '">' + m + '</span>';
+      }
+    );
+  }
+
+  function render() {
+    var code = docs[cur];
+    document.getElementById('code').innerHTML = highlight(code);
+    document.getElementById('code').scrollTop = 0;
+    document.getElementById('stat').textContent = code.split('\n').length + ' 行';
+    document.getElementById('codeTitle').textContent =
+      (cur === total - 1) ? '完整程式碼（HTML ＋ CSS，附註解）' : '第 ' + (cur + 1) + ' 步的程式碼';
+    document.getElementById('pos').textContent = '第 ' + (cur + 1) + ' 步／共 ' + total + ' 步';
+
+    var btns = document.querySelectorAll('#stepList button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', i === cur);
+      btns[i].classList.toggle('seen', i < cur);
+    }
+    document.getElementById('btnPrev').disabled = cur === 0;
+    document.getElementById('btnNext').disabled = cur === total - 1;
+    run();
+  }
+
+  function run() { frame.srcdoc = docs[cur]; }
+
+  /* 內容載入後量出實際高度：量測前先把 iframe 壓到 10px，
+     scrollHeight 才會反映真正的內容高度，不會留一大段空白。 */
+  frame.addEventListener('load', function () {
+    var h = 1200;
+    try {
+      frame.style.height = '10px';
+      h = Math.ceil(frame.contentDocument.documentElement.scrollHeight) || 1200;
+    } catch (e) {}
+    if (h < 120) h = 120;
+    frame.style.height = h + 'px';
+    fit();
+  });
+
+  /* 縮放：把 1200px 寬的頁面等比塞進右欄，並讓外層捲動範圍正確 */
+  function fit() {
+    var avail = wrap.clientWidth - 32;
+    var k = Math.min(1, avail / 1200);
+    stage.style.transform = 'scale(' + k + ')';
+    outer.style.width = (1200 * k) + 'px';
+    outer.style.height = (parseFloat(frame.style.height || 1200) * k) + 'px';
+  }
+  window.addEventListener('resize', fit);
+
+  function go(i) { cur = Math.max(0, Math.min(total - 1, i)); render(); }
+
+  document.getElementById('stepList').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) go(parseInt(b.dataset.i, 10));
+  });
+  document.getElementById('btnPrev').addEventListener('click', function () { go(cur - 1); });
+  document.getElementById('btnNext').addEventListener('click', function () { go(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1); }
+  });
+
+  var btnCopy = document.getElementById('btnCopy');
+  btnCopy.addEventListener('click', function () {
+    var code = docs[cur];
+    function ok() {
+      btnCopy.textContent = '已複製';
+      btnCopy.classList.add('done');
+      setTimeout(function () {
+        btnCopy.textContent = '複製這一步的程式碼';
+        btnCopy.classList.remove('done');
+      }, 1600);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); ok(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(ok, fallback);
+    } else { fallback(); }
+  });
+
+  document.getElementById('btnReload').addEventListener('click', run);
+
+  document.getElementById('btnPop').addEventListener('click', function () {
+    var url = URL.createObjectURL(new Blob([docs[cur]], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  });
+
+  render();
+  fit();
+})();
+</script>
+</body>
+</html>
