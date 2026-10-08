@@ -1,0 +1,97 @@
+<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>範例 4｜下班能量計</title><style>*{box-sizing:border-box}
+body{margin:0;font-family:"PingFang TC","Microsoft JhengHei",sans-serif;background:#f3edde;color:#2a241b;font-size:15px}
+header{padding:16px 24px 14px;background:#2f5d50;color:#fff}
+header h1{margin:0 0 4px;font-size:24px}
+header .sub{margin:0;font-size:14px;opacity:.92}
+.hd-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.hd-actions button{border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;border-radius:999px;padding:7px 14px;cursor:pointer;font-size:14px}
+.hd-actions button:hover{background:rgba(255,255,255,.26)}
+.steps{padding:12px 24px 14px;background:#fff;border-bottom:1px solid #d8d0c5}
+.steps__hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 10px;font-size:13px;color:#6b6355}
+.steps__hd b{color:#2a241b}
+.steps__hd .pos{margin-left:auto;font-weight:700;color:#2f5d50}
+.steps__nav{display:flex;gap:6px}
+.steps__nav button{border:1px solid #cfc4b5;background:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:13px}
+.steps__nav button:disabled{opacity:.35;cursor:default}
+.steps__list{list-style:none;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:0;padding:0}
+.steps__list button{width:100%;height:100%;display:flex;gap:8px;text-align:left;padding:8px 10px;background:#faf7f0;border:1px solid #e1d8cc;border-radius:10px;cursor:pointer;font-size:13px;line-height:1.35;color:inherit}
+.steps__list button b{flex:0 0 20px;height:20px;border-radius:50%;background:#e1d8cc;display:grid;place-items:center;font-size:12px}
+.steps__list button.active{background:#eef5f1;border-color:#2f5d50}
+.steps__list button.active b{background:#2f5d50;color:#fff}
+.how{margin:12px 0 0;padding:10px 14px;background:#eef5f1;border-left:4px solid #2f5d50;border-radius:0 10px 10px 0}
+.how__hd{margin:0 0 4px;font-weight:700;color:#2f5d50;font-size:14px}
+.how__body{margin:0;line-height:1.65}
+.steps__check{margin:12px 0 0;font-size:13px;color:#4a4238;line-height:1.6}
+main{display:grid;grid-template-columns:54% 46%;gap:14px;padding:14px}
+.panes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pane{border:1px solid #d7cdbf;border-radius:14px;background:#fff;overflow:hidden}
+.pane.js{grid-row:span 2}
+.pane h2{font-size:14px;margin:0;padding:8px 12px;background:#f6f1e7;border-bottom:1px solid #e1d8cc}
+pre{margin:0;padding:12px;font-size:13px;line-height:1.45;white-space:pre-wrap;max-height:250px;overflow:auto}
+.pane.js pre{max-height:560px}
+iframe{width:100%;height:540px;border:1px solid #d7cdbf;border-radius:14px;background:#fff}
+.status{margin-top:10px;color:#625a50;font-size:13px}
+@media(max-width:1100px){main{grid-template-columns:1fr}iframe{height:420px}.steps__list{grid-template-columns:repeat(3,minmax(0,1fr))}}</style></head><body>
+<header>
+  <h1>範例 4｜下班能量計</h1>
+  <p class="sub">連按三次為 3，重設回 0。</p>
+  <div class="hd-actions">
+    <button id="copy">複製這一步的程式碼</button>
+    <button id="reload">重新整理預覽</button>
+    <button id="open">開新視窗</button>
+  </div>
+</header>
+<section class="steps">
+  <p class="steps__hd">製作步驟（<b>點任一步</b>可切換下方程式碼與右側畫面）
+    <span class="pos" id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav"><button id="prev">◀ 上一步</button><button id="next">下一步 ▶</button></span>
+  </p>
+  <ol class="steps__list" id="stepList"><li><button type="button" data-i="0"><b>1</b><span>建立狀態畫面</span></button></li><li><button type="button" data-i="1"><b>2</b><span>用 let 保存狀態</span></button></li><li><button type="button" data-i="2"><b>3</b><span>寫 render 函式</span></button></li><li><button type="button" data-i="3"><b>4</b><span>增加按鈕</span></button></li><li><button type="button" data-i="4"><b>5</b><span>重設按鈕</span></button></li><li><button type="button" data-i="5"><b>6</b><span>完整成品與回扣</span></button></li></ol>
+  <div class="how">
+    <p class="how__hd" id="howTitle"></p>
+    <p class="how__body" id="howBody"></p>
+  </div>
+  <p class="steps__check"><b>做完自己檢查：</b>連按三次顯示 3 ・ 按重設回到 0 ・ 重新整理後回到 0</p>
+</section>
+<main>
+  <section>
+    <div class="panes">
+      <div class="pane"><h2>HTML</h2><pre id="htmlCode"></pre></div>
+      <div class="pane js"><h2>JavaScript</h2><pre id="jsCode"></pre></div>
+      <div class="pane"><h2>CSS</h2><pre id="cssCode"></pre></div>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+  <section><iframe id="preview" sandbox="allow-scripts allow-forms" title="即時預覽"></iframe></section>
+</main>
+<script id="data" type="application/json">[{"title": "建立狀態畫面", "desc": "放一個大大的數字 <p id=\"count\">0<\/p>，加上「增加」與「重設」兩顆按鈕。用 CSS 把數字放大，讓它成為畫面的主角。", "html": "<div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div>", "css": "#count{font-size:56px;font-weight:700}", "js": "", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 4｜下班能量計<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n#count{font-size:56px;font-weight:700}<\/style><\/head><body><div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div><script><\/script><\/body><\/html>"}, {"title": "用 let 保存狀態", "desc": "宣告 let count = 0; 當作目前的狀態，並用 querySelector 找到顯示數字的元素。狀態之後會改變，所以用 let 而不是 const。", "html": "<div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div>", "css": "#count{font-size:56px;font-weight:700}", "js": "let count = 0;\nconst countText = document.querySelector('#count');", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 4｜下班能量計<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n#count{font-size:56px;font-weight:700}<\/style><\/head><body><div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div><script>let count = 0;\nconst countText = document.querySelector('#count');<\/script><\/body><\/html>"}, {"title": "寫 render 函式", "desc": "寫 function render() { countText.textContent = count; }：把「資料 → 畫面」的動作集中成一個函式，之後只要呼叫它，不用重複寫更新畫面的程式。", "html": "<div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div>", "css": "#count{font-size:56px;font-weight:700}", "js": "function render() { countText.textContent = count; }", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 4｜下班能量計<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n#count{font-size:56px;font-weight:700}<\/style><\/head><body><div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div><script>function render() { countText.textContent = count; }<\/script><\/body><\/html>"}, {"title": "增加按鈕", "desc": "監聽「增加」按鈕的 click：用 count += 1; 改變狀態，然後呼叫 render() 讓畫面跟著更新。", "html": "<div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div>", "css": "#count{font-size:56px;font-weight:700}", "js": "add.addEventListener('click', function () { count += 1; render(); });", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 4｜下班能量計<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n#count{font-size:56px;font-weight:700}<\/style><\/head><body><div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div><script>add.addEventListener('click', function () { count += 1; render(); });<\/script><\/body><\/html>"}, {"title": "重設按鈕", "desc": "監聽「重設」按鈕：把 count = 0; 再呼叫 render()。", "html": "<div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div>", "css": "#count{font-size:56px;font-weight:700}", "js": "reset.addEventListener('click', function () { count = 0; render(); });", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 4｜下班能量計<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n#count{font-size:56px;font-weight:700}<\/style><\/head><body><div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div><script>reset.addEventListener('click', function () { count = 0; render(); });<\/script><\/body><\/html>"}, {"title": "完整成品與回扣", "desc": "最後別忘了在程式一開始先呼叫一次 render()，讓畫面與資料同步。這個「狀態 → render → 畫面」的模式，之後每個互動都會用到。", "html": "<div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div>", "css": "#count{font-size:56px;font-weight:700}", "js": "let count = 0;\nconst countText = document.querySelector('#count');\nconst add = document.querySelector('#add');\nconst reset = document.querySelector('#reset');\nfunction render() { countText.textContent = count; }\nadd.addEventListener('click', function () { count += 1; render(); });\nreset.addEventListener('click', function () { count = 0; render(); });\nrender();", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 4｜下班能量計<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n#count{font-size:56px;font-weight:700}<\/style><\/head><body><div class=\"wrap\"><div class=\"card\"><h1>下班能量計<\/h1><p id=\"count\">0<\/p><button id=\"add\">增加<\/button><button id=\"reset\">重設<\/button><\/div><\/div><script>let count = 0;\nconst countText = document.querySelector('#count');\nconst add = document.querySelector('#add');\nconst reset = document.querySelector('#reset');\nfunction render() { countText.textContent = count; }\nadd.addEventListener('click', function () { count += 1; render(); });\nreset.addEventListener('click', function () { count = 0; render(); });\nrender();<\/script><\/body><\/html>"}]</script>
+<script>
+const steps=JSON.parse(document.getElementById('data').textContent);
+let current=0;
+const qs=s=>document.querySelector(s);
+const buttons=[...document.querySelectorAll('#stepList [data-i]')];
+function show(i){
+  current=Math.max(0,Math.min(i,steps.length-1));
+  const s=steps[current];
+  buttons.forEach((b,n)=>b.classList.toggle('active',n===current));
+  qs('#htmlCode').textContent=s.html;
+  qs('#cssCode').textContent=s.css||'/* 本題樣式已準備好 */';
+  qs('#jsCode').textContent=s.js||'（這一步還沒有 JavaScript）';
+  qs('#preview').srcdoc=s.doc;
+  qs('#pos').textContent='第 '+(current+1)+' 步／共 '+steps.length+' 步';
+  qs('#howTitle').textContent='第 '+(current+1)+' 步｜'+s.title;
+  qs('#howBody').textContent=s.desc;
+  qs('#status').textContent='目前顯示第 '+(current+1)+' 步的程式碼與畫面（'+(current+1)+' / '+steps.length+'）';
+  qs('#prev').disabled=current===0;
+  qs('#next').disabled=current===steps.length-1;
+}
+buttons.forEach(b=>b.addEventListener('click',()=>show(Number(b.dataset.i))));
+qs('#prev').addEventListener('click',()=>show(current-1));
+qs('#next').addEventListener('click',()=>show(current+1));
+qs('#reload').addEventListener('click',()=>{const f=qs('#preview');f.srcdoc='';f.srcdoc=steps[current].doc;});
+qs('#open').addEventListener('click',()=>{const w=open();if(w){w.document.open();w.document.write(steps[current].doc);w.document.close();}});
+qs('#copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(steps[current].doc);qs('#status').textContent='已複製第 '+(current+1)+' 步的完整 HTML';}catch(e){qs('#status').textContent='複製失敗，請手動全選程式碼';}});
+document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,[contenteditable=true]'))return;if(e.key==='ArrowRight')show(current+1);if(e.key==='ArrowLeft')show(current-1);});
+show(0);
+</script>
+</body></html>

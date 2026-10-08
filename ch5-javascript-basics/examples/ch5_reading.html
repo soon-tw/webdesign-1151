@@ -1,0 +1,97 @@
+<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>範例 5｜深夜閱讀模式</title><style>*{box-sizing:border-box}
+body{margin:0;font-family:"PingFang TC","Microsoft JhengHei",sans-serif;background:#f3edde;color:#2a241b;font-size:15px}
+header{padding:16px 24px 14px;background:#2f5d50;color:#fff}
+header h1{margin:0 0 4px;font-size:24px}
+header .sub{margin:0;font-size:14px;opacity:.92}
+.hd-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.hd-actions button{border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;border-radius:999px;padding:7px 14px;cursor:pointer;font-size:14px}
+.hd-actions button:hover{background:rgba(255,255,255,.26)}
+.steps{padding:12px 24px 14px;background:#fff;border-bottom:1px solid #d8d0c5}
+.steps__hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 10px;font-size:13px;color:#6b6355}
+.steps__hd b{color:#2a241b}
+.steps__hd .pos{margin-left:auto;font-weight:700;color:#2f5d50}
+.steps__nav{display:flex;gap:6px}
+.steps__nav button{border:1px solid #cfc4b5;background:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:13px}
+.steps__nav button:disabled{opacity:.35;cursor:default}
+.steps__list{list-style:none;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:0;padding:0}
+.steps__list button{width:100%;height:100%;display:flex;gap:8px;text-align:left;padding:8px 10px;background:#faf7f0;border:1px solid #e1d8cc;border-radius:10px;cursor:pointer;font-size:13px;line-height:1.35;color:inherit}
+.steps__list button b{flex:0 0 20px;height:20px;border-radius:50%;background:#e1d8cc;display:grid;place-items:center;font-size:12px}
+.steps__list button.active{background:#eef5f1;border-color:#2f5d50}
+.steps__list button.active b{background:#2f5d50;color:#fff}
+.how{margin:12px 0 0;padding:10px 14px;background:#eef5f1;border-left:4px solid #2f5d50;border-radius:0 10px 10px 0}
+.how__hd{margin:0 0 4px;font-weight:700;color:#2f5d50;font-size:14px}
+.how__body{margin:0;line-height:1.65}
+.steps__check{margin:12px 0 0;font-size:13px;color:#4a4238;line-height:1.6}
+main{display:grid;grid-template-columns:54% 46%;gap:14px;padding:14px}
+.panes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pane{border:1px solid #d7cdbf;border-radius:14px;background:#fff;overflow:hidden}
+.pane.js{grid-row:span 2}
+.pane h2{font-size:14px;margin:0;padding:8px 12px;background:#f6f1e7;border-bottom:1px solid #e1d8cc}
+pre{margin:0;padding:12px;font-size:13px;line-height:1.45;white-space:pre-wrap;max-height:250px;overflow:auto}
+.pane.js pre{max-height:560px}
+iframe{width:100%;height:540px;border:1px solid #d7cdbf;border-radius:14px;background:#fff}
+.status{margin-top:10px;color:#625a50;font-size:13px}
+@media(max-width:1100px){main{grid-template-columns:1fr}iframe{height:420px}.steps__list{grid-template-columns:repeat(3,minmax(0,1fr))}}</style></head><body>
+<header>
+  <h1>範例 5｜深夜閱讀模式</h1>
+  <p class="sub">點一次變暗，再點一次回明亮。</p>
+  <div class="hd-actions">
+    <button id="copy">複製這一步的程式碼</button>
+    <button id="reload">重新整理預覽</button>
+    <button id="open">開新視窗</button>
+  </div>
+</header>
+<section class="steps">
+  <p class="steps__hd">製作步驟（<b>點任一步</b>可切換下方程式碼與右側畫面）
+    <span class="pos" id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav"><button id="prev">◀ 上一步</button><button id="next">下一步 ▶</button></span>
+  </p>
+  <ol class="steps__list" id="stepList"><li><button type="button" data-i="0"><b>1</b><span>建立閱讀卡</span></button></li><li><button type="button" data-i="1"><b>2</b><span>準備 night 樣式</span></button></li><li><button type="button" data-i="2"><b>3</b><span>選取元素</span></button></li><li><button type="button" data-i="3"><b>4</b><span>切換 class</span></button></li><li><button type="button" data-i="4"><b>5</b><span>同步按鈕文字</span></button></li><li><button type="button" data-i="5"><b>6</b><span>完整成品與回扣</span></button></li></ol>
+  <div class="how">
+    <p class="how__hd" id="howTitle"></p>
+    <p class="how__body" id="howBody"></p>
+  </div>
+  <p class="steps__check"><b>做完自己檢查：</b>點一次整頁變暗 ・ 再點一次回到明亮 ・ 按鈕文字會跟著切換</p>
+</section>
+<main>
+  <section>
+    <div class="panes">
+      <div class="pane"><h2>HTML</h2><pre id="htmlCode"></pre></div>
+      <div class="pane js"><h2>JavaScript</h2><pre id="jsCode"></pre></div>
+      <div class="pane"><h2>CSS</h2><pre id="cssCode"></pre></div>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+  <section><iframe id="preview" sandbox="allow-scripts allow-forms" title="即時預覽"></iframe></section>
+</main>
+<script id="data" type="application/json">[{"title": "建立閱讀卡", "desc": "做一張閱讀卡：標題、一段文字、一顆「切換深夜模式」按鈕，最外層的容器記得給一個 id。", "html": "<div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div>", "css": "", "js": "", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 5｜深夜閱讀模式<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n<\/style><\/head><body><div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div><script><\/script><\/body><\/html>"}, {"title": "準備 night 樣式", "desc": "在 CSS 先寫好 .night { background:#17201d; color:#fff } 與 .night .card { ... }。樣式先備好，之後 JavaScript 只要切換 class 名稱就會生效。", "html": "<div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div>", "css": ".night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}", "js": "", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 5｜深夜閱讀模式<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}<\/style><\/head><body><div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div><script><\/script><\/body><\/html>"}, {"title": "選取元素", "desc": "用 querySelector 找到最外層容器與按鈕這兩個元素。", "html": "<div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div>", "css": ".night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}", "js": "const page = document.querySelector('#page');\nconst toggle = document.querySelector('#toggle');", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 5｜深夜閱讀模式<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}<\/style><\/head><body><div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div><script>const page = document.querySelector('#page');\nconst toggle = document.querySelector('#toggle');<\/script><\/body><\/html>"}, {"title": "切換 class", "desc": "監聽按鈕的 click，呼叫 page.classList.toggle('night')。toggle 的意思是「有這個 class 就拿掉、沒有就加上」，所以一顆按鈕就能切換兩種狀態。", "html": "<div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div>", "css": ".night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}", "js": "toggle.addEventListener('click', function () { page.classList.toggle('night'); });", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 5｜深夜閱讀模式<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}<\/style><\/head><body><div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div><script>toggle.addEventListener('click', function () { page.classList.toggle('night'); });<\/script><\/body><\/html>"}, {"title": "同步按鈕文字", "desc": "用 page.classList.contains('night') 判斷現在是不是深夜模式，再用三元運算子改按鈕文字，讓使用者知道再按一次會切回什麼。", "html": "<div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div>", "css": ".night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}", "js": "const isNight = page.classList.contains('night');\ntoggle.textContent = isNight ? '切回明亮模式' : '切換深夜模式';", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 5｜深夜閱讀模式<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}<\/style><\/head><body><div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div><script>const isNight = page.classList.contains('night');\ntoggle.textContent = isNight ? '切回明亮模式' : '切換深夜模式';<\/script><\/body><\/html>"}, {"title": "完整成品與回扣", "desc": "classList 只負責改 class，樣式交給 CSS——這是「行為與外觀分開」最好的例子：同一份 JavaScript 換一組 CSS 就是另一種主題。", "html": "<div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div>", "css": ".night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}", "js": "const page = document.querySelector('#page');\nconst toggle = document.querySelector('#toggle');\ntoggle.addEventListener('click', function () {\n  page.classList.toggle('night');\n  const isNight = page.classList.contains('night');\n  toggle.textContent = isNight ? '切回明亮模式' : '切換深夜模式';\n});", "doc": "<!doctype html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>範例 5｜深夜閱讀模式<\/title><style>body{font-family:\"PingFang TC\",\"Microsoft JhengHei\",sans-serif;margin:0;background:#f6f1e7;color:#25211c}.wrap{max-width:760px;margin:0 auto;padding:34px 22px}.card{background:#fff;border:1px solid #ddd3c5;border-radius:18px;padding:24px;box-shadow:0 12px 28px rgba(60,48,32,.08)}button,input{font:inherit}button{border:0;border-radius:12px;padding:10px 16px;background:#2f5d50;color:white;cursor:pointer}input{border:1px solid #bbb0a2;border-radius:10px;padding:10px 12px}.result{margin-top:14px;padding:14px;border-radius:12px;background:#eef5f1;min-height:48px}.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}\n.night{background:#17201d;color:#fff}.night .card{background:#24302c;color:#fff}<\/style><\/head><body><div class=\"wrap\" id=\"page\"><div class=\"card\"><h1>深夜閱讀模式<\/h1><p>今晚適合安靜閱讀。<\/p><button id=\"toggle\">切換深夜模式<\/button><div class=\"result\">連按兩次會回到原本模式。<\/div><\/div><\/div><script>const page = document.querySelector('#page');\nconst toggle = document.querySelector('#toggle');\ntoggle.addEventListener('click', function () {\n  page.classList.toggle('night');\n  const isNight = page.classList.contains('night');\n  toggle.textContent = isNight ? '切回明亮模式' : '切換深夜模式';\n});<\/script><\/body><\/html>"}]</script>
+<script>
+const steps=JSON.parse(document.getElementById('data').textContent);
+let current=0;
+const qs=s=>document.querySelector(s);
+const buttons=[...document.querySelectorAll('#stepList [data-i]')];
+function show(i){
+  current=Math.max(0,Math.min(i,steps.length-1));
+  const s=steps[current];
+  buttons.forEach((b,n)=>b.classList.toggle('active',n===current));
+  qs('#htmlCode').textContent=s.html;
+  qs('#cssCode').textContent=s.css||'/* 本題樣式已準備好 */';
+  qs('#jsCode').textContent=s.js||'（這一步還沒有 JavaScript）';
+  qs('#preview').srcdoc=s.doc;
+  qs('#pos').textContent='第 '+(current+1)+' 步／共 '+steps.length+' 步';
+  qs('#howTitle').textContent='第 '+(current+1)+' 步｜'+s.title;
+  qs('#howBody').textContent=s.desc;
+  qs('#status').textContent='目前顯示第 '+(current+1)+' 步的程式碼與畫面（'+(current+1)+' / '+steps.length+'）';
+  qs('#prev').disabled=current===0;
+  qs('#next').disabled=current===steps.length-1;
+}
+buttons.forEach(b=>b.addEventListener('click',()=>show(Number(b.dataset.i))));
+qs('#prev').addEventListener('click',()=>show(current-1));
+qs('#next').addEventListener('click',()=>show(current+1));
+qs('#reload').addEventListener('click',()=>{const f=qs('#preview');f.srcdoc='';f.srcdoc=steps[current].doc;});
+qs('#open').addEventListener('click',()=>{const w=open();if(w){w.document.open();w.document.write(steps[current].doc);w.document.close();}});
+qs('#copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(steps[current].doc);qs('#status').textContent='已複製第 '+(current+1)+' 步的完整 HTML';}catch(e){qs('#status').textContent='複製失敗，請手動全選程式碼';}});
+document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,[contenteditable=true]'))return;if(e.key==='ArrowRight')show(current+1);if(e.key==='ArrowLeft')show(current-1);});
+show(0);
+</script>
+</body></html>
