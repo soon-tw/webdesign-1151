@@ -200,6 +200,13 @@ img, video, canvas, svg { max-width: 100%; max-height: 100%; }
 .code .ok   { color: var(--code-attr); }
 .code .no   { color: var(--code-str); }
 
+/* 程式碼一律顯示原始字元：JetBrains Mono 的連字會把 <!-- 畫成箭頭、把 === 併成三條長橫線，對初學者是反效果 */
+.code, code, .keys__k, .tbl__el, .dgm .t-code, .dgm .t-mono,
+.code-pane pre, .tsjs pre {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0, "calt" 0;
+}
+
 /* ===========================================
    6. 推薦資源 — 編輯式出處行（無外框、無彩色邊條）
    =========================================== */
@@ -486,6 +493,181 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 /* 面板底色（比較用的分格） */
 .dgm .d-panel  { fill: rgba(255, 255, 255, 0.55); stroke: var(--rule-soft); stroke-width: 1.5; }
 .dgm .d-slot   { fill: rgba(42, 36, 27, 0.06); stroke: var(--rule-medium); stroke-width: 1.5; }
+
+
+/* ===========================================
+   CH5 70-page JavaScript deck additions
+   =========================================== */
+.lesson-tags{position:absolute;top:60px;left:250px;right:250px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.lesson-tags span{border:1px solid var(--rule-soft);border-radius:999px;padding:8px 18px;background:rgba(255,255,255,.48)}.ch5-grid{position:absolute;top:265px;left:80px;right:80px;bottom:118px;display:grid;grid-template-columns:43% 57%;gap:34px;align-items:start}.visual-area{display:grid;gap:14px;align-content:start}.ch5-grid.no-visual{grid-template-columns:1fr}.ch5-copy{display:grid;gap:22px}.mini-lead{font-family:var(--f-display);font-size:42px;line-height:1.35;color:var(--ink)}.lesson-points{list-style:none;display:grid;gap:16px}.lesson-points li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:34px;line-height:1.48;color:var(--ink)}.lesson-points li:before{content:'';position:absolute;left:0;top:.72em;width:18px;height:2px;background:var(--ink);opacity:.32}.lesson-links{list-style:none;display:grid;grid-template-columns:1fr;gap:12px;margin:22px 0 0;padding:0}.lesson-links--multi{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-links a{display:flex;align-items:center;gap:14px;font-family:var(--f-sans);font-size:28px;line-height:1.32;color:var(--ink);text-decoration:none;border:1.5px solid var(--rule-medium);border-radius:14px;padding:12px 20px;background:rgba(255,255,255,.62);transition:background .2s var(--ease),border-color .2s var(--ease)}.lesson-links a::before{content:'開啟';flex:0 0 auto;font-size:26px;font-weight:700;letter-spacing:1px;color:var(--paper);background:var(--ink);border-radius:999px;padding:2px 13px}.lesson-links a:hover{background:rgba(214,221,99,.4);border-color:var(--ink)}.remember{position:absolute;left:80px;right:80px;bottom:50px;border-top:1px solid var(--rule-soft);padding-top:12px;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.codepen-card{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:14px}.codepen-card--js{grid-template-columns:1fr}.code-pane{background:rgba(255,255,255,.72);border:1.5px solid var(--rule-medium);border-radius:18px;overflow:hidden}.code-pane.js{grid-column:1 / -1}.code-pane__hd{font-family:var(--f-display);font-style:italic;font-size:30px;line-height:1.3;padding:8px 16px;border-bottom:1px solid var(--rule-soft);display:flex;align-items:center;justify-content:space-between;gap:14px;color:var(--ink-soft)}.code-pane__tag{font-family:var(--f-sans);font-style:normal;font-size:28px;line-height:1.15;border:1.5px solid var(--rule-medium);border-radius:999px;padding:0 14px;background:rgba(214,221,99,.42);color:var(--ink)}.code-pane pre{font-family:var(--f-code);font-size:30px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px 16px;max-height:270px;overflow:hidden}.code-pane.js pre{font-size:31px;max-height:470px}.code-pane .todo,.code-pane .code-key{background:rgba(214,221,99,.5);border-radius:4px;box-shadow:0 0 0 3px rgba(214,221,99,.5);box-decoration-break:clone;-webkit-box-decoration-break:clone}.diagram-stepper{background:rgba(255,255,255,.52);border:1px solid var(--rule-soft);border-radius:26px;padding:28px;min-height:520px;display:grid;grid-template-rows:auto 1fr auto;gap:24px}.diagram-title{font-family:var(--f-display);font-size:42px;color:var(--ink)}.diagram-flow{display:flex;align-items:center;gap:20px;justify-content:center;flex-wrap:wrap}.flow-node{min-width:185px;min-height:110px;border:1px solid var(--rule-medium);border-radius:22px;display:grid;place-items:center;text-align:center;padding:18px;font-family:var(--f-sans);font-size:30px;line-height:1.25;background:rgba(255,255,255,.44);opacity:.44;transition:transform .35s var(--ease),opacity .35s var(--ease),background .35s var(--ease)}.flow-node.is-on{opacity:1;background:rgba(214,221,99,.38)}.flow-node.is-current{transform:translateY(-8px);outline:4px solid rgba(166,76,124,.35)}.flow-arrow{font-family:var(--f-display);font-size:42px;color:var(--ink-soft)}.diagram-controls{display:flex;gap:12px;justify-content:flex-end}.diagram-controls button{font-family:var(--f-sans);font-size:24px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.52);border-radius:999px;padding:8px 18px;color:var(--ink)}.visual-area.duo .diagram-stepper{min-height:0;padding:10px 18px;gap:10px;display:flex;flex-wrap:wrap;align-items:center}.visual-area.duo .diagram-title{flex:1 1 auto;font-size:32px}.visual-area.duo .diagram-controls{flex:0 0 auto}.visual-area.duo .diagram-controls button{font-size:20px;padding:5px 12px}.visual-area.duo .diagram-flow{flex:1 1 100%;gap:12px}.visual-area.duo .flow-node{min-width:145px;min-height:84px;font-size:25px;padding:10px}.visual-area.duo .flow-arrow{font-size:34px}.visual-area.has-code:not(.ex){align-self:stretch;display:flex;flex-direction:column;gap:14px}.visual-area.has-code:not(.ex) .codepen-card{flex:1 1 auto;min-height:0}.visual-area.has-code:not(.ex) .code-pane{display:flex;flex-direction:column;min-height:0}.visual-area.has-code:not(.ex) .code-pane pre{flex:1 1 auto;min-height:0;max-height:none}.visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:34px}.code-pane pre .code-body{display:block;width:100%}.visual-area.has-code:not(.ex) .diagram-stepper{flex:0 0 auto}.visual-area.duo .code-pane pre{font-size:34px}.visual-area.ex .code-pane pre{font-size:30px;line-height:1.45;max-height:250px}.visual-area.ex .code-pane.js pre{font-size:32px;max-height:320px}.slide--cover .cover-title{font-family:var(--f-display);font-size:134px;line-height:1.02;position:absolute;left:90px;right:90px;top:270px}.slide--cover .cover-sub{font-family:var(--f-body);font-size:46px;position:absolute;left:90px;right:90px;top:575px}.cover-kicker{position:absolute;left:90px;top:150px;font-family:var(--f-sans);font-size:32px;color:var(--ink-soft)}@media (prefers-reduced-motion: reduce){.flow-node{transition:none}.flow-node.is-current{transform:none}}
+
+
+/* ===========================================
+   CH5 rich diagram additions
+   =========================================== */
+.diagram-stepper.rich{min-height:0;padding:18px 20px;gap:12px}
+.diagram-stepper.rich .diagram-title{font-size:36px}
+.diagram-stepper.rich .dgm{width:100%;height:auto;max-height:529px}
+.dgm .dstep{opacity:0;transform:translateY(14px);transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.dgm .dstep.is-on{opacity:1;transform:translateY(0)}
+.dgm .d-ring{opacity:0;fill:none;stroke:var(--pink);stroke-width:3;transition:opacity .3s var(--ease)}
+.dgm .dstep.is-current .d-ring{opacity:1;animation:dgmPulse 1.6s ease-in-out infinite}
+.dgm .dstep.is-on .a-line{stroke-dasharray:10 8;animation:dgmFlow 1.1s linear infinite}
+.dgm .d-cursor{fill:var(--ink);stroke:#fff;stroke-width:1.5}
+.dgm .d-dim{opacity:.42}
+.dgm .d-x{fill:none;stroke:var(--pink);stroke-width:6;stroke-linecap:round}
+.dgm .d-ripple{fill:none;stroke:var(--pink);stroke-width:2;opacity:.55;transform-box:fill-box;transform-origin:center;animation:dgmRipple 1.8s ease-out infinite}
+.dgm .d-ripple2{animation-delay:.4s;opacity:.3}
+/* duo 頁：圖解只佔一條窄帶，需與上方 code 卡共用 697px 預算，故收緊留白與標題行高 */
+.visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:6px}
+.visual-area.duo .diagram-stepper.rich .diagram-title{font-size:32px;line-height:1.2}
+.visual-area.duo .diagram-stepper.rich .dgm{max-height:122px}
+.dgm-dialog{position:fixed;inset:0;display:none;place-items:center;background:rgba(42,36,27,.34);z-index:30}
+.diagram-stepper.rich.is-dialog .dgm-dialog{display:grid}
+.dgm-dialog__card{width:1280px;max-height:820px;overflow:auto;background:var(--paper);border:1px solid var(--rule-medium);border-radius:28px;padding:38px 46px;box-shadow:0 26px 64px rgba(42,36,27,.3)}
+.dgm-dialog__hd{display:flex;justify-content:space-between;align-items:center;gap:24px;border-bottom:1px solid var(--rule-soft);padding-bottom:18px;margin-bottom:24px;font-family:var(--f-display);font-size:46px;color:var(--ink)}
+.dgm-dialog__hd button{font-family:var(--f-sans);font-size:26px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.6);border-radius:999px;padding:8px 22px;color:var(--ink);cursor:pointer}
+.dgm-dialog__body{display:grid;grid-template-columns:1fr 1fr;gap:28px 44px}
+.dgm-dialog__sec{display:grid;gap:10px;align-content:start}
+.dgm-dialog__h{margin:0;font-family:var(--f-sans);font-size:32px;font-weight:700;color:var(--ink)}
+.dgm-dialog__sec ul{list-style:none;display:grid;gap:8px;margin:0;padding:0}
+.dgm-dialog__sec li{position:relative;padding-left:28px;font-family:var(--f-body);font-size:28px;line-height:1.42;color:var(--ink-soft)}
+.dgm-dialog__sec li:before{content:'';position:absolute;left:0;top:.72em;width:14px;height:2px;background:var(--ink);opacity:.35}
+@keyframes dgmPulse{0%,100%{opacity:.9}50%{opacity:.3}}
+@keyframes dgmFlow{to{stroke-dashoffset:-36}}
+@keyframes dgmRipple{0%{transform:scale(.6);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dgm .dstep{transition:none;transform:none}.dgm .dstep.is-on{opacity:1}.dgm .dstep.is-current .d-ring,.dgm .dstep.is-on .a-line,.dgm .d-ripple{animation:none}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===========================================
+   CH6 additions
+   =========================================== */
+/* 固定單列高度，避免視覺欄隨內容長高而溢出 697px 預算 */
+.ch5-grid.ch6-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch6-grid>.visual-area{min-height:0;align-self:stretch}
+.ch5-grid.ch6-grid.tsjs-grid{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:16px}
+
+/* 程式碼卡：CH6 統一 32px（符合字級下限），收緊留白以容納較長片段 */
+.ch5-grid.ch6-grid .code-pane__hd{font-size:28px;padding:6px 16px}
+.ch5-grid.ch6-grid .code-pane pre{font-size:32px;line-height:1.4;padding:12px 16px}
+.ch5-grid.ch6-grid .visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:32px;line-height:1.35}
+.ch5-grid.ch6-grid .visual-area.duo .code-pane pre{font-size:32px;line-height:1.35}
+
+/* duo 圖解窄帶再收緊，讓程式碼卡有更多高度 */
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:4px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .diagram-title{font-size:28px;line-height:1.15}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .dgm{max-height:100px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 10px}
+
+/* TS / JS 並排對照 */
+.tsjs{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-content:start}
+.tsjs__col{border:1.5px solid var(--rule-medium);border-radius:14px;background:rgba(255,255,255,.72);overflow:hidden}
+.tsjs__hd{padding:6px 16px;border-bottom:1px solid var(--rule-soft)}
+.tsjs__pill{font-family:var(--f-sans);font-size:30px;font-weight:700;color:var(--ink)}
+.tsjs__col--js .tsjs__pill{color:var(--ink-soft)}
+.tsjs pre{margin:0;padding:12px 18px;font-family:var(--f-code);font-size:32px;line-height:1.42;white-space:pre-wrap;color:var(--ink)}
+.tsjs__note{grid-column:1/-1;font-size:30px;line-height:1.4;color:var(--ink-soft);border-left:4px solid var(--pink);padding-left:16px;margin:4px 0 0}
+.visual-area.tsjs-area{align-content:start;align-self:start}
+
+/* --- diagram autoplay（CH5／CH6 共用；deck.css 由 build.py 注入每一份簡報） --- */
+.diagram-controls [data-diagram-action="toggle"]{min-width:104px}
+.diagram-stepper.is-paused .diagram-controls [data-diagram-action="toggle"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.diagram-stepper.is-paused .dgm{opacity:.82}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls{gap:8px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 9px}
+
+
+
+
+
+
+
+
+/* ===========================================
+   CH9 additions
+   =========================================== */
+/* 與 CH6 同型的固定列高，避免視覺欄把 grid 撐高 */
+.ch5-grid.ch9-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch9-grid>.visual-area{min-height:0;align-self:stretch}
+/* 圖解不 letterbox：viewBox 高 ≤470，容器寬約 984 → 縮放 1.05，字級不低於 30px */
+.ch5-grid.ch9-grid .diagram-stepper.rich .dgm{max-height:500px}
+
+/* 說明卡（句型、範例骨架、可以／不可以） */
+.panel{background:rgba(255,255,255,.62);border:1.5px solid var(--rule-soft);border-radius:22px;padding:24px 28px}
+.panel__hd{margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--rule-soft);
+  font-family:var(--f-display);font-size:34px;color:var(--ink-soft)}
+.panel p{margin:0 0 12px;font-family:var(--f-body);font-size:30px;line-height:1.5;color:var(--ink)}
+.panel p:last-child{margin-bottom:0}
+.panel b{font-weight:500}
+.panel ul{list-style:none;display:grid;gap:10px;margin:0;padding:0}
+.panel li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:30px;line-height:1.45;color:var(--ink)}
+.panel li::before{content:'';position:absolute;left:0;top:.72em;width:16px;height:2px;background:var(--ink);opacity:.32}
+
+/* 兩欄對照卡 */
+.ch9-two{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+
+/* 窄欄用的小鍵值表（範例骨架） */
+.ktbl{display:grid;margin-top:6px}
+.ktbl__row{display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;
+  padding:11px 0;border-bottom:1px dashed var(--rule-soft)}
+.ktbl__row:last-child{border-bottom:0}
+.ktbl__k{font-family:var(--f-sans);font-size:28px;line-height:1.4;color:var(--ink-soft)}
+.ktbl__v{font-family:var(--f-body);font-size:30px;line-height:1.4;color:var(--ink)}
+
+/* 全寬表格（規格表、技術選型、評分規準） */
+.ch9-tbl{display:grid}
+.ch9-tbl__row{display:grid;grid-template-columns:var(--cols);gap:26px;align-items:baseline;
+  padding:13px 0;border-bottom:1px dashed var(--rule-soft);
+  font-family:var(--f-body);font-size:38px;line-height:1.42;color:var(--ink)}
+.ch9-tbl__row:last-child{border-bottom:0}
+.ch9-tbl__row>span:first-child{font-family:var(--f-sans);font-size:30px;color:var(--ink-soft)}
+.ch9-tbl__row--head{border-bottom:1px solid var(--rule-medium);font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}
+.ch9-tbl__row--head>span:first-child{font-size:28px}
+
+/* 兩欄檢查清單 */
+.ch9-chk{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 44px;margin:0;padding:0}
+.ch9-chk li{position:relative;padding-left:52px;font-family:var(--f-body);font-size:34px;line-height:1.4;color:var(--ink)}
+.ch9-chk li::before{content:"\e2e6";font-family:var(--f-icons);font-size:34px;line-height:1;
+  position:absolute;left:0;top:4px;color:var(--ink-soft)}
 
 </style>
 <link rel="stylesheet" href="../assets/deck-fonts.css">

@@ -1,0 +1,1041 @@
+<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CH6 資料處理與 TypeScript</title><style>
+/* ===========================================================
+   CH2 簡報樣式 — soft-editorial
+   由 output/簡報建置/build.py 內嵌字型後寫入簡報檔案。
+   修改樣式請改本檔，再重跑 build.py。
+   =========================================================== */
+
+/* ===== 內嵌字型子集（離線可用；由 build.py 產生） ===== */
+
+/* ===========================================
+   1. THEME TOKENS
+   =========================================== */
+:root {
+  /* Colors */
+  --paper:        #F2EEDF;
+  --paper-2:      #ECE6D2;
+  --ink:          #2A241B;
+  --ink-soft:     #5C5345;
+  --pink:         #E1A4C2;
+  --lemon:        #D6DD63;
+  --blush:        #E8C9B6;
+  --sage:         #B7C7A8;
+  --lilac:        #C9BEDC;
+  --card:         rgba(255, 255, 255, 0.55);
+  --rule-soft:    rgba(42, 36, 27, 0.18);
+  --rule-medium:  rgba(42, 36, 27, 0.35);
+
+  /* 程式碼語法色（同一色票的加深版） */
+  --code-tag: #8C5A3C;
+  --code-attr: #6E7F45;
+  --code-str: #A64C7C;
+  --code-cmt: #8A8072;
+
+  /* Fonts — 全部內嵌，離線可用 */
+  --f-display: 'Cormorant Garamond', 'LXGW WenKai TC', 'Noto Serif TC', serif;
+  --f-body:    'Work Sans', 'Noto Serif TC', serif;
+  --f-sans:    'Work Sans', 'Noto Sans TC', sans-serif;
+  --f-code:    'JetBrains Mono', 'Noto Sans TC', monospace;
+  --f-icons:   'Material Symbols Outlined';
+
+  /* Type scale（1920×1080 stage；字級下限見 CLAUDE.md 規範） */
+  --t-display:  168px;
+  --t-chapter:  132px;
+  --t-headline: 76px;
+  --t-subhead:  48px;
+  --t-body:     38px;
+  --t-body-sm:  34px;
+  --t-code:     32px;
+  --t-min:      28px;
+  --t-eyebrow:  30px;
+
+  --pad-outer: 80px;
+  --pad-top: 60px;
+  --pad-bottom: 50px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.6s;
+
+  --stage-bg: #1a1713;
+  --slide-bg: var(--paper);
+}
+
+/* ===========================================
+   2. BASE（viewport-base.css 全文強制納入）
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html,
+body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-stage {
+  position: absolute; left: 0; top: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  background: var(--slide-bg, #fff);
+}
+.slide {
+  position: absolute; inset: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  display: block;
+  visibility: hidden; opacity: 0; pointer-events: none;
+  background: var(--slide-bg, #fff);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+
+@media print {
+  html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+  .deck-viewport { position: static; overflow: visible; background: #fff; }
+  .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+  .slide {
+    position: relative; display: block !important; visibility: visible !important;
+    opacity: 1 !important; pointer-events: auto !important;
+    width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   3. SLIDE CHROME
+   =========================================== */
+.eyebrow {
+  position: absolute; top: var(--pad-top); left: var(--pad-outer);
+  font-family: var(--f-sans); font-size: var(--t-eyebrow); font-weight: 400;
+  color: var(--ink);
+}
+.pagedot {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.footer {
+  position: absolute; bottom: var(--pad-bottom); left: var(--pad-outer); right: var(--pad-outer);
+  display: flex; justify-content: space-between;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+
+/* ===========================================
+   4. LAYOUT PRIMITIVES
+   =========================================== */
+.headline {
+  position: absolute; top: 128px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-headline);
+  line-height: 1.24; color: var(--ink);
+}
+.headline em { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+/* 標題下方的極細分隔線（編輯排版手法，非裝飾卡片） */
+.headline::after {
+  content: ''; display: block; width: 160px; height: 1px;
+  background: var(--rule-medium); margin-top: 26px;
+}
+
+.body-split {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; grid-template-columns: 44% minmax(0, 1fr); gap: 44px; align-items: start;
+}
+.body-split--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+/* 範例頁：截圖給 58%，投影時字才看得清楚 */
+.body-split--shot { grid-template-columns: 58% minmax(0, 1fr); }
+.body-full {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; gap: 34px; align-content: start;
+}
+
+/* 要點條列 — 單一墨色短橫線標記，不做彩色圓點循環 */
+.points { list-style: none; display: grid; gap: 24px; }
+.points li {
+  position: relative; padding-left: 40px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.62; color: var(--ink);
+}
+.points li::before {
+  content: ''; position: absolute; left: 0; top: 0.74em;
+  width: 22px; height: 2px; background: var(--ink); opacity: 0.34;
+}
+.points b, .points strong { font-weight: 500; }
+.points code {
+  font-family: var(--f-code); font-size: 0.92em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* ===========================================
+   5. CODE PANEL
+   =========================================== */
+.code-label {
+  display: block; margin-bottom: 14px;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.code {
+  font-family: var(--f-code); font-size: var(--t-code); line-height: 1.62;
+  color: var(--ink);
+  background: var(--card); border-radius: 22px;
+  padding: 38px 42px;
+  white-space: pre; overflow: hidden;
+}
+.code .tag  { color: var(--code-tag); }
+.code .attr { color: var(--code-attr); }
+.code .str  { color: var(--code-str); }
+.code .cmt  { color: var(--code-cmt); }
+.code .ok   { color: var(--code-attr); }
+.code .no   { color: var(--code-str); }
+
+/* 程式碼一律顯示原始字元：JetBrains Mono 的連字會把 <!-- 畫成箭頭、把 === 併成三條長橫線，對初學者是反效果 */
+.code, code, .keys__k, .tbl__el, .dgm .t-code, .dgm .t-mono,
+.code-pane pre, .tsjs pre {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0, "calt" 0;
+}
+
+/* ===========================================
+   6. 推薦資源 — 編輯式出處行（無外框、無彩色邊條）
+   =========================================== */
+.res {
+  margin-top: 34px; padding-top: 18px;
+  border-top: 1px dashed var(--rule-medium);
+}
+.res__kind {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.res__kind::before {
+  font-family: var(--f-icons); font-size: 30px; font-weight: normal;
+  font-style: normal; line-height: 1; color: var(--ink-soft);
+}
+.res__title {
+  display: block; margin-top: 8px;
+  font-family: var(--f-display); font-size: var(--t-body-sm); font-weight: 500; color: var(--ink);
+}
+.res__desc {
+  font-family: var(--f-body); font-size: 28px; line-height: 1.55;
+  color: var(--ink-soft); margin-top: 4px;
+}
+.res--card   .res__kind::before { content: "\e8e7"; }  /* bookmark */
+.res--video  .res__kind::before { content: "\e1c4"; }  /* play_circle */
+.res--mind   .res__kind::before { content: "\e97a"; }  /* account_tree */
+.res--chart  .res__kind::before { content: "\e26b"; }  /* bar_chart */
+.res--audio  .res__kind::before { content: "\f01f"; }  /* headphones */
+.res--slides .res__kind::before { content: "\e41b"; }  /* slideshow */
+.res--quiz   .res__kind::before { content: "\f04c"; }  /* quiz */
+.res--check  .res__kind::before { content: "\e2e6"; }  /* task_alt */
+
+/* ===========================================
+   7. 行內小圖示與狀態藥丸
+   =========================================== */
+.ic {
+  font-family: var(--f-icons); font-style: normal; font-weight: normal;
+  line-height: 1; vertical-align: -0.14em; display: inline-block;
+}
+.ic--warn::before  { content: "\f083"; }  /* warning */
+.ic--check::before { content: "\e2e6"; }  /* task_alt */
+.ic--no::before    { content: "\e888"; }  /* cancel */
+.ic--tip::before   { content: "\e90f"; }  /* lightbulb */
+.ic--info::before  { content: "\e88e"; }  /* info */
+
+.pill {
+  display: inline-block; border-radius: 999px; padding: 1px 18px 3px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink);
+}
+.pill--yes { background: var(--lemon); }
+.pill--no  { background: var(--pink); }
+
+/* ===========================================
+   8. 章節頁 / 封面 / 收尾
+   =========================================== */
+.chapter-num {
+  position: absolute; top: 250px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-weight: 500;
+  font-size: 120px; color: var(--blush);
+}
+.chapter-title {
+  position: absolute; top: 400px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-chapter);
+  line-height: 1.22; color: var(--ink);
+}
+.chapter-title::after {
+  content: ''; display: block; width: 240px; height: 1px;
+  background: var(--rule-medium); margin-top: 34px;
+}
+.chapter-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink-soft);
+}
+
+.cover-kicker {
+  position: absolute; top: 240px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-subhead);
+  color: var(--ink-soft);
+}
+.cover-title {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-display);
+  line-height: 1.16; color: var(--ink);
+}
+.cover-sub {
+  position: absolute; top: 560px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 64px;
+  line-height: 1.3; color: var(--ink-soft);
+}
+.cover-swatches {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  display: flex; gap: 20px;
+}
+.cover-swatches span { width: 56px; height: 56px; border-radius: 50%; display: block; }
+.cover-swatches span:nth-child(1) { background: var(--pink); }
+.cover-swatches span:nth-child(2) { background: var(--lemon); }
+.cover-swatches span:nth-child(3) { background: var(--sage); }
+
+.slide--accent { background: var(--pink); }
+.closer-title {
+  position: absolute; top: 380px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 140px;
+  line-height: 1.2; color: var(--ink);
+}
+.closer-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink);
+}
+
+/* ===========================================
+   9. ANIMATION
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(28px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal:nth-child(1) { transition-delay: 0.08s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: 0.16s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: 0.24s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: 0.32s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: 0.40s; }
+
+/* ===========================================
+   10. DECK CHROME（舞台外）
+   =========================================== */
+.progress {
+  position: fixed; left: 0; bottom: 0; height: 4px; width: 0;
+  background: var(--pink); z-index: 1001; transition: width 0.3s var(--ease);
+}
+.counter {
+  position: fixed; right: 18px; bottom: 14px; z-index: 1001;
+  font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+  position: fixed; top: 16px; left: 16px; z-index: 10001;
+  font-size: 18px; line-height: 1; padding: 10px 12px; border: 0; border-radius: 12px;
+  background: var(--paper); color: var(--ink); cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); outline-offset: 4px; }
+
+/* ===========================================
+   11. 補充元件（備注／步驟／雙平台快捷鍵表）
+   =========================================== */
+/* 頁尾備注：虛線細規 + 小字，用於補充說明 */
+.note {
+  margin-top: 28px; padding-top: 16px;
+  border-top: 1px dashed var(--rule-medium);
+  font-family: var(--f-body); font-size: var(--t-min); line-height: 1.6;
+  color: var(--ink-soft);
+}
+.note b { color: var(--ink); font-weight: 500; }
+.note code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 編號步驟：斜體羅馬數字，符合 soft-editorial 的步驟記號 */
+.steps { list-style: none; counter-reset: step; display: grid; gap: 18px; }
+.steps li {
+  position: relative; padding-left: 76px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.6; color: var(--ink);
+}
+.steps li::before {
+  counter-increment: step; content: counter(step, lower-roman) ".";
+  position: absolute; left: 0; top: 0;
+  font-family: var(--f-display); font-style: italic; font-size: 32px; color: var(--ink-soft);
+}
+.steps code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 雙平台快速鍵表 */
+.keys { display: grid; gap: 0; }
+.keys__row {
+  display: grid; grid-template-columns: 1fr 300px 300px; gap: 18px;
+  align-items: baseline; padding: 13px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-min);
+}
+.keys__row:last-child { border-bottom: 0; }
+.keys__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.keys__fn { font-family: var(--f-body); color: var(--ink); }
+.keys__k  { font-family: var(--f-code); font-size: var(--t-min); color: var(--code-tag); }
+
+/* 行內連結（CodePen、數位學習平台等） */
+.points a, .note a, .res__desc a, .code a {
+  color: var(--code-tag);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+/* 頁尾備注：佔用固定底槽，主體區域讓出空間 */
+.body-split--note, .body-full--note { bottom: 232px; }
+.note--bottom {
+  position: absolute; left: var(--pad-outer); right: var(--pad-outer); bottom: 120px;
+  margin: 0;
+}
+
+/* ===========================================
+   12. 內容表格（常用元素速查）
+   =========================================== */
+.tbl { display: grid; }
+.tbl__row {
+  display: grid; grid-template-columns: 420px 1fr 1.3fr; gap: 28px;
+  align-items: baseline; padding: 15px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-body);
+}
+.tbl__row:last-child { border-bottom: 0; }
+.tbl__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.tbl__el { font-family: var(--f-code); color: var(--code-tag); }
+.tbl__use { font-family: var(--f-body); line-height: 1.45; color: var(--ink); }
+.tbl__row--head .tbl__el { color: var(--ink-soft); }
+
+/* ===========================================
+   13. 作業範例的成品截圖
+   =========================================== */
+.shot {
+  display: block; width: auto; max-width: 100%; max-height: 560px;
+  border-radius: 12px; background: #fff;
+}
+.shot-frame {
+  background: var(--card); border-radius: 22px; padding: 22px;
+  display: inline-block; max-width: 100%;
+}
+
+/* ===========================================
+   14. 內嵌圖解（語彙取自 archify：格線底、泳道標頭、
+       節點卡、語意色票、箭頭先用 marker 定義）
+       —— 只用 CSS class 上色，不寫 inline fill，
+          換主題時整組跟著變
+   =========================================== */
+.dgm { display: block; width: 100%; height: auto; }
+
+.dgm .d-grid   { fill: none; stroke: rgba(42, 36, 27, 0.07); stroke-width: 1; }
+
+/* 節點卡：一律「先遮罩、再上色」兩層，避免半透明底色讓線穿過去 */
+.dgm .d-mask   { fill: var(--paper); stroke: none; }
+.dgm .d-card   { fill: rgba(255, 255, 255, 0.72); stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-margin { fill: rgba(232, 201, 182, 0.40); stroke: var(--blush); stroke-width: 2; stroke-dasharray: 9 7; }
+.dgm .d-border { fill: none; stroke: var(--ink); stroke-width: 4; }
+.dgm .d-padding{ fill: rgba(183, 199, 168, 0.45); stroke: var(--sage); stroke-width: 2; }
+.dgm .d-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-hot    { fill: rgba(225, 164, 194, 0.35); stroke: var(--pink); stroke-width: 2; }
+.dgm .d-cool   { fill: rgba(201, 190, 220, 0.35); stroke: var(--lilac); stroke-width: 2; }
+.dgm .d-soft   { fill: rgba(214, 221, 99, 0.32);  stroke: var(--lemon); stroke-width: 2; }
+
+/* 文字：字級已按「1920×1080 舞台的 28px 下限」放大，不沿用 archify 的 7–12px */
+.dgm .t-head { font-family: var(--f-display); font-style: italic; font-size: 30px; fill: var(--ink-soft); }
+.dgm .t-lab  { font-family: var(--f-sans);  font-size: 30px; fill: var(--ink); }
+.dgm .t-bold { font-family: var(--f-sans);  font-size: 30px; font-weight: 700; fill: var(--ink); }
+.dgm .t-code { font-family: var(--f-code);  font-size: 28px; fill: var(--code-tag); }
+.dgm .t-note { font-family: var(--f-body);  font-size: 28px; fill: var(--ink-soft); }
+.dgm .t-mono { font-family: var(--f-code);  font-size: 28px; fill: var(--ink-soft); }
+
+/* 色票小方塊（圖例用） */
+.dgm .sw-margin { fill: var(--blush); }
+.dgm .sw-border { fill: var(--ink); }
+.dgm .sw-padding{ fill: var(--sage); }
+.dgm .sw-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+
+/* 流程線與箭頭（marker 在各圖的 <defs> 內定義） */
+.dgm .a-line     { fill: none; stroke: var(--ink-soft); stroke-width: 2.5; }
+.dgm .a-line-soft{ fill: none; stroke: var(--rule-medium); stroke-width: 2; }
+.dgm .d-arrowhead{ fill: var(--ink-soft); }
+
+/* 原位／預設位置的虛線殘影 */
+.dgm .d-ghost { fill: none; stroke: var(--rule-medium); stroke-width: 2; stroke-dasharray: 7 7; }
+
+/* 小標籤（狀態、勝出、標記用） */
+.dgm .d-pill   { fill: rgba(214, 221, 99, 0.55); stroke: var(--lemon); stroke-width: 1.5; }
+.dgm .d-pill-w { fill: rgba(225, 164, 194, 0.45); stroke: var(--pink); stroke-width: 1.5; }
+
+/* 面板底色（比較用的分格） */
+.dgm .d-panel  { fill: rgba(255, 255, 255, 0.55); stroke: var(--rule-soft); stroke-width: 1.5; }
+.dgm .d-slot   { fill: rgba(42, 36, 27, 0.06); stroke: var(--rule-medium); stroke-width: 1.5; }
+
+
+/* ===========================================
+   CH5 70-page JavaScript deck additions
+   =========================================== */
+.lesson-tags{position:absolute;top:60px;left:250px;right:250px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.lesson-tags span{border:1px solid var(--rule-soft);border-radius:999px;padding:8px 18px;background:rgba(255,255,255,.48)}.ch5-grid{position:absolute;top:265px;left:80px;right:80px;bottom:118px;display:grid;grid-template-columns:43% 57%;gap:34px;align-items:start}.visual-area{display:grid;gap:14px;align-content:start}.ch5-grid.no-visual{grid-template-columns:1fr}.ch5-copy{display:grid;gap:22px}.mini-lead{font-family:var(--f-display);font-size:42px;line-height:1.35;color:var(--ink)}.lesson-points{list-style:none;display:grid;gap:16px}.lesson-points li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:34px;line-height:1.48;color:var(--ink)}.lesson-points li:before{content:'';position:absolute;left:0;top:.72em;width:18px;height:2px;background:var(--ink);opacity:.32}.lesson-links{list-style:none;display:grid;grid-template-columns:1fr;gap:12px;margin:22px 0 0;padding:0}.lesson-links--multi{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-links a{display:flex;align-items:center;gap:14px;font-family:var(--f-sans);font-size:28px;line-height:1.32;color:var(--ink);text-decoration:none;border:1.5px solid var(--rule-medium);border-radius:14px;padding:12px 20px;background:rgba(255,255,255,.62);transition:background .2s var(--ease),border-color .2s var(--ease)}.lesson-links a::before{content:'開啟';flex:0 0 auto;font-size:26px;font-weight:700;letter-spacing:1px;color:var(--paper);background:var(--ink);border-radius:999px;padding:2px 13px}.lesson-links a:hover{background:rgba(214,221,99,.4);border-color:var(--ink)}.remember{position:absolute;left:80px;right:80px;bottom:50px;border-top:1px solid var(--rule-soft);padding-top:12px;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.codepen-card{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:14px}.codepen-card--js{grid-template-columns:1fr}.code-pane{background:rgba(255,255,255,.72);border:1.5px solid var(--rule-medium);border-radius:18px;overflow:hidden}.code-pane.js{grid-column:1 / -1}.code-pane__hd{font-family:var(--f-display);font-style:italic;font-size:30px;line-height:1.3;padding:8px 16px;border-bottom:1px solid var(--rule-soft);display:flex;align-items:center;justify-content:space-between;gap:14px;color:var(--ink-soft)}.code-pane__tag{font-family:var(--f-sans);font-style:normal;font-size:28px;line-height:1.15;border:1.5px solid var(--rule-medium);border-radius:999px;padding:0 14px;background:rgba(214,221,99,.42);color:var(--ink)}.code-pane pre{font-family:var(--f-code);font-size:30px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px 16px;max-height:270px;overflow:hidden}.code-pane.js pre{font-size:31px;max-height:470px}.code-pane .todo,.code-pane .code-key{background:rgba(214,221,99,.5);border-radius:4px;box-shadow:0 0 0 3px rgba(214,221,99,.5);box-decoration-break:clone;-webkit-box-decoration-break:clone}.diagram-stepper{background:rgba(255,255,255,.52);border:1px solid var(--rule-soft);border-radius:26px;padding:28px;min-height:520px;display:grid;grid-template-rows:auto 1fr auto;gap:24px}.diagram-title{font-family:var(--f-display);font-size:42px;color:var(--ink)}.diagram-flow{display:flex;align-items:center;gap:20px;justify-content:center;flex-wrap:wrap}.flow-node{min-width:185px;min-height:110px;border:1px solid var(--rule-medium);border-radius:22px;display:grid;place-items:center;text-align:center;padding:18px;font-family:var(--f-sans);font-size:30px;line-height:1.25;background:rgba(255,255,255,.44);opacity:.44;transition:transform .35s var(--ease),opacity .35s var(--ease),background .35s var(--ease)}.flow-node.is-on{opacity:1;background:rgba(214,221,99,.38)}.flow-node.is-current{transform:translateY(-8px);outline:4px solid rgba(166,76,124,.35)}.flow-arrow{font-family:var(--f-display);font-size:42px;color:var(--ink-soft)}.diagram-controls{display:flex;gap:12px;justify-content:flex-end}.diagram-controls button{font-family:var(--f-sans);font-size:24px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.52);border-radius:999px;padding:8px 18px;color:var(--ink)}.visual-area.duo .diagram-stepper{min-height:0;padding:10px 18px;gap:10px;display:flex;flex-wrap:wrap;align-items:center}.visual-area.duo .diagram-title{flex:1 1 auto;font-size:32px}.visual-area.duo .diagram-controls{flex:0 0 auto}.visual-area.duo .diagram-controls button{font-size:20px;padding:5px 12px}.visual-area.duo .diagram-flow{flex:1 1 100%;gap:12px}.visual-area.duo .flow-node{min-width:145px;min-height:84px;font-size:25px;padding:10px}.visual-area.duo .flow-arrow{font-size:34px}.visual-area.has-code:not(.ex){align-self:stretch;display:flex;flex-direction:column;gap:14px}.visual-area.has-code:not(.ex) .codepen-card{flex:1 1 auto;min-height:0}.visual-area.has-code:not(.ex) .code-pane{display:flex;flex-direction:column;min-height:0}.visual-area.has-code:not(.ex) .code-pane pre{flex:1 1 auto;min-height:0;max-height:none}.visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:34px}.code-pane pre .code-body{display:block;width:100%}.visual-area.has-code:not(.ex) .diagram-stepper{flex:0 0 auto}.visual-area.duo .code-pane pre{font-size:34px}.visual-area.ex .code-pane pre{font-size:30px;line-height:1.45;max-height:250px}.visual-area.ex .code-pane.js pre{font-size:32px;max-height:320px}.slide--cover .cover-title{font-family:var(--f-display);font-size:134px;line-height:1.02;position:absolute;left:90px;right:90px;top:270px}.slide--cover .cover-sub{font-family:var(--f-body);font-size:46px;position:absolute;left:90px;right:90px;top:575px}.cover-kicker{position:absolute;left:90px;top:150px;font-family:var(--f-sans);font-size:32px;color:var(--ink-soft)}@media (prefers-reduced-motion: reduce){.flow-node{transition:none}.flow-node.is-current{transform:none}}
+
+
+/* ===========================================
+   CH5 rich diagram additions
+   =========================================== */
+.diagram-stepper.rich{min-height:0;padding:18px 20px;gap:12px}
+.diagram-stepper.rich .diagram-title{font-size:36px}
+.diagram-stepper.rich .dgm{width:100%;height:auto;max-height:529px}
+.dgm .dstep{opacity:0;transform:translateY(14px);transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.dgm .dstep.is-on{opacity:1;transform:translateY(0)}
+.dgm .d-ring{opacity:0;fill:none;stroke:var(--pink);stroke-width:3;transition:opacity .3s var(--ease)}
+.dgm .dstep.is-current .d-ring{opacity:1;animation:dgmPulse 1.6s ease-in-out infinite}
+.dgm .dstep.is-on .a-line{stroke-dasharray:10 8;animation:dgmFlow 1.1s linear infinite}
+.dgm .d-cursor{fill:var(--ink);stroke:#fff;stroke-width:1.5}
+.dgm .d-dim{opacity:.42}
+.dgm .d-x{fill:none;stroke:var(--pink);stroke-width:6;stroke-linecap:round}
+.dgm .d-ripple{fill:none;stroke:var(--pink);stroke-width:2;opacity:.55;transform-box:fill-box;transform-origin:center;animation:dgmRipple 1.8s ease-out infinite}
+.dgm .d-ripple2{animation-delay:.4s;opacity:.3}
+/* duo 頁：圖解只佔一條窄帶，需與上方 code 卡共用 697px 預算，故收緊留白與標題行高 */
+.visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:6px}
+.visual-area.duo .diagram-stepper.rich .diagram-title{font-size:32px;line-height:1.2}
+.visual-area.duo .diagram-stepper.rich .dgm{max-height:122px}
+.dgm-dialog{position:fixed;inset:0;display:none;place-items:center;background:rgba(42,36,27,.34);z-index:30}
+.diagram-stepper.rich.is-dialog .dgm-dialog{display:grid}
+.dgm-dialog__card{width:1280px;max-height:820px;overflow:auto;background:var(--paper);border:1px solid var(--rule-medium);border-radius:28px;padding:38px 46px;box-shadow:0 26px 64px rgba(42,36,27,.3)}
+.dgm-dialog__hd{display:flex;justify-content:space-between;align-items:center;gap:24px;border-bottom:1px solid var(--rule-soft);padding-bottom:18px;margin-bottom:24px;font-family:var(--f-display);font-size:46px;color:var(--ink)}
+.dgm-dialog__hd button{font-family:var(--f-sans);font-size:26px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.6);border-radius:999px;padding:8px 22px;color:var(--ink);cursor:pointer}
+.dgm-dialog__body{display:grid;grid-template-columns:1fr 1fr;gap:28px 44px}
+.dgm-dialog__sec{display:grid;gap:10px;align-content:start}
+.dgm-dialog__h{margin:0;font-family:var(--f-sans);font-size:32px;font-weight:700;color:var(--ink)}
+.dgm-dialog__sec ul{list-style:none;display:grid;gap:8px;margin:0;padding:0}
+.dgm-dialog__sec li{position:relative;padding-left:28px;font-family:var(--f-body);font-size:28px;line-height:1.42;color:var(--ink-soft)}
+.dgm-dialog__sec li:before{content:'';position:absolute;left:0;top:.72em;width:14px;height:2px;background:var(--ink);opacity:.35}
+@keyframes dgmPulse{0%,100%{opacity:.9}50%{opacity:.3}}
+@keyframes dgmFlow{to{stroke-dashoffset:-36}}
+@keyframes dgmRipple{0%{transform:scale(.6);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dgm .dstep{transition:none;transform:none}.dgm .dstep.is-on{opacity:1}.dgm .dstep.is-current .d-ring,.dgm .dstep.is-on .a-line,.dgm .d-ripple{animation:none}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===========================================
+   CH6 additions
+   =========================================== */
+/* 固定單列高度，避免視覺欄隨內容長高而溢出 697px 預算 */
+.ch5-grid.ch6-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch6-grid>.visual-area{min-height:0;align-self:stretch}
+.ch5-grid.ch6-grid.tsjs-grid{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:16px}
+
+/* 程式碼卡：CH6 統一 32px（符合字級下限），收緊留白以容納較長片段 */
+.ch5-grid.ch6-grid .code-pane__hd{font-size:28px;padding:6px 16px}
+.ch5-grid.ch6-grid .code-pane pre{font-size:32px;line-height:1.4;padding:12px 16px}
+.ch5-grid.ch6-grid .visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:32px;line-height:1.35}
+.ch5-grid.ch6-grid .visual-area.duo .code-pane pre{font-size:32px;line-height:1.35}
+
+/* duo 圖解窄帶再收緊，讓程式碼卡有更多高度 */
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:4px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .diagram-title{font-size:28px;line-height:1.15}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .dgm{max-height:100px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 10px}
+
+/* TS / JS 並排對照 */
+.tsjs{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-content:start}
+.tsjs__col{border:1.5px solid var(--rule-medium);border-radius:14px;background:rgba(255,255,255,.72);overflow:hidden}
+.tsjs__hd{padding:6px 16px;border-bottom:1px solid var(--rule-soft)}
+.tsjs__pill{font-family:var(--f-sans);font-size:30px;font-weight:700;color:var(--ink)}
+.tsjs__col--js .tsjs__pill{color:var(--ink-soft)}
+.tsjs pre{margin:0;padding:12px 18px;font-family:var(--f-code);font-size:32px;line-height:1.42;white-space:pre-wrap;color:var(--ink)}
+.tsjs__note{grid-column:1/-1;font-size:30px;line-height:1.4;color:var(--ink-soft);border-left:4px solid var(--pink);padding-left:16px;margin:4px 0 0}
+.visual-area.tsjs-area{align-content:start;align-self:start}
+
+/* --- diagram autoplay（CH5／CH6 共用；deck.css 由 build.py 注入每一份簡報） --- */
+.diagram-controls [data-diagram-action="toggle"]{min-width:104px}
+.diagram-stepper.is-paused .diagram-controls [data-diagram-action="toggle"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.diagram-stepper.is-paused .dgm{opacity:.82}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls{gap:8px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 9px}
+
+</style><link rel="stylesheet" href="../assets/deck-fonts.css">
+<link rel="stylesheet" href="../assets/deck-site.css">
+</head><body><div class="deck-viewport"><main class="deck-stage" id="deckStage"><section class="slide slide--cover active visible" data-label="CH6 資料處理與 TypeScript"><p class="cover-kicker">CH6 · 資料處理與 TypeScript</p><h1 class="cover-title">CH6 資料處理與 TypeScript</h1><p class="cover-sub">用型別把資料說清楚，用 map／filter／reduce 把資料變成畫面</p><div class="footer"><span>互動式網頁設計</span><span>01/52</span></div></section><section class="slide" data-label="上週回顧：事件 → 資料 → 畫面"><p class="eyebrow">CH6 · 02</p><p class="pagedot">02/52</p><h2 class="headline">上週回顧：事件 → 資料 → 畫面</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：Event/Data/View</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">上週你讓按鈕動起來；這週換個角度：資料變多、變複雜時，怎麼管得住。</p><ul class="lesson-points"><li>每個互動都走同一條路：事件 → 資料 → 畫面。</li><li>CH5 處理的是一筆資料（一個數字、一段文字）。</li><li>CH6 要處理一批資料：一整個商品清單。</li><li>資料一多，就更容易「用錯」——這就是要型別的原因。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="A" data-step="0"><div class="diagram-title">圖解 A｜Event -&gt; Data -&gt; View</div><svg class="dgm" viewBox="0 0 940 520" role="img" aria-label="使用者操作觸發事件，資料改變後畫面更新">
+<defs>
+<pattern id="ra-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern>
+<marker id="ra-arw" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker>
+</defs>
+<rect x="0" y="0" width="940" height="520" fill="url(#ra-grid)"/>
+<rect class="d-panel" x="20" y="90" width="280" height="380" rx="12"/>
+<rect class="d-panel" x="330" y="90" width="280" height="380" rx="12"/>
+<rect class="d-panel" x="640" y="90" width="280" height="380" rx="12"/>
+<text class="t-head" x="40" y="60">01 / 使用者操作</text>
+<text class="t-head" x="350" y="60">02 / 資料改變</text>
+<text class="t-head" x="660" y="60">03 / 畫面更新</text>
+<text class="t-note" x="470" y="502" text-anchor="middle">事件 → 資料 → 畫面：每個互動都是這條路</text>
+<g class="dstep" data-step="0">
+<rect class="d-card" x="50" y="130" width="220" height="180" rx="12"/>
+<circle class="d-slot" cx="72" cy="152" r="6"/><circle class="d-slot" cx="92" cy="152" r="6"/><circle class="d-slot" cx="112" cy="152" r="6"/>
+<line class="a-line-soft" x1="50" y1="170" x2="270" y2="170"/>
+<rect class="d-hot" x="95" y="212" width="130" height="52" rx="12"/>
+<text class="t-bold" x="160" y="246" text-anchor="middle">按我 +1</text>
+<path class="d-cursor" transform="translate(206,246)" d="M0 0 L0 20 L5 15.5 L9 23.5 L12.5 22 L8.5 14 L15 13.5 Z"/>
+<circle class="d-ripple" cx="212" cy="252" r="16"/>
+<circle class="d-ripple d-ripple2" cx="212" cy="252" r="26"/>
+<text class="t-note" x="160" y="380" text-anchor="middle">滑鼠點擊＝一個事件</text>
+<rect class="d-ring" x="85" y="202" width="150" height="72" rx="16"/>
+</g>
+<g class="dstep" data-step="1">
+<path class="a-line" d="M 302 280 L 328 280" marker-end="url(#ra-arw)"/>
+<rect class="d-slot" x="390" y="160" width="160" height="120" rx="12"/>
+<text class="t-code" x="470" y="196" text-anchor="middle">let count</text>
+<text class="t-mono" x="425" y="252" text-anchor="middle" opacity="0.45">0</text>
+<path class="a-line-soft" d="M 443 244 L 465 244" marker-end="url(#ra-arw)"/>
+<rect class="d-soft" x="475" y="216" width="56" height="48" rx="10"/>
+<text class="t-bold" x="503" y="250" text-anchor="middle">1</text>
+<text class="t-code" x="470" y="340" text-anchor="middle">count = count + 1</text>
+<text class="t-note" x="470" y="386" text-anchor="middle">資料先變，畫面才會變</text>
+<rect class="d-ring" x="405" y="206" width="140" height="68" rx="16"/>
+</g>
+<g class="dstep" data-step="2">
+<path class="a-line" d="M 612 280 L 638 280" marker-end="url(#ra-arw)"/>
+<rect class="d-card" x="670" y="130" width="220" height="180" rx="12"/>
+<circle class="d-slot" cx="692" cy="152" r="6"/><circle class="d-slot" cx="712" cy="152" r="6"/><circle class="d-slot" cx="732" cy="152" r="6"/>
+<line class="a-line-soft" x1="670" y1="170" x2="890" y2="170"/>
+<rect class="d-content" x="686" y="184" width="188" height="108" rx="8"/>
+<text class="t-mono" x="726" y="252" text-anchor="middle" opacity="0.45">0</text>
+<rect class="d-soft" x="756" y="212" width="72" height="64" rx="10"/>
+<text class="t-bold" x="792" y="256" text-anchor="middle" font-size="40">1</text>
+<text class="t-code" x="780" y="336" text-anchor="middle">result.textContent</text>
+<text class="t-code" x="780" y="368" text-anchor="middle">= count;</text>
+<text class="t-note" x="780" y="416" text-anchor="middle">畫面顯示新資料</text>
+<rect class="d-ring" x="678" y="176" width="204" height="124" rx="16"/>
+</g>
+</svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：先想資料怎麼變，再寫畫面怎麼更新；資料一多，就更需要規則。</div></section><section class="slide" data-label="本週主角：Product 商品清單"><p class="eyebrow">CH6 · 03</p><p class="pagedot">03/52</p><h2 class="headline">本週主角：Product 商品清單</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：貫穿資料</span></div><div class="ch5-grid ch6-grid tsjs-grid"><div class="ch5-copy"><p class="mini-lead">本週從頭到尾都用同一組資料，放在 ProductService 這個類別裡。</p><ul class="lesson-points"><li>一筆商品有 5 個欄位：id、name、price、stock、tags；全部商品放在 ProductService 的 products 欄位。</li><li>後面每一頁都在這個類別裡長出一個方法；Angular 的 service 就是這個形狀。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body"><mark class="code-key">export class ProductService</mark> {
+  products = [
+    { id: 1, name: &#x27;炒飯&#x27;, price: 80, stock: 12, tags: [&#x27;主食&#x27;, &#x27;特價&#x27;] },
+    { id: 2, name: &#x27;拉麵&#x27;, price: 120, stock: 3, tags: [&#x27;主食&#x27;] },
+    { id: 3, name: &#x27;水餃&#x27;, price: 60, stock: 0, tags: [&#x27;點心&#x27;, &#x27;特價&#x27;] },
+    { id: 4, name: &#x27;紅茶&#x27;, price: 30, stock: 40, tags: [&#x27;飲料&#x27;] },
+  ];
+}</span></pre></div></div></div></div><div class="remember">這頁記住：ProductService 是本週的主角：products 欄位 ＋ 每頁一個方法。</div></section><section class="slide" data-label="為什麼需要 TypeScript"><p class="eyebrow">CH6 · 04</p><p class="pagedot">04/52</p><h2 class="headline">為什麼需要 TypeScript</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：型別安全</span></div><div class="ch5-grid ch6-grid tsjs-grid"><div class="ch5-copy"><p class="mini-lead">JavaScript 只有在「跑起來」之後才會發現用錯；TypeScript 在打字時就提醒你。</p><ul class="lesson-points"><li>把 &quot;80&quot;（字串）當數字算，JS 會給你 &quot;808080&quot; 這種怪結果。</li><li>TypeScript 是「加上型別的 JavaScript」：寫法幾乎一樣，多了型別描述。</li><li>型別錯誤在編輯器裡就畫紅線，不用等執行；右邊就是同一段程式的對照。</li></ul></div><div class="visual-area tsjs-area"><div class="tsjs"><div class="tsjs__col"><div class="tsjs__hd"><span class="tsjs__pill">TypeScript</span></div><pre><span class="code-body">export class ProductService {
+  total(price: number, n: number): number {
+    return price * n;
+  }
+}
+new ProductService().total(80, 3);   // 240</span></pre></div><div class="tsjs__col tsjs__col--js"><div class="tsjs__hd"><span class="tsjs__pill">JavaScript</span></div><pre><span class="code-body">export class ProductService {
+  total(price, n) {
+    return price * n;
+  }
+}
+new ProductService().total(80, 3);   // 240</span></pre></div><p class="tsjs__note">同一段邏輯，兩欄只差型別註解。TS 的 total(&#x27;80&#x27;, 3) 在打字時就紅字；JS 不報錯，得到 &#x27;808080&#x27;。</p></div></div></div><div class="remember">這頁記住：TypeScript＝JavaScript ＋ 型別檢查；錯在打字時就發現。</div></section><section class="slide" data-label="環境設定：用 StackBlitz 開 Angular 專案"><p class="eyebrow">CH6 · 05</p><p class="pagedot">05/52</p><h2 class="headline">環境設定：用 StackBlitz 開 Angular 專案</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：StackBlitz、Angular CLI</span></div><div class="ch5-grid ch6-grid tsjs-grid"><div class="ch5-copy"><p class="mini-lead">本週不用安裝任何工具：在瀏覽器開一個 Angular 專案，後面的程式碼都貼進去就能跑。</p><ul class="lesson-points"><li>開 stackblitz.com → New Project → 選 Angular（Angular TypeScript 範本）。</li><li>左側是檔案樹、下方是終端機；ng 指令與本機相同，專案預設就是 strict。</li><li>後面每一頁的方法，都貼進同一個 ProductService，就能在 StackBlitz 直接跑。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 1) 終端機：ng generate s ProductService
+// 2) 把 p3 的 class 內容貼進 product-service.ts
+// 3) main.ts 取得 service；後面每頁的方法都加在它裡面
+bootstrapApplication(AppComponent).then((app) =&gt; {
+  const svc = app.injector.get(ProductService);
+  console.log(svc.products.length);   // 4
+});</span></pre></div></div></div></div><div class="remember">這頁記住：StackBlitz 開 Angular 專案 → ng generate s ProductService → main.ts 取得它。</div></section><section class="slide" data-label="章節轉場｜型別基礎與推論"><p class="eyebrow">CH6 · 06</p><p class="pagedot">06/52</p><h2 class="headline">章節轉場｜型別基礎與推論</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：轉場</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">第一部分：先讓資料自己說清楚「我是什麼」。</p><ul class="lesson-points"><li>型別註記：由你手寫，告訴 TS 這個值是什麼。</li><li>型別推論：你給初始值，TS 自己判斷。</li><li>兩者搭配：能推就推，需要時才寫。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：先讓資料說清楚自己是什麼型別。</div></section><section class="slide" data-label="型別註記：冒號後面是什麼"><p class="eyebrow">CH6 · 07</p><p class="pagedot">07/52</p><h2 class="headline">型別註記：冒號後面是什麼</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：型別註記</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">型別註記就是在變數後面加「冒號 ＋ 型別」。</p><ul class="lesson-points"><li>let price: number = 50;：price 只能是數字。</li><li>寫成 price = &quot;50&quot; 會立刻出現型別錯誤。</li><li>冒號後面是「這個值是什麼型別」，不是「值」。</li><li>常見基本型別：number、string、boolean。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+priceOf(): number {
+  let <mark class="code-key">price: number = 50</mark>;
+  price = 80;      // OK
+  // price = &#x27;50&#x27;; // <mark class="code-key">型別錯誤</mark>
+  return price;
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="X" data-step="0"><div class="diagram-title">圖解 X｜型別註記與推論</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="型別註記與推論：初始值讓 TS 推論，需要時再手寫註記"><defs><pattern id="rg-X" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-X" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-X)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">值 50</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-X)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">推論 number</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-X)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">註記 : number</text><text class="t-note" x="470" y="102" text-anchor="middle">let price = 50; → 推論 number；要明寫就 let price: number = 50;</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">值 50</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">推論 number</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">註記 : number</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>型別註記與推論怎麼選</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">先靠推論</p><ul><li>有初始值就讓 TS 自己判斷</li><li>let price = 50 → number</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">需要時才註記</p><ul><li>函式參數、回傳值最常需要</li><li>let price: number = 50</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">好處</p><ul><li>改錯型別時當場紅字</li><li>讀程式的人一眼看懂</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：冒號後面寫型別：let price: number = 50;</div></section><section class="slide" data-label="型別推論：能推就不必寫"><p class="eyebrow">CH6 · 08</p><p class="pagedot">08/52</p><h2 class="headline">型別推論：能推就不必寫</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：型別推論</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">大部分時候你根本不用寫型別——TS 會從初始值推論出來。</p><ul class="lesson-points"><li>let price = 50;  TS 推論 price 是 number。</li><li>const name = &#x27;炒飯&#x27;;  推論為 string。</li><li>推論之後就不能再塞別的型別：price = &#x27;50&#x27; 會報錯。</li><li>把滑鼠移到變數上，編輯器會顯示它推論出的型別。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+firstPrice(): number {
+  let <mark class="code-key">price = 50</mark>;       // <mark class="code-key">推論</mark> number
+  // price = &#x27;50&#x27;;      // 型別錯誤
+  const name = &#x27;炒飯&#x27;;  // 推論 string
+  return price;
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="X" data-step="0"><div class="diagram-title">圖解 X｜型別註記與推論</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="型別註記與推論：初始值讓 TS 推論，需要時再手寫註記"><defs><pattern id="rg-X" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-X" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-X)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">值 50</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-X)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">推論 number</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-X)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">註記 : number</text><text class="t-note" x="470" y="102" text-anchor="middle">let price = 50; → 推論 number；要明寫就 let price: number = 50;</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">值 50</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">推論 number</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">註記 : number</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>型別註記與推論怎麼選</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">先靠推論</p><ul><li>有初始值就讓 TS 自己判斷</li><li>let price = 50 → number</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">需要時才註記</p><ul><li>函式參數、回傳值最常需要</li><li>let price: number = 50</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">好處</p><ul><li>改錯型別時當場紅字</li><li>讀程式的人一眼看懂</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：有初始值，TS 自己就知道型別；能推就不必寫。</div></section><section class="slide" data-label="基本型別與陣列型別"><p class="eyebrow">CH6 · 09</p><p class="pagedot">09/52</p><h2 class="headline">基本型別與陣列型別</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：基本型別、T[]</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">常用型別一次看：文字、數字、真假、以及「一整排」。</p><ul class="lesson-points"><li>number、string、boolean 是最基本的三種。</li><li>陣列寫成 string[]：一排字串；number[]：一排數字。</li><li>Product[] 就是「很多個 Product」。</li><li>型別寫在變數後面，陣列型別寫在元素型別後面加 []。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+sample(): void {
+  const price: number = 80;
+  const name: string = &#x27;炒飯&#x27;;
+  const inStock: boolean = true;
+  const tags: <mark class="code-key">string[]</mark> = [&#x27;主食&#x27;, &#x27;特價&#x27;];
+}</span></pre></div></div></div></div><div class="remember">這頁記住：Product[] 就是「很多個 Product」。</div></section><section class="slide" data-label="物件型別：inline 描述商品"><p class="eyebrow">CH6 · 10</p><p class="pagedot">10/52</p><h2 class="headline">物件型別：inline 描述商品</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：object type</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">物件型別就是把每個欄位叫什麼、是什麼型別寫下來。</p><ul class="lesson-points"><li>{ name: string; price: number } 描述一個物件形狀。</li><li>欄位少時可以 inline 寫在變數後面。</li><li>少寫欄位或多寫欄位都會被 TS 抓到。</li><li>欄位一多，就會想幫這個形狀取個名字（下一段）。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+meal(): { <mark class="code-key">name: string; price: number</mark> } {
+  return { name: &#x27;炒飯&#x27;, price: 80 };
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="Y" data-step="0"><div class="diagram-title">圖解 Y｜Product 資料卡</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="Product 資料卡：五個欄位，用點記法取值"><defs><pattern id="rg-Y" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-Y" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-Y)"/><rect class="d-slot" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">空資料卡</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-Y)"/><rect class="d-card" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">填入 5 欄位</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-Y)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">點記法取值</text><text class="t-note" x="470" y="102" text-anchor="middle">interface Product { id; name; price; stock; tags }</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">空資料卡</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">填入 5 欄位</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">點記法取值</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>Product 的 5 個欄位</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">id: number</p><ul><li>識別碼，數字</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">name: string</p><ul><li>商品名稱，文字</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">price / stock: number</p><ul><li>價格、庫存都是數字</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">tags: string[]</p><ul><li>標籤，一排字串</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：物件型別：欄位名稱與型別要一一對上。</div></section><section class="slide" data-label="函式型別：參數與回傳契約"><p class="eyebrow">CH6 · 11</p><p class="pagedot">11/52</p><h2 class="headline">函式型別：參數與回傳契約</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：參數、回傳</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">函式也能標型別：輸入（參數）與輸出（回傳值）都要說清楚。</p><ul class="lesson-points"><li>參數後面加型別：price: number。</li><li>括號後面加回傳型別：): number。</li><li>呼叫時給錯型別，TS 立刻報錯。</li><li>函式契約清楚，別人（和 AI）就知道怎麼用。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+total(<mark class="code-key">price: number</mark>, count: number): number {
+  return price * count;
+}
+
+// 呼叫：new ProductService().total(80, 3) → 240</span></pre></div></div></div></div><div class="remember">這頁記住：函式的輸入口與輸出口都標型別，呼叫就不會錯。</div></section><section class="slide" data-label="TS vs JS 並排：計價函式"><p class="eyebrow">CH6 · 12</p><p class="pagedot">12/52</p><h2 class="headline">TS vs JS 並排：計價函式</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：對照</span></div><div class="ch5-grid ch6-grid tsjs-grid"><div class="ch5-copy"><p class="mini-lead">同一段計價函式，寫成 TS 與 JS 差在哪？</p><ul class="lesson-points"><li>TS：參數與回傳都標型別，呼叫錯立刻紅字。</li><li>JS：寫法一樣，但錯要等執行、看到 NaN 才知道。</li><li>型別註記在編譯後會被移除，執行時幾乎沒有成本。</li></ul></div><div class="visual-area tsjs-area"><div class="tsjs"><div class="tsjs__col"><div class="tsjs__hd"><span class="tsjs__pill">TypeScript</span></div><pre><span class="code-body">export class ProductService {
+  finalPrice(p: number, off: number): number {
+    return Math.round(p * off);
+  }
+}</span></pre></div><div class="tsjs__col tsjs__col--js"><div class="tsjs__hd"><span class="tsjs__pill">JavaScript</span></div><pre><span class="code-body">export class ProductService {
+  finalPrice(p, off) {
+    return Math.round(p * off);
+  }
+}</span></pre></div><p class="tsjs__note">呼叫 finalPrice(80, 0.9) 得到 72；改傳 &#x27;80&#x27; 時 TS 當場紅字，JS 不報錯、得到 NaN。</p></div></div></div><div class="remember">這頁記住：同一段邏輯，TS 多寫型別、換到當場的安全性。</div></section><section class="slide" data-label="章節轉場｜物件型別"><p class="eyebrow">CH6 · 13</p><p class="pagedot">13/52</p><h2 class="headline">章節轉場｜物件型別</h2><div class="lesson-tags"><span>課程進度：02 / 07 物件型別、interface 與 JSON</span><span>本頁語法／概念：轉場</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">第二部分：幫常用的資料形狀取個名字。</p><ul class="lesson-points"><li>interface：描述物件形狀的合約。</li><li>type：型別別名，也能描述物件，還能組合。</li><li>兩者很像；本課用 interface 描述物件、type 描述組合。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：用名字描述一個資料形狀，之後重複使用。</div></section><section class="slide" data-label="interface：定義 Product"><p class="eyebrow">CH6 · 14</p><p class="pagedot">14/52</p><h2 class="headline">interface：定義 Product</h2><div class="lesson-tags"><span>課程進度：02 / 07 物件型別、interface 與 JSON</span><span>本頁語法／概念：interface</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">interface 就是「資料的合約」：欄位名稱與型別都要對上。</p><ul class="lesson-points"><li>interface Product { id: number; name: string; ... }。</li><li>宣告成 Product 的值，就必須具備這些欄位。</li><li>少欄位、型別寫錯，都會出現診斷訊息。</li><li>定義一次，全課的 products 陣列都用它。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 頂層宣告（Angular 也是）
+<mark class="code-key">interface Product</mark> {
+  id: number;
+  name: string;
+  price: number;
+  stock: number;
+  tags: string[];
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="Z" data-step="0"><div class="diagram-title">圖解 Z｜interface 契約</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="interface 契約：欄位與型別要對上，錯的資料被擋下"><defs><pattern id="rg-Z" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-Z" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-Z)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">合約欄位</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-Z)"/><rect class="d-hot" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">錯的資料被擋</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-Z)"/><rect class="d-soft" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">合法資料通過</text><text class="t-note" x="470" y="102" text-anchor="middle">interface 是資料的合約：欄位名稱與型別都要對上</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">合約欄位</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">錯的資料被擋</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">合法資料通過</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>interface 檢查什麼</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">欄位齊全</p><ul><li>少一個欄位就會報錯</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">型別正確</p><ul><li>price 給字串會報錯</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">多餘欄位</p><ul><li>物件字面量多寫欄位也會被抓</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：interface 是資料的合約；欄位與型別都要對上。</div></section><section class="slide" data-label="type 別名與 interface 比較"><p class="eyebrow">CH6 · 15</p><p class="pagedot">15/52</p><h2 class="headline">type 別名與 interface 比較</h2><div class="lesson-tags"><span>課程進度：02 / 07 物件型別、interface 與 JSON</span><span>本頁語法／概念：type、比較</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">interface 與 type 都能描述物件，差別在能不能組合。</p><ul class="lesson-points"><li>interface Product { ... } 與 type Product = { ... } 幾乎等價。</li><li>type 還能描述聯集、交叉等組合（後面會用到）。</li><li>interface 可以「再開一次」自動合併（宣告合併）。</li><li>本課：描述物件用 interface；需要組合時用 type。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body"><mark class="code-key">type Product = {</mark>
+  id: number; name: string; price: number;
+};
+interface Product2 { id: number; name: string; price: number; }</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AA" data-step="0"><div class="diagram-title">圖解 AA｜type 別名</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="type 別名：與 interface 一樣能描述物件形狀"><defs><pattern id="rg-AA" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AA" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AA)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">物件型別</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AA)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">type 別名</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AA)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">兩條路同型別</text><text class="t-note" x="470" y="102" text-anchor="middle">type Product = { … }；interface 與 type 都能描述形狀</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">物件型別</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">type 別名</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">兩條路同型別</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：兩者都能描述物件；需要組合時選 type。</div></section><section class="slide" data-label="選用屬性 ? 與 readonly"><p class="eyebrow">CH6 · 16</p><p class="pagedot">16/52</p><h2 class="headline">選用屬性 ? 與 readonly</h2><div class="lesson-tags"><span>課程進度：02 / 07 物件型別、interface 與 JSON</span><span>本頁語法／概念：optional、readonly</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">兩個常用修飾：? 表示可有可無，readonly 表示不能改。</p><ul class="lesson-points"><li>discount?: number 表示這個欄位可以不存在。</li><li>readonly name: string 表示建立後不能改。</li><li>取用前要記得：可有可無的欄位可能是 undefined。</li><li>id、price 這種會變的欄位就不加 readonly。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 頂層宣告
+interface Product {
+  id: number;
+  <mark class="code-key">readonly</mark> name: string;
+  price: number;
+  <mark class="code-key">discount?</mark>: number;   // 可有可無
+}
+
+const p: Product = { id: 1, name: &#x27;炒飯&#x27;, price: 80 };
+// p.name = &#x27;拉麵&#x27;;  // 錯誤：readonly</span></pre></div></div></div></div><div class="remember">這頁記住：? 可有可無；readonly 不能改。</div></section><section class="slide" data-label="JSON 是什麼：物件與文字之間的橋"><p class="eyebrow">CH6 · 17</p><p class="pagedot">17/52</p><h2 class="headline">JSON 是什麼：物件與文字之間的橋</h2><div class="lesson-tags"><span>課程進度：02 / 07 物件型別、interface 與 JSON</span><span>本頁語法／概念：JSON 格式</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">物件是程式裡的東西；JSON 是它的文字版，用來存檔與傳輸。</p><ul class="lesson-points"><li>JSON 是純文字格式，不是 JavaScript：鍵名一定要用雙引號。</li><li>不能有註解、也不能有尾逗號（最後一個欄位後面不加逗號）。</li><li>值只有 6 種：字串、數字、布林、null、陣列、物件。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">JSON</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// product.json：JSON 是純文字，鍵名要雙引號
+{
+  &quot;id&quot;: 1,
+  &quot;name&quot;: &quot;炒飯&quot;,
+  &quot;price&quot;: 80,
+  &quot;tags&quot;: [&quot;主食&quot;, &quot;特價&quot;]
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AO" data-step="0"><div class="diagram-title">圖解 AO｜JSON 往返</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="JSON 往返：物件用 stringify 變文字，文字用 parse 變回物件"><defs><pattern id="rg-AO" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AO" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AO)"/><rect class="d-card" x="25" y="14" width="205" height="62" rx="12"/><text class="t-bold d-dim" x="127" y="52" text-anchor="middle">JS 物件</text><path class="a-line" d="M 236 45 L 254 45" marker-end="url(#ra-AO)"/><rect class="d-soft" x="260" y="14" width="205" height="62" rx="12"/><text class="t-bold d-dim" x="362" y="52" text-anchor="middle">stringify</text><path class="a-line" d="M 471 45 L 489 45" marker-end="url(#ra-AO)"/><rect class="d-hot" x="495" y="14" width="205" height="62" rx="12"/><text class="t-bold d-dim" x="597" y="52" text-anchor="middle">JSON 文字</text><path class="a-line" d="M 706 45 L 724 45" marker-end="url(#ra-AO)"/><rect class="d-soft" x="730" y="14" width="205" height="62" rx="12"/><text class="t-bold d-dim" x="832" y="52" text-anchor="middle">parse</text><text class="t-note" x="470" y="102" text-anchor="middle">物件 → 文字用 stringify；文字 → 物件用 parse</text><g class="dstep" data-step="0"><rect class="d-ring" x="17" y="6" width="221" height="78" rx="16"/><text class="t-bold" x="127" y="52" text-anchor="middle">JS 物件</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="252" y="6" width="221" height="78" rx="16"/><text class="t-bold" x="362" y="52" text-anchor="middle">stringify</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="487" y="6" width="221" height="78" rx="16"/><text class="t-bold" x="597" y="52" text-anchor="middle">JSON 文字</text></g><g class="dstep" data-step="3"><rect class="d-ring" x="722" y="6" width="221" height="78" rx="16"/><text class="t-bold" x="832" y="52" text-anchor="middle">parse</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>JSON 的語法規則與 6 種值</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">值只有 6 種</p><ul><li>字串、數字、布林、null、陣列、物件</li><li>沒有 undefined、函式、Date</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">鍵名一定要雙引號</p><ul><li>{&quot;name&quot;: &quot;炒飯&quot;} 才合法</li><li>{name: &quot;炒飯&quot;} 不是 JSON</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">不能有註解與尾逗號</p><ul><li>// 註解會讓 parse 失敗</li><li>最後一個欄位後面不加逗號</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：JSON 是物件的文字版：鍵名雙引號、不能有註解與尾逗號。</div></section><section class="slide" data-label="JSON 與 TypeScript 型別對應"><p class="eyebrow">CH6 · 18</p><p class="pagedot">18/52</p><h2 class="headline">JSON 與 TypeScript 型別對應</h2><div class="lesson-tags"><span>課程進度：02 / 07 物件型別、interface 與 JSON</span><span>本頁語法／概念：JSON ↔ 型別</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">JSON.parse 的結果是 any——不標型別，就等於關掉檢查。</p><ul class="lesson-points"><li>JSON 的 6 種值對到 TS：string、number、boolean、null、T[]、物件。</li><li>用 interface Product 描述 JSON 的形狀，取用欄位才有提示。</li><li>as Product[] 只是「斷言」，TS 不會真的檢查內容。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// JSON.parse 回傳 any：型別要自己標
+const one: Product = JSON.parse(text);
+const raw = JSON.parse(text) as Product[];
+
+// 物件 → 文字：存檔、送出都要它
+const json: string = JSON.stringify(one);</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AP" data-step="0"><div class="diagram-title">圖解 AP｜JSON.parse 的型別落差</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="JSON.parse 回傳 any，標上型別後 TS 才會檢查"><defs><pattern id="rg-AP" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AP" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AP)"/><rect class="d-card" x="25" y="14" width="205" height="62" rx="12"/><text class="t-bold d-dim" x="127" y="52" text-anchor="middle">JSON.parse</text><path class="a-line" d="M 236 45 L 254 45" marker-end="url(#ra-AP)"/><rect class="d-soft" x="260" y="14" width="205" height="62" rx="12"/><text class="t-bold d-dim" x="362" y="52" text-anchor="middle">any 沒保護</text><path class="a-line" d="M 471 45 L 489 45" marker-end="url(#ra-AP)"/><rect class="d-hot" x="495" y="14" width="205" height="62" rx="12"/><text class="t-bold d-dim" x="597" y="52" text-anchor="middle">標上型別</text><path class="a-line" d="M 706 45 L 724 45" marker-end="url(#ra-AP)"/><rect class="d-card" x="730" y="14" width="205" height="62" rx="12"/><text class="t-bold d-dim" x="832" y="52" text-anchor="middle">有檢查</text><text class="t-note" x="470" y="102" text-anchor="middle">parse 回傳 any；標上型別（如 Product），TS 才幫你檢查</text><g class="dstep" data-step="0"><rect class="d-ring" x="17" y="6" width="221" height="78" rx="16"/><text class="t-bold" x="127" y="52" text-anchor="middle">JSON.parse</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="252" y="6" width="221" height="78" rx="16"/><text class="t-bold" x="362" y="52" text-anchor="middle">any 沒保護</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="487" y="6" width="221" height="78" rx="16"/><text class="t-bold" x="597" y="52" text-anchor="middle">標上型別</text></g><g class="dstep" data-step="3"><rect class="d-ring" x="722" y="6" width="221" height="78" rx="16"/><text class="t-bold" x="832" y="52" text-anchor="middle">有檢查</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>JSON.parse 之後怎麼保住型別</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">parse 回傳 any</p><ul><li>any 等於關掉檢查</li><li>打錯欄位名不會有紅字</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">標上 interface</p><ul><li>const p: Product = JSON.parse(text)</li><li>取用欄位時就有提示</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">as 只是斷言</p><ul><li>as Product[] 不檢查內容</li><li>要真驗證得自己寫檢查</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：JSON.parse 回傳 any；標上型別（或自己驗證）才有保護。</div></section><section class="slide" data-label="章節轉場｜聯合、交叉與收窄"><p class="eyebrow">CH6 · 19</p><p class="pagedot">19/52</p><h2 class="headline">章節轉場｜聯合、交叉與收窄</h2><div class="lesson-tags"><span>課程進度：03 / 07 聯合、交叉與型別收窄</span><span>本頁語法／概念：轉場</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">第三部分：型別可以組合，也能一步步縮小範圍。</p><ul class="lesson-points"><li>聯合 A | B：值只能是其中一種。</li><li>交叉 A &amp; B：把兩個形狀疊成一個。</li><li>收窄：先用判斷確認型別，再安全取用。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：型別能組合，也能逐步收窄。</div></section><section class="slide" data-label="聯合型別：A 或 B"><p class="eyebrow">CH6 · 20</p><p class="pagedot">20/52</p><h2 class="headline">聯合型別：A 或 B</h2><div class="lesson-tags"><span>課程進度：03 / 07 聯合、交叉與型別收窄</span><span>本頁語法／概念：union</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">聯合型別用 | 表示「這幾種之一」。</p><ul class="lesson-points"><li>number | string：這個值可能是數字，也可能是文字。</li><li>使用前要先判斷是哪一種（下一頁的收窄）。</li><li>比 any 安全：TS 還是會檢查每一種可能。</li><li>常見於「id 可能是數字或字串」這類情境。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+formatId(id: <mark class="code-key">number | string</mark>): string {
+  return `#${id}`;
+}
+// formatId(true) → 錯誤：不在聯集內</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AB" data-step="0"><div class="diagram-title">圖解 AB｜聯合型別 A | B</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="聯合型別：值只能是 A 或 B 其中之一"><defs><pattern id="rg-AB" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AB" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AB)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">型別 A</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AB)"/><rect class="d-card" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">型別 B</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AB)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">A | B 聯集</text><text class="t-note" x="470" y="102" text-anchor="middle">值只能是其中一種：number | string</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">型別 A</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">型別 B</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">A | B 聯集</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>聯合型別常見用法</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">id 可能是數字或字串</p><ul><li>number | string</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">狀態只有幾種</p><ul><li>&#x27;in&#x27; | &#x27;low&#x27; | &#x27;out&#x27;</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">用前先收窄</p><ul><li>typeof / in / kind 判斷</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：A | B 表示值只能是其中一種。</div></section><section class="slide" data-label="字面值聯合：商品狀態"><p class="eyebrow">CH6 · 21</p><p class="pagedot">21/52</p><h2 class="headline">字面值聯合：商品狀態</h2><div class="lesson-tags"><span>課程進度：03 / 07 聯合、交叉與型別收窄</span><span>本頁語法／概念：literal union</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">把 string 收窄成幾個固定的字面值，錯字就進不來。</p><ul class="lesson-points"><li>type StockState = &#x27;in&#x27; | &#x27;low&#x27; | &#x27;out&#x27;。</li><li>傳入 &#x27;soldout&#x27; 這種不在清單的字串會被擋下。</li><li>比單用 string 精準：只能填你允許的選項。</li><li>常用於狀態、角色、尺寸這類「只有幾種可能」的欄位。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">type StockState = <mark class="code-key">&#x27;in&#x27; | &#x27;low&#x27; | &#x27;out&#x27;</mark>;
+
+// ProductService 的方法
+label(s: StockState): string {
+  if (s === &#x27;in&#x27;) return &#x27;庫存充足&#x27;;
+  return &#x27;已售完&#x27;;
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AC" data-step="0"><div class="diagram-title">圖解 AC｜字面值聯合</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="字面值聯合：把選項寫死，錯字進不來"><defs><pattern id="rg-AC" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AC" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AC)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">string 太寬</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AC)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">收成 3 個字面值</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AC)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">錯字被擋</text><text class="t-note" x="470" y="102" text-anchor="middle">type StockState = &#x27;in&#x27; | &#x27;low&#x27; | &#x27;out&#x27;</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">string 太寬</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">收成 3 個字面值</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">錯字被擋</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：字面值聯合：把選項寫死，錯字進不來。</div></section><section class="slide" data-label="交叉型別：把兩個形狀疊起來"><p class="eyebrow">CH6 · 22</p><p class="pagedot">22/52</p><h2 class="headline">交叉型別：把兩個形狀疊起來</h2><div class="lesson-tags"><span>課程進度：03 / 07 聯合、交叉與型別收窄</span><span>本頁語法／概念：intersection</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">交叉型別用 &amp; 把兩個形狀疊成一個。</p><ul class="lesson-points"><li>Product &amp; { finalPrice: number } 同時具備兩邊的欄位。</li><li>常用在「原資料 ＋ 額外計算欄位」，例如折扣後價格。</li><li>產生的新物件必須同時滿足兩個形狀。</li><li>搭配展開運算子 { ...p, finalPrice } 最常見。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">type Product = {
+  id: number; name: string; price: number;
+};
+type Discounted = <mark class="code-key">Product &amp; { finalPrice: number }</mark>;
+
+const d: Discounted = { id: 1, name: &#x27;炒飯&#x27;, price: 80, finalPrice: 72 };</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AD" data-step="0"><div class="diagram-title">圖解 AD｜交叉型別 A &amp; B</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="交叉型別：把兩個形狀疊成一個"><defs><pattern id="rg-AD" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AD" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AD)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">形狀 A</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AD)"/><rect class="d-card" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">形狀 B</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AD)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">A &amp; B 疊合</text><text class="t-note" x="470" y="102" text-anchor="middle">Product &amp; { finalPrice: number }</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">形狀 A</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">形狀 B</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">A &amp; B 疊合</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：A &amp; B 把兩個形狀疊成一個。</div></section><section class="slide" data-label="型別收窄：typeof 分流"><p class="eyebrow">CH6 · 23</p><p class="pagedot">23/52</p><h2 class="headline">型別收窄：typeof 分流</h2><div class="lesson-tags"><span>課程進度：03 / 07 聯合、交叉與型別收窄</span><span>本頁語法／概念：narrowing</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">收窄：先用 typeof 判斷，TS 就知道這個分支裡是什麼型別。</p><ul class="lesson-points"><li>if (typeof value === &#x27;string&#x27;) 之後，value 就是 string。</li><li>else 分支裡，value 自動變成 number。</li><li>每個分支都拿到「更精確的型別」，才能安全呼叫方法。</li><li>沒有收窄就對聯集直接呼叫方法，TS 會擋下來。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+describe(value: string | number): string {
+  if (<mark class="code-key">typeof value === &#x27;string&#x27;</mark>) {
+    return value.toUpperCase();
+  }
+  return value.toFixed(2);
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AE" data-step="0"><div class="diagram-title">圖解 AE｜型別收窄</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="型別收窄：先判斷型別，再安全取用"><defs><pattern id="rg-AE" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AE" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AE)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">string | number</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AE)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">typeof 分流</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AE)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">各自窄型別</text><text class="t-note" x="470" y="102" text-anchor="middle">先判斷型別，TS 就知道這個分支裡是什麼</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">string | number</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">typeof 分流</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">各自窄型別</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>三種收窄方式</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">typeof</p><ul><li>判斷基本型別：string / number</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">in</p><ul><li>判斷有沒有某個屬性</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">判別欄位</p><ul><li>用 kind 這種共用欄位分流</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：先判斷型別，再安全取用。</div></section><section class="slide" data-label="型別收窄：in 與屬性檢查"><p class="eyebrow">CH6 · 24</p><p class="pagedot">24/52</p><h2 class="headline">型別收窄：in 與屬性檢查</h2><div class="lesson-tags"><span>課程進度：03 / 07 聯合、交叉與型別收窄</span><span>本頁語法／概念：narrowing</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">除了 typeof，還可以用 in 檢查「有沒有這個屬性」。</p><ul class="lesson-points"><li>if (&#x27;meow&#x27; in pet) 之後，pet 收窄成 Cat。</li><li>else 分支裡 pet 就是 Dog。</li><li>適合用「獨有屬性」區分的物件聯合。</li><li>屬性名稱寫錯，TS 會提示這不是合法的鍵。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">type Cat = { meow: () =&gt; void };
+type Dog = { bark: () =&gt; void };
+
+// ProductService 的方法
+speak(pet: Cat | Dog): void {
+  if (<mark class="code-key">&#x27;meow&#x27; in pet</mark>) pet.meow();
+  else pet.bark();
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AE" data-step="0"><div class="diagram-title">圖解 AE｜型別收窄</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="型別收窄：先判斷型別，再安全取用"><defs><pattern id="rg-AE" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AE" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AE)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">string | number</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AE)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">typeof 分流</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AE)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">各自窄型別</text><text class="t-note" x="470" y="102" text-anchor="middle">先判斷型別，TS 就知道這個分支裡是什麼</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">string | number</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">typeof 分流</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">各自窄型別</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>三種收窄方式</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">typeof</p><ul><li>判斷基本型別：string / number</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">in</p><ul><li>判斷有沒有某個屬性</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">判別欄位</p><ul><li>用 kind 這種共用欄位分流</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：有這個屬性才走這條路。</div></section><section class="slide" data-label="判別聯合：用 kind 分流"><p class="eyebrow">CH6 · 25</p><p class="pagedot">25/52</p><h2 class="headline">判別聯合：用 kind 分流</h2><div class="lesson-tags"><span>課程進度：03 / 07 聯合、交叉與型別收窄</span><span>本頁語法／概念：判別欄位</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">判別聯合：每個成員都有一個共用欄位（如 kind），用它的值分流。</p><ul class="lesson-points"><li>每個型別都有 kind，值各不相同（&#x27;ok&#x27; / &#x27;error&#x27;）。</li><li>if (r.kind === &#x27;ok&#x27;) 之後，TS 完全知道有哪些欄位。</li><li>比 typeof / in 更適合「多種狀態」的資料。</li><li>API 回應、表單結果、非同步狀態都常用這招。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">type Result =
+  | { <mark class="code-key">kind: &#x27;ok&#x27;</mark>; data: Product[] }
+  | { <mark class="code-key">kind: &#x27;error&#x27;</mark>; message: string };
+
+// ProductService 的方法
+render(r: Result): number | string {
+  if (r.kind === &#x27;ok&#x27;) return r.data.length;
+  return r.message;
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AF" data-step="0"><div class="diagram-title">圖解 AF｜判別聯合</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="判別聯合：用共用欄位分流，TS 完全知道有哪些欄位"><defs><pattern id="rg-AF" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AF" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AF)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">kind 分流</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AF)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">各走各的路</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AF)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">TS 看得懂</text><text class="t-note" x="470" y="102" text-anchor="middle">判別聯合：用共用欄位 kind 的值分流</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">kind 分流</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">各走各的路</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">TS 看得懂</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：用共用欄位（kind）分流，TS 才看得懂。</div></section><section class="slide" data-label="章節轉場｜泛型"><p class="eyebrow">CH6 · 26</p><p class="pagedot">26/52</p><h2 class="headline">章節轉場｜泛型</h2><div class="lesson-tags"><span>課程進度：04 / 07 泛型</span><span>本頁語法／概念：轉場</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">第四部分：型別也能當參數傳進去。</p><ul class="lesson-points"><li>泛型 &lt;T&gt; 是「型別的佔位符」。</li><li>呼叫時才決定 T 是什麼型別。</li><li>一份程式碼，套用在多種型別上。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：型別也能當參數，寫一次用很多種。</div></section><section class="slide" data-label="泛型入門：為什麼需要 &lt;T&gt;"><p class="eyebrow">CH6 · 27</p><p class="pagedot">27/52</p><h2 class="headline">泛型入門：為什麼需要 &lt;T&gt;</h2><div class="lesson-tags"><span>課程進度：04 / 07 泛型</span><span>本頁語法／概念：generics</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">泛型入門：為什麼不直接寫死型別？</p><ul class="lesson-points"><li>寫 first(items: number[]) 只能處理數字陣列。</li><li>寫 first(items: any[]) 就失去型別保護。</li><li>泛型 first&lt;T&gt;(items: T[]) 兩者兼顧：通用又不失型別。</li><li>TS 會從呼叫時的引數自動推論 T。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+<mark class="code-key">first&lt;T&gt;</mark>(items: T[]): T | undefined {
+  return items[0];
+}
+
+const n = this.first([1, 2, 3]);       // number
+const s = this.first([&#x27;炒飯&#x27;, &#x27;拉麵&#x27;]); // string</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AG" data-step="0"><div class="diagram-title">圖解 AG｜泛型 &lt;T&gt;</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="泛型：型別當參數，呼叫時才決定 T 是什麼"><defs><pattern id="rg-AG" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AG" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AG)"/><rect class="d-soft" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">型別佔位 T</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AG)"/><rect class="d-card" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">代入 number</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AG)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">代入 Product</text><text class="t-note" x="470" y="102" text-anchor="middle">function first&lt;T&gt;(items: T[]): T | undefined</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">型別佔位 T</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">代入 number</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">代入 Product</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>泛型的三個好處</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">通用</p><ul><li>一份程式碼套多種型別</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">安全</p><ul><li>不用 any，型別不會跑掉</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">自動推論</p><ul><li>呼叫時 TS 自己決定 T</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：一份程式碼，套用在多種型別。</div></section><section class="slide" data-label="泛型函式：identity 與 first"><p class="eyebrow">CH6 · 28</p><p class="pagedot">28/52</p><h2 class="headline">泛型函式：identity 與 first</h2><div class="lesson-tags"><span>課程進度：04 / 07 泛型</span><span>本頁語法／概念：generic fn</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">泛型函式：呼叫時才決定 T 是什麼。</p><ul class="lesson-points"><li>function identity&lt;T&gt;(value: T): T 回傳與輸入同型別。</li><li>identity(50) → T 是 number；identity(&#x27;炒飯&#x27;) → T 是 string。</li><li>也可以明寫 identity&lt;number&gt;(50)。</li><li>first&lt;T&gt;(items: T[]): T | undefined 是常用範例。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+<mark class="code-key">identity&lt;T&gt;</mark>(value: T): T {
+  return value;
+}
+
+const a = this.identity&lt;number&gt;(50);   // number
+const b = this.identity(&#x27;炒飯&#x27;);        // string</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AG" data-step="0"><div class="diagram-title">圖解 AG｜泛型 &lt;T&gt;</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="泛型：型別當參數，呼叫時才決定 T 是什麼"><defs><pattern id="rg-AG" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AG" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AG)"/><rect class="d-soft" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">型別佔位 T</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AG)"/><rect class="d-card" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">代入 number</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AG)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">代入 Product</text><text class="t-note" x="470" y="102" text-anchor="middle">function first&lt;T&gt;(items: T[]): T | undefined</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">型別佔位 T</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">代入 number</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">代入 Product</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>泛型的三個好處</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">通用</p><ul><li>一份程式碼套多種型別</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">安全</p><ul><li>不用 any，型別不會跑掉</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">自動推論</p><ul><li>呼叫時 TS 自己決定 T</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：呼叫時才決定 T，回傳型別跟著輸入走。</div></section><section class="slide" data-label="泛型介面：ApiResponse&lt;T&gt;"><p class="eyebrow">CH6 · 29</p><p class="pagedot">29/52</p><h2 class="headline">泛型介面：ApiResponse&lt;T&gt;</h2><div class="lesson-tags"><span>課程進度：04 / 07 泛型</span><span>本頁語法／概念：generic interface</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">泛型介面：用一個信封包住任意型別的資料。</p><ul class="lesson-points"><li>interface ApiResponse&lt;T&gt; { ok: boolean; data: T; }。</li><li>ApiResponse&lt;Product[]&gt; 的 data 就是 Product[]。</li><li>同一個信封，裝商品、裝使用者、裝任何東西都行。</li><li>API 回應幾乎都長這樣，第 38 頁會實際使用。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body"><mark class="code-key">interface ApiResponse&lt;T&gt;</mark> {
+  ok: boolean; data: T; message?: string;
+}
+
+// ProductService 的方法
+unwrap(res: ApiResponse&lt;Product[]&gt;): Product[] {
+  return res.data;
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AK" data-step="0"><div class="diagram-title">圖解 AK｜ApiResponse 信封</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="ApiResponse 信封：用一個信封包住任意型別的資料"><defs><pattern id="rg-AK" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AK" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AK)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">信封外框</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AK)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">data: T</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AK)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">拆開取用</text><text class="t-note" x="470" y="102" text-anchor="middle">interface ApiResponse&lt;T&gt; { ok: boolean; data: T; message?: string }</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">信封外框</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">data: T</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">拆開取用</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>ApiResponse 為什麼要泛型</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">固定外框</p><ul><li>ok、message 每次都一樣</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">可變內容</p><ul><li>data 由 T 決定：Product[]、User…</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">取用安全</p><ul><li>body.data 直接就是對的型別</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：用一個信封（ApiResponse&lt;T&gt;）包住任意資料。</div></section><section class="slide" data-label="泛型限制：extends keyof"><p class="eyebrow">CH6 · 30</p><p class="pagedot">30/52</p><h2 class="headline">泛型限制：extends keyof</h2><div class="lesson-tags"><span>課程進度：04 / 07 泛型</span><span>本頁語法／概念：constraint</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">泛型限制：用 extends 規定 T 必須具備什麼。</p><ul class="lesson-points"><li>&lt;K extends keyof T&gt; 表示 K 只能是 T 的欄位名稱。</li><li>function getField&lt;T, K extends keyof T&gt;(obj: T, key: K): T[K]。</li><li>傳入不存在的鍵（如 &#x27;color&#x27;）會編譯錯誤。</li><li>回傳型別 T[K] 會精準對應那個欄位的型別。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+getField&lt;T, <mark class="code-key">K extends keyof T</mark>&gt;(obj: T, key: K): <mark class="code-key">T[K]</mark> {
+  return obj[key];
+}
+
+const p: Product = { id: 1, name: &#x27;炒飯&#x27;, price: 80, stock: 12, tags: [] };
+const name = this.getField(p, &#x27;name&#x27;);   // string
+// this.getField(p, &#x27;color&#x27;);            // 錯誤：鍵不存在</span></pre></div></div></div></div><div class="remember">這頁記住：&lt;K extends keyof T&gt; 限制能用的鍵。</div></section><section class="slide" data-label="章節轉場｜資料轉換"><p class="eyebrow">CH6 · 31</p><p class="pagedot">31/52</p><h2 class="headline">章節轉場｜資料轉換</h2><div class="lesson-tags"><span>課程進度：05 / 07 陣列與物件資料轉換</span><span>本頁語法／概念：轉場</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">第五部分：把一批資料換形狀、挑出來、合成一個值。</p><ul class="lesson-points"><li>map：每筆都換，回傳等長的新陣列。</li><li>filter：留下符合的，回傳子集合。</li><li>reduce：把一整串收成一個值。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：換形狀、挑出來、合成一個值。</div></section><section class="slide" data-label="map：把每筆資料換形狀"><p class="eyebrow">CH6 · 32</p><p class="pagedot">32/52</p><h2 class="headline">map：把每筆資料換形狀</h2><div class="lesson-tags"><span>課程進度：05 / 07 陣列與物件資料轉換</span><span>本頁語法／概念：map</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">map：對每一筆資料做同樣的處理，得到一個新陣列。</p><ul class="lesson-points"><li>products.map((p) =&gt; p.name) 取出所有名稱。</li><li>回傳的長度與原陣列一樣（等長）。</li><li>原陣列不會被改動——map 產生新陣列。</li><li>常接在 filter 後面：先挑再換形狀。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+names(): string[] {
+  return this.products<mark class="code-key">.map(</mark>(p) =&gt; p.name);
+}
+// [&#x27;炒飯&#x27;, &#x27;拉麵&#x27;, &#x27;水餃&#x27;, &#x27;紅茶&#x27;]</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AH" data-step="0"><div class="diagram-title">圖解 AH｜map 轉換</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="map：每筆換形狀，回傳等長的新陣列"><defs><pattern id="rg-AH" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AH" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AH)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">原陣列</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AH)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">逐筆換形狀</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AH)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">等長新陣列</text><text class="t-note" x="470" y="102" text-anchor="middle">products.map((p) =&gt; p.name)</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">原陣列</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">逐筆換形狀</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">等長新陣列</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：map 回傳「新的等長陣列」。</div></section><section class="slide" data-label="filter：留下符合的"><p class="eyebrow">CH6 · 33</p><p class="pagedot">33/52</p><h2 class="headline">filter：留下符合的</h2><div class="lesson-tags"><span>課程進度：05 / 07 陣列與物件資料轉換</span><span>本頁語法／概念：filter</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">filter：對每一筆問一個問題，留下答案為 true 的。</p><ul class="lesson-points"><li>products.filter((p) =&gt; p.stock &gt; 0) 只留有庫存的。</li><li>回傳的是子集合，長度可能變少。</li><li>原陣列不變——filter 產生新陣列。</li><li>條件寫得越清楚，越容易讀。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+inStock(): Product[] {
+  return this.products<mark class="code-key">.filter(</mark>(p) =&gt; p.stock &gt; 0);
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AI" data-step="0"><div class="diagram-title">圖解 AI｜filter 篩選</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="filter：逐筆判斷，回傳符合的子集合"><defs><pattern id="rg-AI" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AI" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AI)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">原陣列</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AI)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">逐筆判斷</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AI)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">符合的子集合</text><text class="t-note" x="470" y="102" text-anchor="middle">products.filter((p) =&gt; p.stock &gt; 0)</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">原陣列</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">逐筆判斷</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">符合的子集合</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：filter 回傳子集合，不改動原陣列。</div></section><section class="slide" data-label="reduce：合成一個值"><p class="eyebrow">CH6 · 34</p><p class="pagedot">34/52</p><h2 class="headline">reduce：合成一個值</h2><div class="lesson-tags"><span>課程進度：05 / 07 陣列與物件資料轉換</span><span>本頁語法／概念：reduce</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">reduce：把一整串資料「收」成一個值。</p><ul class="lesson-points"><li>reduce((sum, p) =&gt; sum + p.stock, 0) 加總庫存。</li><li>第一個參數是累加器（sum），第二個是目前的項目。</li><li>最後那個 0 是初始值，也決定累加器的型別。</li><li>找不到合適的 map/filter 時，reduce 幾乎都能解。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+totalStock(): number {
+  return this.products<mark class="code-key">.reduce(</mark>
+    (sum, p) =&gt; sum + p.stock, 0,
+  );
+}
+// 12 + 3 + 0 + 40 = 55</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AJ" data-step="0"><div class="diagram-title">圖解 AJ｜reduce 合成</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="reduce：把一串資料收成一個值"><defs><pattern id="rg-AJ" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AJ" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AJ)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">逐筆投入</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AJ)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">累加器 sum</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AJ)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">合成單一值</text><text class="t-note" x="470" y="102" text-anchor="middle">products.reduce((sum, p) =&gt; sum + p.price * p.stock, 0)</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">逐筆投入</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">累加器 sum</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">合成單一值</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：reduce 把一串資料收成一個值。</div></section><section class="slide" data-label="綜合：計算庫存總金額"><p class="eyebrow">CH6 · 35</p><p class="pagedot">35/52</p><h2 class="headline">綜合：計算庫存總金額</h2><div class="lesson-tags"><span>課程進度：05 / 07 陣列與物件資料轉換</span><span>本頁語法／概念：reduce＋型別</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">綜合練習：算出整份清單的庫存總金額。</p><ul class="lesson-points"><li>每筆的金額是 price * stock。</li><li>用 reduce 把每筆金額加總，初始值給 0。</li><li>回傳型別標成 number，讓結果有型別可接。</li><li>80×12 ＋ 120×3 ＋ 60×0 ＋ 30×40 ＝ 2520。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+totalValue(): number {
+  return this.products<mark class="code-key">.reduce(</mark>
+    (sum, p) =&gt; sum + p.price * p.stock, 0,
+  );
+}
+// 80×12 + 120×3 + 60×0 + 30×40 = 2520</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AJ" data-step="0"><div class="diagram-title">圖解 AJ｜reduce 合成</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="reduce：把一串資料收成一個值"><defs><pattern id="rg-AJ" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AJ" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AJ)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">逐筆投入</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AJ)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">累加器 sum</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AJ)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">合成單一值</text><text class="t-note" x="470" y="102" text-anchor="middle">products.reduce((sum, p) =&gt; sum + p.price * p.stock, 0)</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">逐筆投入</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">累加器 sum</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">合成單一值</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：reduce 的初始值與累加器型別要對。</div></section><section class="slide" data-label="綜合：依標籤篩選並整理"><p class="eyebrow">CH6 · 36</p><p class="pagedot">36/52</p><h2 class="headline">綜合：依標籤篩選並整理</h2><div class="lesson-tags"><span>課程進度：05 / 07 陣列與物件資料轉換</span><span>本頁語法／概念：filter＋map</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">綜合練習：先篩選，再整理成要顯示的形狀。</p><ul class="lesson-points"><li>先 filter 留下含指定標籤的商品。</li><li>再 map 取出商品名稱，得到 string[]。</li><li>鏈式寫法：products.filter(...).map(...)。</li><li>兩個方法都不會改到原陣列。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+namesByTag(tag: string): string[] {
+  return this.products
+    <mark class="code-key">.filter(</mark>(p) =&gt; p.tags.includes(tag))
+    <mark class="code-key">.map(</mark>(p) =&gt; p.name);
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AI" data-step="0"><div class="diagram-title">圖解 AI｜filter 篩選</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="filter：逐筆判斷，回傳符合的子集合"><defs><pattern id="rg-AI" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AI" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AI)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">原陣列</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AI)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">逐筆判斷</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AI)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">符合的子集合</text><text class="t-note" x="470" y="102" text-anchor="middle">products.filter((p) =&gt; p.stock &gt; 0)</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">原陣列</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">逐筆判斷</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">符合的子集合</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：先篩再整理，鏈式一氣呵成。</div></section><section class="slide" data-label="不變性與 sort 的陷阱"><p class="eyebrow">CH6 · 37</p><p class="pagedot">37/52</p><h2 class="headline">不變性與 sort 的陷阱</h2><div class="lesson-tags"><span>課程進度：05 / 07 陣列與物件資料轉換</span><span>本頁語法／概念：immutability</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">小陷阱：sort 會「直接改到原陣列」。</p><ul class="lesson-points"><li>products.sort(...) 會把 products 本身的順序改掉。</li><li>想保留原陣列，先複製：const sorted = [...products]。</li><li>map、filter、reduce 都不會改原陣列，sort 才會。</li><li>不確定時，先展開再操作最安全。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+sortedByPrice(): Product[] {
+  // 直接 sort 會改到原陣列
+  return <mark class="code-key">[...this.products]</mark>.sort((a, b) =&gt; a.price - b.price);
+}
+// this.products 的順序不變</span></pre></div></div></div></div><div class="remember">這頁記住：想保留原陣列，就先展開 [...arr] 再排序。</div></section><section class="slide" data-label="章節轉場｜非同步與 API"><p class="eyebrow">CH6 · 38</p><p class="pagedot">38/52</p><h2 class="headline">章節轉場｜非同步與 API</h2><div class="lesson-tags"><span>課程進度：06 / 07 非同步與 API 回應型別</span><span>本頁語法／概念：轉場</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">第六部分：資料從網路來，型別要先定義好。</p><ul class="lesson-points"><li>非同步：先送出請求、等回應、再接續。</li><li>API 回應有自己的形狀，要用 interface 描述。</li><li>拿到資料後，用已學的 map/filter 整理。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：資料從網路來，型別先定義好。</div></section><section class="slide" data-label="非同步路線：Promise、await、fetch"><p class="eyebrow">CH6 · 39</p><p class="pagedot">39/52</p><h2 class="headline">非同步路線：Promise、await、fetch</h2><div class="lesson-tags"><span>課程進度：06 / 07 非同步與 API 回應型別</span><span>本頁語法／概念：async 預覽</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">非同步路線：fetch 送出、await 等待、response 回來。</p><ul class="lesson-points"><li>fetch(url) 送出請求，回傳一個 Promise。</li><li>await 會「等」資料回來，才繼續下一行。</li><li>失敗（斷線、404）會走 catch。</li><li>非同步函式用 async 宣告。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="U" data-step="0"><div class="diagram-title">圖解 U｜非同步路線</div><svg class="dgm" viewBox="0 0 940 480" role="img" aria-label="非同步：fetch 送出請求、await 等待、response 回來，失敗走 catch"><defs><pattern id="rg-U" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-U" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="480" fill="url(#rg-U)"/><text class="t-head" x="60" y="80" text-anchor="start">request</text><text class="t-head" x="400" y="80" text-anchor="start">await 等待</text><text class="t-head" x="700" y="80" text-anchor="start">response</text><line class="a-line-soft" x1="90" y1="250" x2="860" y2="250"/><rect class="d-card" x="100" y="200" width="200" height="90" rx="12"/><text class="t-code" x="200" y="252" text-anchor="middle">fetch(url)</text><rect class="d-soft" x="640" y="200" width="220" height="90" rx="12"/><text class="t-bold" x="750" y="252" text-anchor="middle">資料回來</text><rect class="d-hot" x="640" y="330" width="220" height="80" rx="12"/><text class="t-bold" x="750" y="378" text-anchor="middle">catch 錯誤</text><text class="t-note" x="470" y="450" text-anchor="middle">非同步＝先送出、等回應、再接續</text><g class="dstep" data-step="0"><rect class="d-ring" x="88" y="188" width="224" height="114" rx="16"/></g><g class="dstep" data-step="1"><path class="a-line" d="M 306 245 L 632 245" marker-end="url(#ra-U)"/><text class="t-note" x="470" y="215" text-anchor="middle">等待中…</text><rect class="d-ring" x="320" y="190" width="300" height="110" rx="16"/></g><g class="dstep" data-step="2"><rect class="d-ring" x="628" y="188" width="244" height="114" rx="16"/></g><g class="dstep" data-step="3"><rect class="d-ring" x="628" y="318" width="244" height="104" rx="16"/></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：先送出、等回應、再接續；失敗走 catch。</div></section><section class="slide" data-label="API 回應型別：ApiResponse&lt;Product[]&gt;"><p class="eyebrow">CH6 · 40</p><p class="pagedot">40/52</p><h2 class="headline">API 回應型別：ApiResponse&lt;Product[]&gt;</h2><div class="lesson-tags"><span>課程進度：06 / 07 非同步與 API 回應型別</span><span>本頁語法／概念：回應型別</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">API 回應型別：先定義回應長相，再寫取用。</p><ul class="lesson-points"><li>interface ApiResponse&lt;T&gt; { ok: boolean; data: T; message?: string }。</li><li>const body: ApiResponse&lt;Product[]&gt; = await res.json()。</li><li>型別標上去之後，body.data 就是 Product[]。</li><li>之後 map / filter 都會有型別提示。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ApiResponse&lt;T&gt; 定義見第 27 頁
+// ProductService 的方法
+async loadProducts(): Promise&lt;Product[]&gt; {
+  const res = await fetch(&#x27;/api/products&#x27;);
+  const body: <mark class="code-key">ApiResponse&lt;Product[]&gt;</mark> = await res.json();
+  return body.data;
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AK" data-step="0"><div class="diagram-title">圖解 AK｜ApiResponse 信封</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="ApiResponse 信封：用一個信封包住任意型別的資料"><defs><pattern id="rg-AK" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AK" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AK)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">信封外框</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AK)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">data: T</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AK)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">拆開取用</text><text class="t-note" x="470" y="102" text-anchor="middle">interface ApiResponse&lt;T&gt; { ok: boolean; data: T; message?: string }</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">信封外框</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">data: T</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">拆開取用</text></g></svg><div class="dgm-dialog"><div class="dgm-dialog__card"><div class="dgm-dialog__hd"><span>ApiResponse 為什麼要泛型</span><button type="button" data-diagram-action="close">關閉</button></div><div class="dgm-dialog__body"><div class="dgm-dialog__sec"><p class="dgm-dialog__h">固定外框</p><ul><li>ok、message 每次都一樣</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">可變內容</p><ul><li>data 由 T 決定：Product[]、User…</li></ul></div><div class="dgm-dialog__sec"><p class="dgm-dialog__h">取用安全</p><ul><li>body.data 直接就是對的型別</li></ul></div></div></div></div><div class="diagram-controls"><button type="button" data-diagram-action="more">深入說明</button><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：先定義回應的形狀，再寫取用。</div></section><section class="slide" data-label="取得資料並轉換"><p class="eyebrow">CH6 · 41</p><p class="pagedot">41/52</p><h2 class="headline">取得資料並轉換</h2><div class="lesson-tags"><span>課程進度：06 / 07 非同步與 API 回應型別</span><span>本頁語法／概念：async＋map</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">取得資料後，用第 5 部分學的轉換把它整理成畫面要的樣子。</p><ul class="lesson-points"><li>await res.json() 拿到 ApiResponse&lt;Product[]&gt;。</li><li>body.data.filter(...) 篩選、.map(...) 取名稱。</li><li>整段包在 async 函式裡，回傳 Promise&lt;string[]&gt;。</li><li>非同步與資料轉換，其實是同一套資料流。</li></ul></div><div class="visual-area duo has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+async loadNames(): Promise&lt;string[]&gt; {
+  const res = <mark class="code-key">await</mark> fetch(&#x27;/api/products&#x27;);
+  const body: ApiResponse&lt;Product[]&gt; = await res.json();
+  return body.data.filter((p) =&gt; p.stock &gt; 0)
+    <mark class="code-key">.map(</mark>(p) =&gt; p.name);
+}</span></pre></div></div><div class="diagram-stepper rich" data-diagram="AL" data-step="0"><div class="diagram-title">圖解 AL｜取得並轉換</div><svg class="dgm" viewBox="0 0 940 110" role="img" aria-label="取得並轉換：fetch、await，再用 map/filter 整理"><defs><pattern id="rg-AL" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AL" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="110" fill="url(#rg-AL)"/><rect class="d-card" x="40" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="165" y="52" text-anchor="middle">fetch 送出</text><path class="a-line" d="M 296 45 L 339 45" marker-end="url(#ra-AL)"/><rect class="d-soft" x="345" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="470" y="52" text-anchor="middle">await 回應</text><path class="a-line" d="M 601 45 L 644 45" marker-end="url(#ra-AL)"/><rect class="d-hot" x="650" y="14" width="250" height="62" rx="12"/><text class="t-bold d-dim" x="775" y="52" text-anchor="middle">map/filter 整理</text><text class="t-note" x="470" y="102" text-anchor="middle">取得資料後，用已學的轉換把回應整理成畫面要的樣子</text><g class="dstep" data-step="0"><rect class="d-ring" x="32" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="165" y="52" text-anchor="middle">fetch 送出</text></g><g class="dstep" data-step="1"><rect class="d-ring" x="337" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="470" y="52" text-anchor="middle">await 回應</text></g><g class="dstep" data-step="2"><rect class="d-ring" x="642" y="6" width="266" height="78" rx="16"/><text class="t-bold" x="775" y="52" text-anchor="middle">map/filter 整理</text></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：拿到資料後，用已學的 map/filter 整理。</div></section><section class="slide" data-label="錯誤處理：try/catch 與 unknown"><p class="eyebrow">CH6 · 42</p><p class="pagedot">42/52</p><h2 class="headline">錯誤處理：try/catch 與 unknown</h2><div class="lesson-tags"><span>課程進度：06 / 07 非同步與 API 回應型別</span><span>本頁語法／概念：error handling</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">錯誤處理：try/catch，而且錯誤是 unknown。</p><ul class="lesson-points"><li>可能出錯的程式放 try 區塊，錯誤處理放 catch。</li><li>catch (err: unknown) 的 err 是 unknown，不能直接取屬性。</li><li>先收窄：err instanceof Error ? err.message : &#x27;未知錯誤&#x27;。</li><li>TS 強迫你面對錯誤，不會默默吞掉。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// ProductService 的方法
+async showCount(): Promise&lt;void&gt; {
+  try {
+    const data = await this.loadProducts();
+    console.log(data.length);
+  } <mark class="code-key">catch (err: unknown)</mark> {
+    // err 是 unknown，要先收窄
+    console.error(err <mark class="code-key">instanceof Error</mark> ? err.message : &#x27;未知錯誤&#x27;);
+  }
+}</span></pre></div></div></div></div><div class="remember">這頁記住：錯誤型別是 unknown，要先收窄才能用。</div></section><section class="slide" data-label="常見錯誤與除錯：診斷、any、as"><p class="eyebrow">CH6 · 43</p><p class="pagedot">43/52</p><h2 class="headline">常見錯誤與除錯：診斷、any、as</h2><div class="lesson-tags"><span>課程進度：06 / 07 非同步與 API 回應型別</span><span>本頁語法／概念：debugging</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">常見錯誤與除錯：讀懂紅字，別用 any 蓋掉問題。</p><ul class="lesson-points"><li>診斷訊息會指出行號與原因，先讀懂再改。</li><li>any 會關掉所有型別檢查——等於放棄 TS 的好處。</li><li>as 只在「你確定」時用；不確定就先寫驗證函式。</li><li>把滑鼠移到紅字上，通常會告訴你正確型別。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 不要用 <mark class="code-key">any</mark> 蓋掉問題
+const raw: any = JSON.parse(text);   // 失去所有型別保護
+
+// as 只在確定時用；否則先驗證
+const p = raw <mark class="code-key">as Product</mark>;
+// 更好：寫 isProduct(v): v is Product 檢查</span></pre></div></div></div></div><div class="remember">這頁記住：讀懂紅字，別用 any 蓋掉問題。</div></section><section class="slide" data-label="章節轉場｜整合練習"><p class="eyebrow">CH6 · 44</p><p class="pagedot">44/52</p><h2 class="headline">章節轉場｜整合練習</h2><div class="lesson-tags"><span>課程進度：07 / 07 整合練習與知識地圖</span><span>本頁語法／概念：轉場</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">最後一部分：把型別、轉換、非同步串成一個作品。</p><ul class="lesson-points"><li>六題由易到難，涵蓋本週所有重點。</li><li>每題都有六步互動範例頁，可逐步做出來。</li><li>做一題完整，勝過六題各做一半。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：把型別 ＋ 轉換 ＋ 非同步串成作品。</div></section><section class="slide" data-label="練習總覽：六題難度地圖"><p class="eyebrow">CH6 · 45</p><p class="pagedot">45/52</p><h2 class="headline">練習總覽：六題難度地圖</h2><div class="lesson-tags"><span>課程進度：07 / 07 整合練習與知識地圖</span><span>本頁語法／概念：練習選單</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">六題練習：挑一題做完，勝過各做一半。</p><ul class="lesson-points"><li>基礎：庫存總金額、依標籤篩選——熟悉 map／filter／reduce。</li><li>標準：套用折扣、庫存狀態分類——練交叉與判別聯合。</li><li>挑戰：泛型查詢、模擬 API——練泛型與非同步；第一次寫 TS 建議從第 1、2 題開始。</li></ul><ul class="lesson-links lesson-links--multi"><li><a href="examples/ch6_total.html" target="_blank" rel="noopener">1 庫存總金額</a></li><li><a href="examples/ch6_filter.html" target="_blank" rel="noopener">2 標籤篩選</a></li><li><a href="examples/ch6_discount.html" target="_blank" rel="noopener">3 商品折扣</a></li><li><a href="examples/ch6_status.html" target="_blank" rel="noopener">4 庫存狀態</a></li><li><a href="examples/ch6_firstby.html" target="_blank" rel="noopener">5 泛型查詢</a></li><li><a href="examples/ch6_api.html" target="_blank" rel="noopener">6 模擬 API</a></li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="V" data-step="0"><div class="diagram-title">圖解 V｜語法連作品</div><svg class="dgm" viewBox="0 0 940 500" role="img" aria-label="這週的型別工具連到六題作品，挑一題完成"><defs><pattern id="rg-V" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-V" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="500" fill="url(#rg-V)"/><text class="t-head" x="60" y="90" text-anchor="start">這週的型別工具</text><text class="t-head" x="560" y="90" text-anchor="start">六題作品</text><rect class="d-card" x="60" y="120" width="150" height="62" rx="12"/><text class="t-bold" x="135" y="158" text-anchor="middle">型別</text><rect class="d-card" x="230" y="120" width="150" height="62" rx="12"/><text class="t-bold" x="305" y="158" text-anchor="middle">聯合</text><rect class="d-card" x="60" y="204" width="150" height="62" rx="12"/><text class="t-bold" x="135" y="242" text-anchor="middle">泛型</text><rect class="d-card" x="230" y="204" width="150" height="62" rx="12"/><text class="t-bold" x="305" y="242" text-anchor="middle">map</text><rect class="d-card" x="60" y="288" width="150" height="62" rx="12"/><text class="t-bold" x="135" y="326" text-anchor="middle">filter</text><rect class="d-card" x="230" y="288" width="150" height="62" rx="12"/><text class="t-bold" x="305" y="326" text-anchor="middle">reduce</text><rect class="d-card" x="560" y="120" width="300" height="64" rx="12"/><text class="t-bold" x="710" y="160" text-anchor="middle">基礎：總金額／篩選</text><rect class="d-card" x="560" y="210" width="300" height="64" rx="12"/><text class="t-bold" x="710" y="250" text-anchor="middle">標準：折扣／狀態</text><rect class="d-card" x="560" y="300" width="300" height="64" rx="12"/><text class="t-bold" x="710" y="340" text-anchor="middle">挑戰：泛型／API</text><text class="t-note" x="470" y="470" text-anchor="middle">挑一題做完，比六題各做一半好</text><g class="dstep" data-step="0"><rect class="d-ring" x="48" y="108" width="344" height="290" rx="16"/></g><g class="dstep" data-step="1"><path class="a-line" d="M 390 150 L 552 152" marker-end="url(#ra-V)"/><path class="a-line" d="M 390 234 L 552 242" marker-end="url(#ra-V)"/><path class="a-line" d="M 390 318 L 552 332" marker-end="url(#ra-V)"/></g><g class="dstep" data-step="2"><rect class="d-ring" x="548" y="108" width="324" height="268" rx="16"/></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：挑一題做完，勝過六題各做一半。</div></section><section class="slide" data-label="練習 1（基礎）庫存總金額"><p class="eyebrow">CH6 · 46</p><p class="pagedot">46/52</p><h2 class="headline">練習 1（基礎）庫存總金額</h2><div class="lesson-tags"><span>課程進度：07 / 07 整合練習與知識地圖</span><span>本頁語法／概念：reduce、註記</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">練習 1（基礎）：用 reduce 算出整份清單的庫存總金額。</p><ul class="lesson-points"><li>題目：給定 Product[]，算出 price × stock 的總和。</li><li>提示：reduce 初始值給 0，累加器是 number。</li><li>參考解答在右側程式卡；完整六步請點下方連結。</li><li>預期結果：2520。</li></ul><ul class="lesson-links"><li><a href="examples/ch6_total.html" target="_blank" rel="noopener">完整程式碼、即時預覽與 6 個製作步驟</a></li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 練習 1：庫存總金額
+// ProductService 的方法
+totalValue(): number {
+  return this.products<mark class="code-key">.reduce(</mark>
+    (sum, p) =&gt; sum + p.price * p.stock, 0,
+  );
+}
+// 2520</span></pre></div></div></div></div><div class="remember">這頁記住：reduce 把每筆金額加總成一個數字。</div></section><section class="slide" data-label="練習 2（基礎）依標籤篩選商品"><p class="eyebrow">CH6 · 47</p><p class="pagedot">47/52</p><h2 class="headline">練習 2（基礎）依標籤篩選商品</h2><div class="lesson-tags"><span>課程進度：07 / 07 整合練習與知識地圖</span><span>本頁語法／概念：filter、string[]</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">練習 2（基礎）：輸入一個標籤，篩出含該標籤的商品名稱。</p><ul class="lesson-points"><li>題目：用 tags 篩選，回傳商品名稱清單。</li><li>提示：filter 搭配 p.tags.includes(tag)，再接 map。</li><li>參考解答在右側程式卡；完整六步請點下方連結。</li><li>邊界：找不到任何商品時回傳空陣列 []。</li></ul><ul class="lesson-links"><li><a href="examples/ch6_filter.html" target="_blank" rel="noopener">完整程式碼、即時預覽與 6 個製作步驟</a></li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 練習 2：依標籤篩選商品
+// ProductService 的方法
+namesByTag(tag: string): string[] {
+  return this.products
+    <mark class="code-key">.filter(</mark>(p) =&gt; p.tags.includes(tag))
+    <mark class="code-key">.map(</mark>(p) =&gt; p.name);
+}
+// namesByTag(&#x27;特價&#x27;) → [&#x27;炒飯&#x27;, &#x27;水餃&#x27;]</span></pre></div></div></div></div><div class="remember">這頁記住：filter 挑選、map 取名稱。</div></section><section class="slide" data-label="練習 3（標準）商品套用折扣"><p class="eyebrow">CH6 · 48</p><p class="pagedot">48/52</p><h2 class="headline">練習 3（標準）商品套用折扣</h2><div class="lesson-tags"><span>課程進度：07 / 07 整合練習與知識地圖</span><span>本頁語法／概念：交叉型別、map</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">練習 3（標準）：用交叉型別為每筆商品加上折扣後價格。</p><ul class="lesson-points"><li>題目：定義 DiscountedProduct = Product &amp; { finalPrice: number }。</li><li>提示：map 內用展開 { ...p, finalPrice }，不要改原物件。</li><li>參考解答在右側程式卡；完整六步請點下方連結。</li><li>注意：原陣列 products 不能被改動。</li></ul><ul class="lesson-links"><li><a href="examples/ch6_discount.html" target="_blank" rel="noopener">完整程式碼、即時預覽與 6 個製作步驟</a></li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 練習 3：商品套用折扣
+type <mark class="code-key">Discounted</mark> = Product &amp; { finalPrice: number };
+
+applyDiscount(off: number): Discounted[] {
+  return this.products.map((p) =&gt; ({
+    <mark class="code-key">...p</mark>, finalPrice: Math.round(p.price * off),
+  }));
+}</span></pre></div></div></div></div><div class="remember">這頁記住：交叉型別 ＋ map ＋ 展開，產生新陣列。</div></section><section class="slide" data-label="練習 4（標準）庫存狀態分類"><p class="eyebrow">CH6 · 49</p><p class="pagedot">49/52</p><h2 class="headline">練習 4（標準）庫存狀態分類</h2><div class="lesson-tags"><span>課程進度：07 / 07 整合練習與知識地圖</span><span>本頁語法／概念：判別聯合、map</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">練習 4（標準）：用判別聯合把庫存轉成狀態。</p><ul class="lesson-points"><li>題目：定義 StockStatus，將每筆商品轉成 in / low / out。</li><li>提示：用 kind 當判別欄位，配合 if 或 switch 收窄。</li><li>參考解答在右側程式卡；完整六步請點下方連結。</li><li>規則：0 → out；小於 5 → low；其餘 → in。</li></ul><ul class="lesson-links"><li><a href="examples/ch6_status.html" target="_blank" rel="noopener">完整程式碼、即時預覽與 6 個製作步驟</a></li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 練習 4：庫存狀態分類
+type <mark class="code-key">StockStatus</mark> =
+  | { <mark class="code-key">kind</mark>: &#x27;in&#x27;; qty: number }
+  | { kind: &#x27;low&#x27;; qty: number }
+  | { kind: &#x27;out&#x27; };
+
+status(p: Product): StockStatus {
+  if (p.stock === 0) return { kind: &#x27;out&#x27; };
+  if (p.stock &lt; 5) return { kind: &#x27;low&#x27;, qty: p.stock };
+  return { kind: &#x27;in&#x27;, qty: p.stock };
+}</span></pre></div></div></div></div><div class="remember">這頁記住：判別聯合讓「多種狀態」有型別可循。</div></section><section class="slide" data-label="練習 5（挑戰）泛型查詢 firstBy"><p class="eyebrow">CH6 · 50</p><p class="pagedot">50/52</p><h2 class="headline">練習 5（挑戰）泛型查詢 firstBy</h2><div class="lesson-tags"><span>課程進度：07 / 07 整合練習與知識地圖</span><span>本頁語法／概念：generics、keyof</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">練習 5（挑戰）：寫一個泛型函式，依任意欄位找第一筆符合者。</p><ul class="lesson-points"><li>題目：firstBy(items, key, value) 回傳 T | undefined。</li><li>提示：&lt;T, K extends keyof T&gt;、T[K]、Array.find。</li><li>參考解答在右側程式卡；完整六步請點下方連結。</li><li>收穫：同一支函式可查商品、使用者、任何物件陣列。</li></ul><ul class="lesson-links"><li><a href="examples/ch6_firstby.html" target="_blank" rel="noopener">完整程式碼、即時預覽與 6 個製作步驟</a></li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 練習 5：泛型查詢 <mark class="code-key">firstBy</mark>
+firstBy&lt;T, K extends <mark class="code-key">keyof T</mark>&gt;(items: T[], key: K, value: T[K]): T | undefined {
+  return items.find((item) =&gt; item[key] === value);
+}
+// firstBy(this.products, &#x27;name&#x27;, &#x27;炒飯&#x27;)</span></pre></div></div></div></div><div class="remember">這頁記住：泛型 ＋ keyof：一支函式查所有物件陣列。</div></section><section class="slide" data-label="練習 6（挑戰）模擬 API 取得商品"><p class="eyebrow">CH6 · 51</p><p class="pagedot">51/52</p><h2 class="headline">練習 6（挑戰）模擬 API 取得商品</h2><div class="lesson-tags"><span>課程進度：07 / 07 整合練習與知識地圖</span><span>本頁語法／概念：ApiResponse、async</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">練習 6（挑戰）：模擬以 API 取得商品，篩出特價品名稱。</p><ul class="lesson-points"><li>題目：定義 ApiResponse&lt;T&gt;，用 async 取得並篩選。</li><li>提示：檢查 res.ok；錯誤用 try/catch 與 unknown 收窄。</li><li>參考解答在右側程式卡；完整六步請點下方連結。</li><li>範例頁以 mock 資料模擬，離線也能預覽。</li></ul><ul class="lesson-links"><li><a href="examples/ch6_api.html" target="_blank" rel="noopener">完整程式碼、即時預覽與 6 個製作步驟</a></li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">本頁重點</span></div><pre><span class="code-body">// 練習 6：模擬 API 取得商品
+async loadDeals(): Promise&lt;string[]&gt; {
+  try {
+    const res = await fetch(&#x27;/api/products&#x27;);
+    if (!res.ok) throw new Error(&#x27;HTTP 錯誤&#x27;);
+    const body: <mark class="code-key">ApiResponse&lt;Product[]&gt;</mark> = await res.json();
+    return body.data.filter((p) =&gt; p.tags.includes(&#x27;特價&#x27;))
+      .map((p) =&gt; p.name);
+  } <mark class="code-key">catch (err: unknown)</mark> {
+    return [];
+  }
+}</span></pre></div></div></div></div><div class="remember">這頁記住：ApiResponse&lt;T&gt; ＋ async ＋ try/catch。</div></section><section class="slide" data-label="完整 TypeScript 知識地圖"><p class="eyebrow">CH6 · 52</p><p class="pagedot">52/52</p><h2 class="headline">完整 TypeScript 知識地圖</h2><div class="lesson-tags"><span>課程進度：07 / 07 整合練習與知識地圖</span><span>本頁語法／概念：知識地圖</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">把本週學的全部收在一張圖：型別 → 組合 → 轉換 → 非同步。</p><ul class="lesson-points"><li>型別基礎：註記、推論、基本型別、陣列。</li><li>組合與泛型：interface、type、聯合、交叉、泛型。</li><li>資料轉換：map、filter、reduce、不變性。</li><li>非同步與 API：Promise、await、ApiResponse&lt;T&gt;、try/catch。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="AN" data-step="0"><div class="diagram-title">圖解 AN｜TS 知識地圖</div><svg class="dgm" viewBox="0 0 940 540" role="img" aria-label="TypeScript 知識地圖：型別基礎、組合與泛型、資料轉換、非同步與 API"><defs><pattern id="rg-AN" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AN" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="540" fill="url(#rg-AN)"/><text class="t-head" x="40" y="70" text-anchor="start">型別基礎</text><text class="t-head" x="500" y="70" text-anchor="start">組合與泛型</text><text class="t-head" x="40" y="310" text-anchor="start">資料轉換</text><text class="t-head" x="500" y="310" text-anchor="start">非同步與 API</text><rect class="d-panel" x="30" y="90" width="420" height="190" rx="12"/><rect class="d-panel" x="490" y="90" width="420" height="190" rx="12"/><rect class="d-panel" x="30" y="330" width="420" height="170" rx="12"/><rect class="d-panel" x="490" y="330" width="420" height="170" rx="12"/><rect class="d-card" x="60" y="120" width="190" height="52" rx="12"/><text class="t-bold" x="155.0" y="156.0" text-anchor="middle">型別註記</text><rect class="d-card" x="260" y="120" width="190" height="52" rx="12"/><text class="t-bold" x="355.0" y="156.0" text-anchor="middle">型別推論</text><rect class="d-card" x="60" y="186" width="190" height="52" rx="12"/><text class="t-bold" x="155.0" y="222.0" text-anchor="middle">基本型別</text><rect class="d-card" x="260" y="186" width="190" height="52" rx="12"/><text class="t-bold" x="355.0" y="222.0" text-anchor="middle">陣列 T[]</text><rect class="d-card" x="520" y="120" width="190" height="52" rx="12"/><text class="t-bold" x="615.0" y="156.0" text-anchor="middle">interface</text><rect class="d-card" x="720" y="120" width="190" height="52" rx="12"/><text class="t-bold" x="815.0" y="156.0" text-anchor="middle">type</text><rect class="d-card" x="520" y="186" width="190" height="52" rx="12"/><text class="t-bold" x="615.0" y="222.0" text-anchor="middle">聯合 |</text><rect class="d-card" x="720" y="186" width="190" height="52" rx="12"/><text class="t-bold" x="815.0" y="222.0" text-anchor="middle">泛型 &lt;T&gt;</text><rect class="d-card" x="60" y="360" width="190" height="52" rx="12"/><text class="t-bold" x="155.0" y="396.0" text-anchor="middle">map</text><rect class="d-card" x="260" y="360" width="190" height="52" rx="12"/><text class="t-bold" x="355.0" y="396.0" text-anchor="middle">filter</text><rect class="d-card" x="60" y="426" width="190" height="52" rx="12"/><text class="t-bold" x="155.0" y="462.0" text-anchor="middle">reduce</text><rect class="d-card" x="260" y="426" width="190" height="52" rx="12"/><text class="t-bold" x="355.0" y="462.0" text-anchor="middle">不變性</text><rect class="d-card" x="520" y="360" width="190" height="52" rx="12"/><text class="t-bold" x="615.0" y="396.0" text-anchor="middle">Promise</text><rect class="d-card" x="720" y="360" width="190" height="52" rx="12"/><text class="t-bold" x="815.0" y="396.0" text-anchor="middle">await</text><rect class="d-card" x="520" y="426" width="190" height="52" rx="12"/><text class="t-bold" x="615.0" y="462.0" text-anchor="middle">ApiResponse&lt;T&gt;</text><rect class="d-card" x="720" y="426" width="190" height="52" rx="12"/><text class="t-bold" x="815.0" y="462.0" text-anchor="middle">try/catch</text><text class="t-note" x="470" y="528" text-anchor="middle">型別 → 組合 → 轉換 → 非同步：本週的完整路線</text><g class="dstep" data-step="0"><rect class="d-ring" x="20" y="100" width="440" height="170" rx="16"/></g><g class="dstep" data-step="1"><rect class="d-ring" x="480" y="100" width="440" height="170" rx="16"/></g><g class="dstep" data-step="2"><rect class="d-ring" x="20" y="340" width="440" height="150" rx="16"/></g><g class="dstep" data-step="3"><rect class="d-ring" x="480" y="340" width="440" height="150" rx="16"/></g></svg><div class="diagram-controls"><button type="button" data-diagram-action="next">下一步</button><button type="button" data-diagram-action="reset">重播</button><button type="button" data-diagram-action="toggle" aria-pressed="true">暫停</button></div></div></div></div><div class="remember">這頁記住：型別是地基，轉換與非同步都蓋在它上面。</div></section></main></div><a class="deck-backlink" href="../">← 回簡報總覽</a>
+<div class="progress" id="progress"></div><div class="counter" id="counter">1 / 52</div><script>/* ===========================================
+   SLIDE PRESENTATION CONTROLLER（CH5／CH6 共用）
+   由 make_ch5.py / make_ch6.py 讀入後內嵌到產出的 HTML。
+   要改行為請改本檔，不要改產出的簡報 HTML。
+   =========================================== */
+class SlidePresentation{
+  constructor(){
+    this.slides=[...document.querySelectorAll('.slide')];
+    this.total=this.slides.length;
+    this.current=0;
+    this.stage=document.getElementById('deckStage');
+    this.progress=document.getElementById('progress');
+    this.counter=document.getElementById('counter');
+    this.timers=new WeakMap();
+    this.reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.scale();
+    addEventListener('resize',()=>this.scale());
+    this.nav();
+    this.initDiagrams();
+    this.show(0);
+  }
+  /* 固定 16:9：整個 stage 等比縮放並置中，不重排內容 */
+  scale(){
+    const f=Math.min(innerWidth/1920,innerHeight/1080),
+          x=(innerWidth-1920*f)/2,y=(innerHeight-1080*f)/2;
+    this.stage.style.transform=`translate(${x}px, ${y}px) scale(${f})`;
+  }
+  nav(){
+    document.addEventListener('keydown',e=>{
+      const open=document.querySelector('.diagram-stepper.is-dialog');
+      if(open){e.preventDefault();if(e.key==='Escape')open.classList.remove('is-dialog');return;}
+      if(e.target.closest('input,textarea,[contenteditable=true]'))return;
+      if(e.target.closest('button')&&(e.key===' '||e.key==='Enter'))return;
+      if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();this.show(this.current+1);}
+      if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();this.show(this.current-1);}
+      if(e.key==='Home')this.show(0);
+      if(e.key==='End')this.show(this.total-1);
+    });
+  }
+  show(i){
+    this.current=Math.max(0,Math.min(i,this.total-1));
+    this.slides.forEach((s,n)=>{s.classList.toggle('active',n===this.current);s.classList.toggle('visible',n===this.current);});
+    this.progress.style.width=((this.current+1)/this.total*100)+'%';
+    this.counter.textContent=(this.current+1)+' / '+this.total;
+    this.syncAuto();
+  }
+  /* ---------- 圖解：逐步揭示 + 自動播放 ---------- */
+  initDiagrams(){
+    document.querySelectorAll('.diagram-stepper').forEach(d=>{
+      const nodes=[...d.querySelectorAll('.flow-node,.dstep')];
+      const paint=()=>{
+        const step=Number(d.dataset.step||0);
+        nodes.forEach((node,i)=>{node.classList.toggle('is-on',i<=step);node.classList.toggle('is-current',i===step);});
+      };
+      d._nodes=nodes; d._paint=paint;
+      const controls=d.querySelector('.diagram-controls');
+      if(nodes.length<=1){ if(controls)controls.style.display='none'; paint(); return; }
+      const bind=(sel,fn)=>{const el=d.querySelector(sel);if(el)el.addEventListener('click',e=>{e.currentTarget.blur();fn();});};
+      bind('[data-diagram-action="next"]',()=>{this.manual(d);this.stepBy(d,1);});
+      bind('[data-diagram-action="reset"]',()=>{this.manual(d);d.dataset.step='0';paint();});
+      bind('[data-diagram-action="more"]',()=>{this.stopAuto(d);d.classList.add('is-dialog');});
+      bind('[data-diagram-action="close"]',()=>{this.closeDialog(d);});
+      bind('[data-diagram-action="toggle"]',()=>{this.toggleAuto(d);});
+      const dlg=d.querySelector('.dgm-dialog');
+      if(dlg)dlg.addEventListener('click',e=>{if(e.target===dlg)this.closeDialog(d);});
+      d.dataset.auto=this.reduce?'off':'on';
+      this.syncToggle(d);
+      paint();
+    });
+  }
+  stepBy(d,n){
+    const nodes=d._nodes||[];
+    if(!nodes.length)return;
+    d.dataset.step=String((Number(d.dataset.step||0)+n+nodes.length)%nodes.length);
+    (d._paint||function(){})();
+  }
+  closeDialog(d){
+    d.classList.remove('is-dialog');
+    if(d.dataset.auto==='on')this.startAuto(d);
+  }
+  /* 手動操作（下一步／重播）後自動暫停 */
+  manual(d){ d.dataset.auto='off'; this.stopAuto(d); this.syncToggle(d); }
+  toggleAuto(d){
+    const on=d.dataset.auto==='on';
+    d.dataset.auto=on?'off':'on';
+    if(on)this.stopAuto(d); else this.startAuto(d);
+    this.syncToggle(d);
+  }
+  syncToggle(d){
+    const t=d.querySelector('[data-diagram-action="toggle"]');
+    if(!t)return;
+    const on=d.dataset.auto==='on';
+    t.textContent=on?'暫停':'播放';
+    t.setAttribute('aria-pressed',on?'true':'false');
+    d.classList.toggle('is-paused',!on);
+  }
+  startAuto(d){
+    this.stopAuto(d);
+    const nodes=d._nodes||[];
+    if(nodes.length<=1)return;
+    if(!d.closest('.slide.active')||d.classList.contains('is-dialog'))return;
+    this.timers.set(d,setInterval(()=>{
+      if(!d.closest('.slide.active')||d.classList.contains('is-dialog')){this.stopAuto(d);this.syncToggle(d);return;}
+      this.stepBy(d,1);
+    },3000));
+  }
+  stopAuto(d){ const t=this.timers.get(d); if(t){clearInterval(t);this.timers.delete(d);} }
+  /* 只播當前頁；切頁時停掉其他頁的計時器 */
+  syncAuto(){
+    document.querySelectorAll('.diagram-stepper').forEach(d=>{
+      if(d.closest('.slide.active')&&d.dataset.auto==='on')this.startAuto(d);
+      else this.stopAuto(d);
+    });
+  }
+  pauseAll(){ document.querySelectorAll('.diagram-stepper').forEach(d=>this.stopAuto(d)); }
+}
+const deck=new SlidePresentation();
+/* 匯出／列印流程可呼叫，確保沒有計時器在跑 */
+window.__deckPauseAll=()=>deck.pauseAll();
+</script></body></html>
