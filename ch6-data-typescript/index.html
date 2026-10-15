@@ -615,6 +615,66 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 .ch5-grid.ch6-grid .visual-area.duo .diagram-controls{gap:8px}
 .ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 9px}
 
+/* ===========================================
+   CH9 additions
+   =========================================== */
+/* 與 CH6 同型的固定列高，避免視覺欄把 grid 撐高 */
+.ch5-grid.ch9-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch9-grid>.visual-area{min-height:0;align-self:stretch}
+/* 圖解不 letterbox：viewBox 高 ≤470，容器寬約 984 → 縮放 1.05，字級不低於 30px */
+.ch5-grid.ch9-grid .diagram-stepper.rich .dgm{max-height:500px}
+
+/* 說明卡（句型、範例骨架、可以／不可以） */
+.panel{background:rgba(255,255,255,.62);border:1.5px solid var(--rule-soft);border-radius:22px;padding:24px 28px}
+.panel__hd{margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--rule-soft);
+  font-family:var(--f-display);font-size:34px;color:var(--ink-soft)}
+.panel p{margin:0 0 12px;font-family:var(--f-body);font-size:30px;line-height:1.5;color:var(--ink)}
+.panel p:last-child{margin-bottom:0}
+.panel b{font-weight:500}
+.panel ul{list-style:none;display:grid;gap:10px;margin:0;padding:0}
+.panel li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:30px;line-height:1.45;color:var(--ink)}
+.panel li::before{content:'';position:absolute;left:0;top:.72em;width:16px;height:2px;background:var(--ink);opacity:.32}
+
+/* 兩欄對照卡 */
+.ch9-two{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+
+/* 窄欄用的小鍵值表（範例骨架） */
+.ktbl{display:grid;margin-top:6px}
+.ktbl__row{display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;
+  padding:11px 0;border-bottom:1px dashed var(--rule-soft)}
+.ktbl__row:last-child{border-bottom:0}
+.ktbl__k{font-family:var(--f-sans);font-size:28px;line-height:1.4;color:var(--ink-soft)}
+.ktbl__v{font-family:var(--f-body);font-size:30px;line-height:1.4;color:var(--ink)}
+
+/* 全寬表格（規格表、技術選型、評分規準） */
+.ch9-tbl{display:grid}
+.ch9-tbl__row{display:grid;grid-template-columns:var(--cols);gap:26px;align-items:baseline;
+  padding:13px 0;border-bottom:1px dashed var(--rule-soft);
+  font-family:var(--f-body);font-size:38px;line-height:1.42;color:var(--ink)}
+.ch9-tbl__row:last-child{border-bottom:0}
+.ch9-tbl__row>span:first-child{font-family:var(--f-sans);font-size:30px;color:var(--ink-soft)}
+.ch9-tbl__row--head{border-bottom:1px solid var(--rule-medium);font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}
+.ch9-tbl__row--head>span:first-child{font-size:28px}
+
+/* 兩欄檢查清單 */
+.ch9-chk{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 44px;margin:0;padding:0}
+.ch9-chk li{position:relative;padding-left:52px;font-family:var(--f-body);font-size:34px;line-height:1.4;color:var(--ink)}
+.ch9-chk li::before{content:"\e2e6";font-family:var(--f-icons);font-size:34px;line-height:1;
+  position:absolute;left:0;top:4px;color:var(--ink-soft)}
+/* ===== Showcase additions (make_showcase.py) ===== */
+
+/* ===========================================
+   Showcase additions（AI 網頁作品分享，make_showcase.py 維護）
+   =========================================== */
+.showcase-split { align-items: start; }
+.showcase-points { gap: 18px; }
+.showcase-points li { font-size: 30px; line-height: 1.5; }
+.showcase-split .shot { max-height: 540px; }
+.showcase-split .shot-frame { padding: 16px; }
+.showcase-split .note { font-size: 27px; margin-top: 14px; }
+.showcase-split .mini-lead { margin-top: 20px; }
+.showcase-split .tbl__row { font-size: 28px; }
+
 </style><link rel="stylesheet" href="../assets/deck-fonts.css">
 <link rel="stylesheet" href="../assets/deck-site.css">
 </head><body><div class="deck-viewport"><main class="deck-stage" id="deckStage"><section class="slide slide--cover active visible" data-label="CH6 資料處理與 TypeScript"><p class="cover-kicker">CH6 · 資料處理與 TypeScript</p><h1 class="cover-title">CH6 資料處理與 TypeScript</h1><p class="cover-sub">用型別把資料說清楚，用 map／filter／reduce 把資料變成畫面</p><div class="footer"><span>互動式網頁設計</span><span>01/52</span></div></section><section class="slide" data-label="上週回顧：事件 → 資料 → 畫面"><p class="eyebrow">CH6 · 02</p><p class="pagedot">02/52</p><h2 class="headline">上週回顧：事件 → 資料 → 畫面</h2><div class="lesson-tags"><span>課程進度：01 / 07 開場與型別基礎</span><span>本頁語法／概念：Event/Data/View</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">上週你讓按鈕動起來；這週換個角度：資料變多、變複雜時，怎麼管得住。</p><ul class="lesson-points"><li>每個互動都走同一條路：事件 → 資料 → 畫面。</li><li>CH5 處理的是一筆資料（一個數字、一段文字）。</li><li>CH6 要處理一批資料：一整個商品清單。</li><li>資料一多，就更容易「用錯」——這就是要型別的原因。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="A" data-step="0"><div class="diagram-title">圖解 A｜Event -&gt; Data -&gt; View</div><svg class="dgm" viewBox="0 0 940 520" role="img" aria-label="使用者操作觸發事件，資料改變後畫面更新">
