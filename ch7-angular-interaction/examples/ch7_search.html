@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-TW"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>練習 5｜餐點搜尋器</title><style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  background: #f4efe4; color: #2a241b; font-size: 15px;
+}
+header { padding: 16px 24px 14px; background: #2f5d50; color: #fff; }
+header h1 { margin: 0 0 4px; font-size: 24px; }
+header .sub { margin: 0; font-size: 14px; opacity: .92; }
+.hd-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.hd-actions button {
+  border: 1px solid rgba(255,255,255,.45); background: rgba(255,255,255,.12);
+  color: #fff; border-radius: 999px; padding: 7px 14px; cursor: pointer; font-size: 14px;
+}
+.hd-actions button:hover { background: rgba(255,255,255,.26); }
+
+.steps { padding: 12px 24px 14px; background: #fff; border-bottom: 1px solid #d8d0c5; }
+.steps__hd {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 10px; font-size: 13px; color: #6b6355;
+}
+.steps__hd b { color: #2a241b; }
+.steps__hd .pos { margin-left: auto; font-weight: 700; color: #2f5d50; }
+.steps__nav { display: flex; gap: 6px; }
+.steps__nav button {
+  border: 1px solid #cfc4b5; background: #fff; border-radius: 8px;
+  padding: 4px 10px; cursor: pointer; font-size: 13px;
+}
+.steps__nav button:disabled { opacity: .35; cursor: default; }
+.steps__list {
+  list-style: none; display: grid; grid-template-columns: repeat(6, minmax(0,1fr));
+  gap: 8px; margin: 0; padding: 0;
+}
+.steps__list button {
+  width: 100%; height: 100%; display: flex; gap: 8px; text-align: left;
+  padding: 8px 10px; background: #faf7f0; border: 1px solid #e1d8cc;
+  border-radius: 10px; cursor: pointer; font-size: 13px; line-height: 1.35; color: inherit;
+}
+.steps__list button b {
+  flex: 0 0 20px; height: 20px; border-radius: 50%; background: #e1d8cc;
+  display: grid; place-items: center; font-size: 12px;
+}
+.steps__list button.active { background: #eef5f1; border-color: #2f5d50; }
+.steps__list button.active b { background: #2f5d50; color: #fff; }
+
+.how {
+  margin: 12px 0 0; padding: 10px 14px; background: #eef5f1;
+  border-left: 4px solid #2f5d50; border-radius: 0 10px 10px 0;
+}
+.how__hd { margin: 0 0 4px; font-weight: 700; color: #2f5d50; font-size: 14px; }
+.how__body { margin: 0; line-height: 1.65; }
+.steps__check { margin: 12px 0 0; font-size: 13px; color: #4a4238; line-height: 1.6; }
+.note { margin: 10px 0 0; font-size: 13px; color: #7a6f5e; }
+
+main { display: grid; grid-template-columns: 46% 54%; gap: 14px; padding: 14px; }
+.tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.tabs button {
+  border: 1px solid #d7cdbf; background: #fff; border-radius: 10px 10px 0 0;
+  padding: 7px 14px; cursor: pointer; font-size: 13px; color: #6b6355;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.tabs button.on { background: #2f5d50; border-color: #2f5d50; color: #fff; }
+.pane {
+  border: 1px solid #d7cdbf; border-radius: 0 12px 12px 12px;
+  background: #fff; overflow: hidden;
+}
+.pane pre {
+  margin: 0; padding: 14px; font-size: 13px; line-height: 1.5; white-space: pre-wrap;
+  font-family: "JetBrains Mono", ui-monospace, monospace; max-height: 620px; overflow: auto;
+}
+.pane .fname {
+  font-size: 12px; color: #8a7f6d; padding: 6px 14px; border-bottom: 1px solid #eee6da;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.preview-wrap { display: grid; gap: 8px; align-content: start; }
+iframe {
+  width: 100%; height: 620px; border: 1px solid #d7cdbf; border-radius: 14px; background: #fff;
+}
+.status { font-size: 13px; color: #625a50; }
+
+@media (max-width: 1100px) {
+  main { grid-template-columns: 1fr; }
+  iframe { height: 460px; }
+  .steps__list { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+</style></head><body>
+<header>
+  <h1>練習 5｜餐點搜尋器</h1>
+  <p class="sub">檢查點：搜「飯」1 筆；搜「披薩」0 筆並顯示提示；清空回 3 筆；反覆輸入不累加。</p>
+  <div class="hd-actions">
+    <button id="copy">複製這一步的檔案</button>
+    <button id="reload">重新整理預覽</button>
+    <button id="open">開新視窗</button>
+  </div>
+</header>
+<section class="steps">
+  <p class="steps__hd">製作步驟（<b>點任一步</b>可切換檔案與右側畫面）
+    <span class="pos" id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav"><button id="prev">◀ 上一步</button><button id="next">下一步 ▶</button></span>
+  </p>
+  <ol class="steps__list" id="stepList"><li><button data-step="1"><b>1</b><span>開啟搜尋欄與菜單</span></button></li><li><button data-step="2"><b>2</b><span>把菜單變成資料</span></button></li><li><button data-step="3"><b>3</b><span>把輸入的文字存進 query</span></button></li><li><button data-step="4"><b>4</b><span>computed：查詢一變就重算</span></button></li><li><button data-step="5"><b>5</b><span>@empty：找不到也要有畫面</span></button></li><li><button data-step="6"><b>6</b><span>完整解答：四種輸入都測</span></button></li></ol>
+  <div class="how">
+    <p class="how__hd" id="howTitle"></p>
+    <p class="how__body" id="howBody"></p>
+  </div>
+  <p class="steps__check"><b>做完自己檢查：</b>打「飯」只剩炒飯；打「披薩」出現找不到的提示；清空後三道回來；連續打字結果都正確。</p>
+  <p class="note">右側是這一步的程式碼以 <b>Angular 20 實際建置</b>出來的成果（不是示意圖）；左側是該步的完整檔案，可整份複製到 StackBlitz。<br><b>預覽是單一 HTML 檔，雙擊就能開，不需要伺服器。</b></p>
+</section>
+<main>
+  <section>
+    <div class="tabs" id="tabs"></div>
+    <div class="pane"><div class="fname" id="fname"></div><pre id="code"></pre></div>
+    <div class="status" id="status"></div>
+  </section>
+  <section class="preview-wrap">
+    <iframe id="preview" title="Angular 預覽"></iframe>
+    <div class="status">預覽路徑：<span id="ppath"></span></div>
+  </section>
+</main>
+<script id="data" type="application/json">[{"title": "開啟搜尋欄與菜單", "desc": "右側有輸入框與三張寫死的卡片，輸入什麼都不會變。", "files": [{"name": "app.ts", "code": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>餐點搜尋器</h1>\n  <p class=\"sub\">打一個字，菜單就篩給你看。</p>\n\n  <div class=\"search\">\n    <input type=\"search\" placeholder=\"試試「飯」或「麵」\">\n  </div>\n\n  <ul class=\"list\">\n    <li class=\"card\"><span class=\"name\">炒飯</span><span class=\"price\">60 元</span></li>\n    <li class=\"card\"><span class=\"name\">水餃</span><span class=\"price\">80 元</span></li>\n    <li class=\"card\"><span class=\"name\">牛肉麵</span><span class=\"price\">120 元</span></li>\n  </ul>\n\n  <p class=\"hint\">共 3 道</p>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 760px;\n  margin: 0 auto;\n  padding: 48px 28px 64px;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 8px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.sub {\n  margin: 0 0 32px;\n  font-size: 17px;\n  color: #6b6355;\n}\n.list {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  display: grid;\n  gap: 12px;\n}\n.card {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 16px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 16px;\n  background: #fff;\n  padding: 20px 24px;\n}\n.card .name {\n  font-size: 22px;\n  font-weight: 700;\n}\n.card .price {\n  font-size: 20px;\n  color: #2f5d50;\n  font-variant-numeric: tabular-nums;\n}\n.empty {\n  margin: 0;\n  padding: 40px 24px;\n  text-align: center;\n  border: 1.5px dashed #cfc4b5;\n  border-radius: 16px;\n  color: #8a7f6d;\n  font-size: 18px;\n}\n.search {\n  display: flex;\n  gap: 12px;\n  margin: 0 0 26px;\n}\n.search input {\n  flex: 1 1 auto;\n  border: 1.5px solid #cfc4b5;\n  border-radius: 12px;\n  padding: 14px 18px;\n  font-size: 18px;\n  background: #fff;\n}\n.search input:focus {\n  outline: 3px solid rgba(47, 93, 80, .22);\n  border-color: #2f5d50;\n}\n.hint {\n  margin: 18px 0 0;\n  font-size: 16px;\n  color: #8a7f6d;\n}\n"}, {"name": "meals.ts", "code": "export interface Meal {\n  id: string;\n  name: string;\n  price: number;\n}\n\nexport const meals: Meal[] = [\n  { id: 'm1', name: '炒飯', price: 60 },\n  { id: 'm2', name: '水餃', price: 80 },\n  { id: 'm3', name: '牛肉麵', price: 120 },\n];\n"}], "preview": "ch7_search/preview/step01.html"}, {"title": "把菜單變成資料", "desc": "匯入 meals.ts 的 meals，用 @for 產生三張卡片，track meal.id。", "files": [{"name": "app.ts", "code": "import { Component } from '@angular/core';\nimport { Meal, meals } from './meals';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  meals: Meal[] = meals;\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>餐點搜尋器</h1>\n  <p class=\"sub\">打一個字，菜單就篩給你看。</p>\n\n  <div class=\"search\">\n    <input type=\"search\" placeholder=\"試試「飯」或「麵」\">\n  </div>\n\n  <ul class=\"list\">\n    @for (meal of meals; track meal.id) {\n      <li class=\"card\"><span class=\"name\">{{ meal.name }}</span><span class=\"price\">{{ meal.price }} 元</span></li>\n    }\n  </ul>\n\n  <p class=\"hint\">共 {{ meals.length }} 道</p>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 760px;\n  margin: 0 auto;\n  padding: 48px 28px 64px;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 8px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.sub {\n  margin: 0 0 32px;\n  font-size: 17px;\n  color: #6b6355;\n}\n.list {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  display: grid;\n  gap: 12px;\n}\n.card {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 16px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 16px;\n  background: #fff;\n  padding: 20px 24px;\n}\n.card .name {\n  font-size: 22px;\n  font-weight: 700;\n}\n.card .price {\n  font-size: 20px;\n  color: #2f5d50;\n  font-variant-numeric: tabular-nums;\n}\n.empty {\n  margin: 0;\n  padding: 40px 24px;\n  text-align: center;\n  border: 1.5px dashed #cfc4b5;\n  border-radius: 16px;\n  color: #8a7f6d;\n  font-size: 18px;\n}\n.search {\n  display: flex;\n  gap: 12px;\n  margin: 0 0 26px;\n}\n.search input {\n  flex: 1 1 auto;\n  border: 1.5px solid #cfc4b5;\n  border-radius: 12px;\n  padding: 14px 18px;\n  font-size: 18px;\n  background: #fff;\n}\n.search input:focus {\n  outline: 3px solid rgba(47, 93, 80, .22);\n  border-color: #2f5d50;\n}\n.hint {\n  margin: 18px 0 0;\n  font-size: 16px;\n  color: #8a7f6d;\n}\n"}, {"name": "meals.ts", "code": "export interface Meal {\n  id: string;\n  name: string;\n  price: number;\n}\n\nexport const meals: Meal[] = [\n  { id: 'm1', name: '炒飯', price: 60 },\n  { id: 'm2', name: '水餃', price: 80 },\n  { id: 'm3', name: '牛肉麵', price: 120 },\n];\n"}], "preview": "ch7_search/preview/step02.html"}, {"title": "把輸入的文字存進 query", "desc": "<input #search (input)=\"query.set(search.value)\">：#search 是模板參考，直接拿到輸入框的值，不必碰 $event.target。", "files": [{"name": "app.ts", "code": "import { Component, signal } from '@angular/core';\nimport { Meal, meals } from './meals';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  meals: Meal[] = meals;\n  query = signal('');\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>餐點搜尋器</h1>\n  <p class=\"sub\">打一個字，菜單就篩給你看。</p>\n\n  <div class=\"search\">\n    <input #search type=\"search\" placeholder=\"試試「飯」或「麵」\" (input)=\"query.set(search.value)\">\n  </div>\n\n  <ul class=\"list\">\n    @for (meal of meals; track meal.id) {\n      <li class=\"card\"><span class=\"name\">{{ meal.name }}</span><span class=\"price\">{{ meal.price }} 元</span></li>\n    }\n  </ul>\n\n  <p class=\"hint\">目前查詢：{{ query() }}</p>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 760px;\n  margin: 0 auto;\n  padding: 48px 28px 64px;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 8px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.sub {\n  margin: 0 0 32px;\n  font-size: 17px;\n  color: #6b6355;\n}\n.list {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  display: grid;\n  gap: 12px;\n}\n.card {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 16px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 16px;\n  background: #fff;\n  padding: 20px 24px;\n}\n.card .name {\n  font-size: 22px;\n  font-weight: 700;\n}\n.card .price {\n  font-size: 20px;\n  color: #2f5d50;\n  font-variant-numeric: tabular-nums;\n}\n.empty {\n  margin: 0;\n  padding: 40px 24px;\n  text-align: center;\n  border: 1.5px dashed #cfc4b5;\n  border-radius: 16px;\n  color: #8a7f6d;\n  font-size: 18px;\n}\n.search {\n  display: flex;\n  gap: 12px;\n  margin: 0 0 26px;\n}\n.search input {\n  flex: 1 1 auto;\n  border: 1.5px solid #cfc4b5;\n  border-radius: 12px;\n  padding: 14px 18px;\n  font-size: 18px;\n  background: #fff;\n}\n.search input:focus {\n  outline: 3px solid rgba(47, 93, 80, .22);\n  border-color: #2f5d50;\n}\n.hint {\n  margin: 18px 0 0;\n  font-size: 16px;\n  color: #8a7f6d;\n}\n"}, {"name": "meals.ts", "code": "export interface Meal {\n  id: string;\n  name: string;\n  price: number;\n}\n\nexport const meals: Meal[] = [\n  { id: 'm1', name: '炒飯', price: 60 },\n  { id: 'm2', name: '水餃', price: 80 },\n  { id: 'm3', name: '牛肉麵', price: 120 },\n];\n"}], "preview": "ch7_search/preview/step03.html"}, {"title": "computed：查詢一變就重算", "desc": "found = computed(...) 讀 query() 與 meals，用 trim() 去空白、includes() 做中文包含比對。模板改讀 found()。", "files": [{"name": "app.ts", "code": "import { Component, computed, signal } from '@angular/core';\nimport { Meal, meals } from './meals';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  meals: Meal[] = meals;\n  query = signal('');\n\n  found = computed(() => {\n    const q = this.query().trim();\n    return this.meals.filter((meal) => meal.name.includes(q));\n  });\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>餐點搜尋器</h1>\n  <p class=\"sub\">打一個字，菜單就篩給你看。</p>\n\n  <div class=\"search\">\n    <input #search type=\"search\" placeholder=\"試試「飯」或「麵」\" (input)=\"query.set(search.value)\">\n  </div>\n\n  <ul class=\"list\">\n    @for (meal of found(); track meal.id) {\n      <li class=\"card\"><span class=\"name\">{{ meal.name }}</span><span class=\"price\">{{ meal.price }} 元</span></li>\n    }\n  </ul>\n\n  <p class=\"hint\">共 {{ found().length }} 道</p>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 760px;\n  margin: 0 auto;\n  padding: 48px 28px 64px;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 8px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.sub {\n  margin: 0 0 32px;\n  font-size: 17px;\n  color: #6b6355;\n}\n.list {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  display: grid;\n  gap: 12px;\n}\n.card {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 16px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 16px;\n  background: #fff;\n  padding: 20px 24px;\n}\n.card .name {\n  font-size: 22px;\n  font-weight: 700;\n}\n.card .price {\n  font-size: 20px;\n  color: #2f5d50;\n  font-variant-numeric: tabular-nums;\n}\n.empty {\n  margin: 0;\n  padding: 40px 24px;\n  text-align: center;\n  border: 1.5px dashed #cfc4b5;\n  border-radius: 16px;\n  color: #8a7f6d;\n  font-size: 18px;\n}\n.search {\n  display: flex;\n  gap: 12px;\n  margin: 0 0 26px;\n}\n.search input {\n  flex: 1 1 auto;\n  border: 1.5px solid #cfc4b5;\n  border-radius: 12px;\n  padding: 14px 18px;\n  font-size: 18px;\n  background: #fff;\n}\n.search input:focus {\n  outline: 3px solid rgba(47, 93, 80, .22);\n  border-color: #2f5d50;\n}\n.hint {\n  margin: 18px 0 0;\n  font-size: 16px;\n  color: #8a7f6d;\n}\n"}, {"name": "meals.ts", "code": "export interface Meal {\n  id: string;\n  name: string;\n  price: number;\n}\n\nexport const meals: Meal[] = [\n  { id: 'm1', name: '炒飯', price: 60 },\n  { id: 'm2', name: '水餃', price: 80 },\n  { id: 'm3', name: '牛肉麵', price: 120 },\n];\n"}], "preview": "ch7_search/preview/step04.html"}, {"title": "@empty：找不到也要有畫面", "desc": "在 @for 後面接 @empty，顯示「找不到〇〇」。空白查詢會 match 全部，所以清空就回到三道。", "files": [{"name": "app.ts", "code": "import { Component, computed, signal } from '@angular/core';\nimport { Meal, meals } from './meals';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  meals: Meal[] = meals;\n  query = signal('');\n\n  found = computed(() => {\n    const q = this.query().trim();\n    return this.meals.filter((meal) => meal.name.includes(q));\n  });\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>餐點搜尋器</h1>\n  <p class=\"sub\">打一個字，菜單就篩給你看。</p>\n\n  <div class=\"search\">\n    <input #search type=\"search\" placeholder=\"試試「飯」或「麵」\" (input)=\"query.set(search.value)\">\n  </div>\n\n  <ul class=\"list\">\n    @for (meal of found(); track meal.id) {\n      <li class=\"card\"><span class=\"name\">{{ meal.name }}</span><span class=\"price\">{{ meal.price }} 元</span></li>\n    } @empty {\n      <p class=\"empty\">找不到「{{ query() }}」，換個字試試。</p>\n    }\n  </ul>\n\n  <p class=\"hint\">共 {{ found().length }} 道</p>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 760px;\n  margin: 0 auto;\n  padding: 48px 28px 64px;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 8px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.sub {\n  margin: 0 0 32px;\n  font-size: 17px;\n  color: #6b6355;\n}\n.list {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  display: grid;\n  gap: 12px;\n}\n.card {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 16px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 16px;\n  background: #fff;\n  padding: 20px 24px;\n}\n.card .name {\n  font-size: 22px;\n  font-weight: 700;\n}\n.card .price {\n  font-size: 20px;\n  color: #2f5d50;\n  font-variant-numeric: tabular-nums;\n}\n.empty {\n  margin: 0;\n  padding: 40px 24px;\n  text-align: center;\n  border: 1.5px dashed #cfc4b5;\n  border-radius: 16px;\n  color: #8a7f6d;\n  font-size: 18px;\n}\n.search {\n  display: flex;\n  gap: 12px;\n  margin: 0 0 26px;\n}\n.search input {\n  flex: 1 1 auto;\n  border: 1.5px solid #cfc4b5;\n  border-radius: 12px;\n  padding: 14px 18px;\n  font-size: 18px;\n  background: #fff;\n}\n.search input:focus {\n  outline: 3px solid rgba(47, 93, 80, .22);\n  border-color: #2f5d50;\n}\n.hint {\n  margin: 18px 0 0;\n  font-size: 16px;\n  color: #8a7f6d;\n}\n"}, {"name": "meals.ts", "code": "export interface Meal {\n  id: string;\n  name: string;\n  price: number;\n}\n\nexport const meals: Meal[] = [\n  { id: 'm1', name: '炒飯', price: 60 },\n  { id: 'm2', name: '水餃', price: 80 },\n  { id: 'm3', name: '牛肉麵', price: 120 },\n];\n"}], "preview": "ch7_search/preview/step05.html"}, {"title": "完整解答：四種輸入都測", "desc": "飯、披薩、空白、清空。每打一個字就比對一次結果數量。", "files": [{"name": "app.ts", "code": "import { Component, computed, signal } from '@angular/core';\nimport { Meal, meals } from './meals';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  meals: Meal[] = meals;\n  query = signal('');\n\n  found = computed(() => {\n    const q = this.query().trim();\n    return this.meals.filter((meal) => meal.name.includes(q));\n  });\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>餐點搜尋器</h1>\n  <p class=\"sub\">打一個字，菜單就篩給你看。</p>\n\n  <div class=\"search\">\n    <input #search type=\"search\" placeholder=\"試試「飯」或「麵」\" (input)=\"query.set(search.value)\">\n  </div>\n\n  <ul class=\"list\">\n    @for (meal of found(); track meal.id) {\n      <li class=\"card\"><span class=\"name\">{{ meal.name }}</span><span class=\"price\">{{ meal.price }} 元</span></li>\n    } @empty {\n      <p class=\"empty\">找不到「{{ query() }}」，換個字試試。</p>\n    }\n  </ul>\n\n  <p class=\"hint\">共 {{ found().length }} 道</p>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 760px;\n  margin: 0 auto;\n  padding: 48px 28px 64px;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 8px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.sub {\n  margin: 0 0 32px;\n  font-size: 17px;\n  color: #6b6355;\n}\n.list {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  display: grid;\n  gap: 12px;\n}\n.card {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 16px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 16px;\n  background: #fff;\n  padding: 20px 24px;\n}\n.card .name {\n  font-size: 22px;\n  font-weight: 700;\n}\n.card .price {\n  font-size: 20px;\n  color: #2f5d50;\n  font-variant-numeric: tabular-nums;\n}\n.empty {\n  margin: 0;\n  padding: 40px 24px;\n  text-align: center;\n  border: 1.5px dashed #cfc4b5;\n  border-radius: 16px;\n  color: #8a7f6d;\n  font-size: 18px;\n}\n.search {\n  display: flex;\n  gap: 12px;\n  margin: 0 0 26px;\n}\n.search input {\n  flex: 1 1 auto;\n  border: 1.5px solid #cfc4b5;\n  border-radius: 12px;\n  padding: 14px 18px;\n  font-size: 18px;\n  background: #fff;\n}\n.search input:focus {\n  outline: 3px solid rgba(47, 93, 80, .22);\n  border-color: #2f5d50;\n}\n.hint {\n  margin: 18px 0 0;\n  font-size: 16px;\n  color: #8a7f6d;\n}\n"}, {"name": "meals.ts", "code": "export interface Meal {\n  id: string;\n  name: string;\n  price: number;\n}\n\nexport const meals: Meal[] = [\n  { id: 'm1', name: '炒飯', price: 60 },\n  { id: 'm2', name: '水餃', price: 80 },\n  { id: 'm3', name: '牛肉麵', price: 120 },\n];\n"}], "preview": "ch7_search/preview/step06.html"}]</script>
+<script>
+const steps = JSON.parse(document.getElementById('data').textContent);
+let cur = 0, tab = 0;
+const $ = s => document.querySelector(s);
+
+function render() {
+  const st = steps[cur];
+  $('#pos').textContent = '第 ' + (cur + 1) + ' 步／共 ' + steps.length + ' 步';
+  $('#howTitle').textContent = st.title;
+  $('#howBody').textContent = st.desc;
+  $('#prev').disabled = cur === 0;
+  $('#next').disabled = cur === steps.length - 1;
+  document.querySelectorAll('#stepList button').forEach((b, i) => b.classList.toggle('active', i === cur));
+
+  if (tab >= st.files.length) tab = 0;
+  $('#tabs').innerHTML = st.files.map((f, i) =>
+    '<button data-tab="' + i + '" class="' + (i === tab ? 'on' : '') + '">' + f.name + '</button>').join('');
+  $('#tabs').querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => { tab = +b.dataset.tab; render(); });
+  });
+  $('#fname').textContent = st.files[tab].name;
+  $('#code').textContent = st.files[tab].code;
+
+  $('#preview').src = st.preview;
+  $('#ppath').textContent = st.preview;
+  $('#status').textContent = '';
+}
+
+document.querySelectorAll('#stepList button').forEach(b => {
+  b.addEventListener('click', () => { cur = +b.dataset.step - 1; tab = 0; render(); });
+});
+$('#prev').addEventListener('click', () => { if (cur > 0) { cur--; tab = 0; render(); } });
+$('#next').addEventListener('click', () => { if (cur < steps.length - 1) { cur++; tab = 0; render(); } });
+$('#reload').addEventListener('click', () => { const f = $('#preview'); f.src = f.src; });
+$('#open').addEventListener('click', () => { window.open(steps[cur].preview, '_blank', 'noopener'); });
+$('#copy').addEventListener('click', async () => {
+  const code = steps[cur].files[tab].code;
+  const name = steps[cur].files[tab].name;
+  // file:// 下沒有 navigator.clipboard，退回 execCommand
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(code);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!ok) throw new Error('copy failed');
+    }
+    $('#status').textContent = '已複製 ' + name;
+  } catch (e) { $('#status').textContent = '複製失敗，請手動選取程式碼'; }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea')) return;
+  if (e.key === 'ArrowLeft' && cur > 0) { cur--; tab = 0; render(); }
+  if (e.key === 'ArrowRight' && cur < steps.length - 1) { cur++; tab = 0; render(); }
+});
+render();
+</script>
+</body></html>

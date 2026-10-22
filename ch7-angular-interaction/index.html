@@ -1,0 +1,1061 @@
+<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CH7 Angular 互動入門</title><style>
+/* ===========================================================
+   CH2 簡報樣式 — soft-editorial
+   由 output/簡報建置/build.py 內嵌字型後寫入簡報檔案。
+   修改樣式請改本檔，再重跑 build.py。
+   =========================================================== */
+
+/* ===== 內嵌字型子集（離線可用；由 build.py 產生） ===== */
+
+/* ===========================================
+   1. THEME TOKENS
+   =========================================== */
+:root {
+  /* Colors */
+  --paper:        #F2EEDF;
+  --paper-2:      #ECE6D2;
+  --ink:          #2A241B;
+  --ink-soft:     #5C5345;
+  --pink:         #E1A4C2;
+  --lemon:        #D6DD63;
+  --blush:        #E8C9B6;
+  --sage:         #B7C7A8;
+  --lilac:        #C9BEDC;
+  --card:         rgba(255, 255, 255, 0.55);
+  --rule-soft:    rgba(42, 36, 27, 0.18);
+  --rule-medium:  rgba(42, 36, 27, 0.35);
+
+  /* 程式碼語法色（同一色票的加深版） */
+  --code-tag: #8C5A3C;
+  --code-attr: #6E7F45;
+  --code-str: #A64C7C;
+  --code-cmt: #8A8072;
+
+  /* Fonts — 全部內嵌，離線可用 */
+  --f-display: 'Cormorant Garamond', 'LXGW WenKai TC', 'Noto Serif TC', serif;
+  --f-body:    'Work Sans', 'Noto Serif TC', serif;
+  --f-sans:    'Work Sans', 'Noto Sans TC', sans-serif;
+  --f-code:    'JetBrains Mono', 'Noto Sans TC', monospace;
+  --f-icons:   'Material Symbols Outlined';
+
+  /* Type scale（1920×1080 stage；字級下限見 CLAUDE.md 規範） */
+  --t-display:  168px;
+  --t-chapter:  132px;
+  --t-headline: 76px;
+  --t-subhead:  48px;
+  --t-body:     38px;
+  --t-body-sm:  34px;
+  --t-code:     32px;
+  --t-min:      28px;
+  --t-eyebrow:  30px;
+
+  --pad-outer: 80px;
+  --pad-top: 60px;
+  --pad-bottom: 50px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.6s;
+
+  --stage-bg: #1a1713;
+  --slide-bg: var(--paper);
+}
+
+/* ===========================================
+   2. BASE（viewport-base.css 全文強制納入）
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html,
+body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-stage {
+  position: absolute; left: 0; top: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  background: var(--slide-bg, #fff);
+}
+.slide {
+  position: absolute; inset: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  display: block;
+  visibility: hidden; opacity: 0; pointer-events: none;
+  background: var(--slide-bg, #fff);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+
+@media print {
+  html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+  .deck-viewport { position: static; overflow: visible; background: #fff; }
+  .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+  .slide {
+    position: relative; display: block !important; visibility: visible !important;
+    opacity: 1 !important; pointer-events: auto !important;
+    width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   3. SLIDE CHROME
+   =========================================== */
+.eyebrow {
+  position: absolute; top: var(--pad-top); left: var(--pad-outer);
+  font-family: var(--f-sans); font-size: var(--t-eyebrow); font-weight: 400;
+  color: var(--ink);
+}
+.pagedot {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.footer {
+  position: absolute; bottom: var(--pad-bottom); left: var(--pad-outer); right: var(--pad-outer);
+  display: flex; justify-content: space-between;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+
+/* ===========================================
+   4. LAYOUT PRIMITIVES
+   =========================================== */
+.headline {
+  position: absolute; top: 128px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-headline);
+  line-height: 1.24; color: var(--ink);
+}
+.headline em { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+/* 標題下方的極細分隔線（編輯排版手法，非裝飾卡片） */
+.headline::after {
+  content: ''; display: block; width: 160px; height: 1px;
+  background: var(--rule-medium); margin-top: 26px;
+}
+
+.body-split {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; grid-template-columns: 44% minmax(0, 1fr); gap: 44px; align-items: start;
+}
+.body-split--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+/* 範例頁：截圖給 58%，投影時字才看得清楚 */
+.body-split--shot { grid-template-columns: 58% minmax(0, 1fr); }
+.body-full {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; gap: 34px; align-content: start;
+}
+
+/* 要點條列 — 單一墨色短橫線標記，不做彩色圓點循環 */
+.points { list-style: none; display: grid; gap: 24px; }
+.points li {
+  position: relative; padding-left: 40px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.62; color: var(--ink);
+}
+.points li::before {
+  content: ''; position: absolute; left: 0; top: 0.74em;
+  width: 22px; height: 2px; background: var(--ink); opacity: 0.34;
+}
+.points b, .points strong { font-weight: 500; }
+.points code {
+  font-family: var(--f-code); font-size: 0.92em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* ===========================================
+   5. CODE PANEL
+   =========================================== */
+.code-label {
+  display: block; margin-bottom: 14px;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.code {
+  font-family: var(--f-code); font-size: var(--t-code); line-height: 1.62;
+  color: var(--ink);
+  background: var(--card); border-radius: 22px;
+  padding: 38px 42px;
+  white-space: pre; overflow: hidden;
+}
+.code .tag  { color: var(--code-tag); }
+.code .attr { color: var(--code-attr); }
+.code .str  { color: var(--code-str); }
+.code .cmt  { color: var(--code-cmt); }
+.code .ok   { color: var(--code-attr); }
+.code .no   { color: var(--code-str); }
+
+/* 程式碼一律顯示原始字元：JetBrains Mono 的連字會把 <!-- 畫成箭頭、把 === 併成三條長橫線，對初學者是反效果 */
+.code, code, .keys__k, .tbl__el, .dgm .t-code, .dgm .t-mono,
+.code-pane pre, .tsjs pre {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0, "calt" 0;
+}
+
+/* ===========================================
+   6. 推薦資源 — 編輯式出處行（無外框、無彩色邊條）
+   =========================================== */
+.res {
+  margin-top: 34px; padding-top: 18px;
+  border-top: 1px dashed var(--rule-medium);
+}
+.res__kind {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.res__kind::before {
+  font-family: var(--f-icons); font-size: 30px; font-weight: normal;
+  font-style: normal; line-height: 1; color: var(--ink-soft);
+}
+.res__title {
+  display: block; margin-top: 8px;
+  font-family: var(--f-display); font-size: var(--t-body-sm); font-weight: 500; color: var(--ink);
+}
+.res__desc {
+  font-family: var(--f-body); font-size: 28px; line-height: 1.55;
+  color: var(--ink-soft); margin-top: 4px;
+}
+.res--card   .res__kind::before { content: "\e8e7"; }  /* bookmark */
+.res--video  .res__kind::before { content: "\e1c4"; }  /* play_circle */
+.res--mind   .res__kind::before { content: "\e97a"; }  /* account_tree */
+.res--chart  .res__kind::before { content: "\e26b"; }  /* bar_chart */
+.res--audio  .res__kind::before { content: "\f01f"; }  /* headphones */
+.res--slides .res__kind::before { content: "\e41b"; }  /* slideshow */
+.res--quiz   .res__kind::before { content: "\f04c"; }  /* quiz */
+.res--check  .res__kind::before { content: "\e2e6"; }  /* task_alt */
+
+/* ===========================================
+   7. 行內小圖示與狀態藥丸
+   =========================================== */
+.ic {
+  font-family: var(--f-icons); font-style: normal; font-weight: normal;
+  line-height: 1; vertical-align: -0.14em; display: inline-block;
+}
+.ic--warn::before  { content: "\f083"; }  /* warning */
+.ic--check::before { content: "\e2e6"; }  /* task_alt */
+.ic--no::before    { content: "\e888"; }  /* cancel */
+.ic--tip::before   { content: "\e90f"; }  /* lightbulb */
+.ic--info::before  { content: "\e88e"; }  /* info */
+
+.pill {
+  display: inline-block; border-radius: 999px; padding: 1px 18px 3px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink);
+}
+.pill--yes { background: var(--lemon); }
+.pill--no  { background: var(--pink); }
+
+/* ===========================================
+   8. 章節頁 / 封面 / 收尾
+   =========================================== */
+.chapter-num {
+  position: absolute; top: 250px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-weight: 500;
+  font-size: 120px; color: var(--blush);
+}
+.chapter-title {
+  position: absolute; top: 400px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-chapter);
+  line-height: 1.22; color: var(--ink);
+}
+.chapter-title::after {
+  content: ''; display: block; width: 240px; height: 1px;
+  background: var(--rule-medium); margin-top: 34px;
+}
+.chapter-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink-soft);
+}
+
+.cover-kicker {
+  position: absolute; top: 240px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-subhead);
+  color: var(--ink-soft);
+}
+.cover-title {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-display);
+  line-height: 1.16; color: var(--ink);
+}
+.cover-sub {
+  position: absolute; top: 560px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 64px;
+  line-height: 1.3; color: var(--ink-soft);
+}
+.cover-swatches {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  display: flex; gap: 20px;
+}
+.cover-swatches span { width: 56px; height: 56px; border-radius: 50%; display: block; }
+.cover-swatches span:nth-child(1) { background: var(--pink); }
+.cover-swatches span:nth-child(2) { background: var(--lemon); }
+.cover-swatches span:nth-child(3) { background: var(--sage); }
+
+.slide--accent { background: var(--pink); }
+.closer-title {
+  position: absolute; top: 380px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 140px;
+  line-height: 1.2; color: var(--ink);
+}
+.closer-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink);
+}
+
+/* ===========================================
+   9. ANIMATION
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(28px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal:nth-child(1) { transition-delay: 0.08s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: 0.16s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: 0.24s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: 0.32s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: 0.40s; }
+
+/* ===========================================
+   10. DECK CHROME（舞台外）
+   =========================================== */
+.progress {
+  position: fixed; left: 0; bottom: 0; height: 4px; width: 0;
+  background: var(--pink); z-index: 1001; transition: width 0.3s var(--ease);
+}
+.counter {
+  position: fixed; right: 18px; bottom: 14px; z-index: 1001;
+  font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+  position: fixed; top: 16px; left: 16px; z-index: 10001;
+  font-size: 18px; line-height: 1; padding: 10px 12px; border: 0; border-radius: 12px;
+  background: var(--paper); color: var(--ink); cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); outline-offset: 4px; }
+
+/* ===========================================
+   11. 補充元件（備注／步驟／雙平台快捷鍵表）
+   =========================================== */
+/* 頁尾備注：虛線細規 + 小字，用於補充說明 */
+.note {
+  margin-top: 28px; padding-top: 16px;
+  border-top: 1px dashed var(--rule-medium);
+  font-family: var(--f-body); font-size: var(--t-min); line-height: 1.6;
+  color: var(--ink-soft);
+}
+.note b { color: var(--ink); font-weight: 500; }
+.note code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 編號步驟：斜體羅馬數字，符合 soft-editorial 的步驟記號 */
+.steps { list-style: none; counter-reset: step; display: grid; gap: 18px; }
+.steps li {
+  position: relative; padding-left: 76px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.6; color: var(--ink);
+}
+.steps li::before {
+  counter-increment: step; content: counter(step, lower-roman) ".";
+  position: absolute; left: 0; top: 0;
+  font-family: var(--f-display); font-style: italic; font-size: 32px; color: var(--ink-soft);
+}
+.steps code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 雙平台快速鍵表 */
+.keys { display: grid; gap: 0; }
+.keys__row {
+  display: grid; grid-template-columns: 1fr 300px 300px; gap: 18px;
+  align-items: baseline; padding: 13px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-min);
+}
+.keys__row:last-child { border-bottom: 0; }
+.keys__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.keys__fn { font-family: var(--f-body); color: var(--ink); }
+.keys__k  { font-family: var(--f-code); font-size: var(--t-min); color: var(--code-tag); }
+
+/* 行內連結（CodePen、數位學習平台等） */
+.points a, .note a, .res__desc a, .code a {
+  color: var(--code-tag);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+/* 頁尾備注：佔用固定底槽，主體區域讓出空間 */
+.body-split--note, .body-full--note { bottom: 232px; }
+.note--bottom {
+  position: absolute; left: var(--pad-outer); right: var(--pad-outer); bottom: 120px;
+  margin: 0;
+}
+
+/* ===========================================
+   12. 內容表格（常用元素速查）
+   =========================================== */
+.tbl { display: grid; }
+.tbl__row {
+  display: grid; grid-template-columns: 420px 1fr 1.3fr; gap: 28px;
+  align-items: baseline; padding: 15px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-body);
+}
+.tbl__row:last-child { border-bottom: 0; }
+.tbl__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.tbl__el { font-family: var(--f-code); color: var(--code-tag); }
+.tbl__use { font-family: var(--f-body); line-height: 1.45; color: var(--ink); }
+.tbl__row--head .tbl__el { color: var(--ink-soft); }
+
+/* ===========================================
+   13. 作業範例的成品截圖
+   =========================================== */
+.shot {
+  display: block; width: auto; max-width: 100%; max-height: 560px;
+  border-radius: 12px; background: #fff;
+}
+.shot-frame {
+  background: var(--card); border-radius: 22px; padding: 22px;
+  display: inline-block; max-width: 100%;
+}
+
+/* ===========================================
+   14. 內嵌圖解（語彙取自 archify：格線底、泳道標頭、
+       節點卡、語意色票、箭頭先用 marker 定義）
+       —— 只用 CSS class 上色，不寫 inline fill，
+          換主題時整組跟著變
+   =========================================== */
+.dgm { display: block; width: 100%; height: auto; }
+
+.dgm .d-grid   { fill: none; stroke: rgba(42, 36, 27, 0.07); stroke-width: 1; }
+
+/* 節點卡：一律「先遮罩、再上色」兩層，避免半透明底色讓線穿過去 */
+.dgm .d-mask   { fill: var(--paper); stroke: none; }
+.dgm .d-card   { fill: rgba(255, 255, 255, 0.72); stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-margin { fill: rgba(232, 201, 182, 0.40); stroke: var(--blush); stroke-width: 2; stroke-dasharray: 9 7; }
+.dgm .d-border { fill: none; stroke: var(--ink); stroke-width: 4; }
+.dgm .d-padding{ fill: rgba(183, 199, 168, 0.45); stroke: var(--sage); stroke-width: 2; }
+.dgm .d-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-hot    { fill: rgba(225, 164, 194, 0.35); stroke: var(--pink); stroke-width: 2; }
+.dgm .d-cool   { fill: rgba(201, 190, 220, 0.35); stroke: var(--lilac); stroke-width: 2; }
+.dgm .d-soft   { fill: rgba(214, 221, 99, 0.32);  stroke: var(--lemon); stroke-width: 2; }
+
+/* 文字：字級已按「1920×1080 舞台的 28px 下限」放大，不沿用 archify 的 7–12px */
+.dgm .t-head { font-family: var(--f-display); font-style: italic; font-size: 30px; fill: var(--ink-soft); }
+.dgm .t-lab  { font-family: var(--f-sans);  font-size: 30px; fill: var(--ink); }
+.dgm .t-bold { font-family: var(--f-sans);  font-size: 30px; font-weight: 700; fill: var(--ink); }
+.dgm .t-code { font-family: var(--f-code);  font-size: 28px; fill: var(--code-tag); }
+.dgm .t-note { font-family: var(--f-body);  font-size: 28px; fill: var(--ink-soft); }
+.dgm .t-mono { font-family: var(--f-code);  font-size: 28px; fill: var(--ink-soft); }
+
+/* 色票小方塊（圖例用） */
+.dgm .sw-margin { fill: var(--blush); }
+.dgm .sw-border { fill: var(--ink); }
+.dgm .sw-padding{ fill: var(--sage); }
+.dgm .sw-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+
+/* 流程線與箭頭（marker 在各圖的 <defs> 內定義） */
+.dgm .a-line     { fill: none; stroke: var(--ink-soft); stroke-width: 2.5; }
+.dgm .a-line-soft{ fill: none; stroke: var(--rule-medium); stroke-width: 2; }
+.dgm .d-arrowhead{ fill: var(--ink-soft); }
+
+/* 原位／預設位置的虛線殘影 */
+.dgm .d-ghost { fill: none; stroke: var(--rule-medium); stroke-width: 2; stroke-dasharray: 7 7; }
+
+/* 小標籤（狀態、勝出、標記用） */
+.dgm .d-pill   { fill: rgba(214, 221, 99, 0.55); stroke: var(--lemon); stroke-width: 1.5; }
+.dgm .d-pill-w { fill: rgba(225, 164, 194, 0.45); stroke: var(--pink); stroke-width: 1.5; }
+
+/* 面板底色（比較用的分格） */
+.dgm .d-panel  { fill: rgba(255, 255, 255, 0.55); stroke: var(--rule-soft); stroke-width: 1.5; }
+.dgm .d-slot   { fill: rgba(42, 36, 27, 0.06); stroke: var(--rule-medium); stroke-width: 1.5; }
+
+
+/* ===========================================
+   CH5 70-page JavaScript deck additions
+   =========================================== */
+.lesson-tags{position:absolute;top:60px;left:250px;right:250px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.lesson-tags span{border:1px solid var(--rule-soft);border-radius:999px;padding:8px 18px;background:rgba(255,255,255,.48)}.ch5-grid{position:absolute;top:265px;left:80px;right:80px;bottom:118px;display:grid;grid-template-columns:43% 57%;gap:34px;align-items:start}.visual-area{display:grid;gap:14px;align-content:start}.ch5-grid.no-visual{grid-template-columns:1fr}.ch5-copy{display:grid;gap:22px}.mini-lead{font-family:var(--f-display);font-size:42px;line-height:1.35;color:var(--ink)}.lesson-points{list-style:none;display:grid;gap:16px}.lesson-points li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:34px;line-height:1.48;color:var(--ink)}.lesson-points li:before{content:'';position:absolute;left:0;top:.72em;width:18px;height:2px;background:var(--ink);opacity:.32}.lesson-links{list-style:none;display:grid;grid-template-columns:1fr;gap:12px;margin:22px 0 0;padding:0}.lesson-links--multi{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-links a{display:flex;align-items:center;gap:14px;font-family:var(--f-sans);font-size:28px;line-height:1.32;color:var(--ink);text-decoration:none;border:1.5px solid var(--rule-medium);border-radius:14px;padding:12px 20px;background:rgba(255,255,255,.62);transition:background .2s var(--ease),border-color .2s var(--ease)}.lesson-links a::before{content:'開啟';flex:0 0 auto;font-size:26px;font-weight:700;letter-spacing:1px;color:var(--paper);background:var(--ink);border-radius:999px;padding:2px 13px}.lesson-links a:hover{background:rgba(214,221,99,.4);border-color:var(--ink)}.remember{position:absolute;left:80px;right:80px;bottom:50px;border-top:1px solid var(--rule-soft);padding-top:12px;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.codepen-card{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:14px}.codepen-card--js{grid-template-columns:1fr}.code-pane{background:rgba(255,255,255,.72);border:1.5px solid var(--rule-medium);border-radius:18px;overflow:hidden}.code-pane.js{grid-column:1 / -1}.code-pane__hd{font-family:var(--f-display);font-style:italic;font-size:30px;line-height:1.3;padding:8px 16px;border-bottom:1px solid var(--rule-soft);display:flex;align-items:center;justify-content:space-between;gap:14px;color:var(--ink-soft)}.code-pane__tag{font-family:var(--f-sans);font-style:normal;font-size:28px;line-height:1.15;border:1.5px solid var(--rule-medium);border-radius:999px;padding:0 14px;background:rgba(214,221,99,.42);color:var(--ink)}.code-pane pre{font-family:var(--f-code);font-size:30px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px 16px;max-height:270px;overflow:hidden}.code-pane.js pre{font-size:31px;max-height:470px}.code-pane .todo,.code-pane .code-key{background:rgba(214,221,99,.5);border-radius:4px;box-shadow:0 0 0 3px rgba(214,221,99,.5);box-decoration-break:clone;-webkit-box-decoration-break:clone}.diagram-stepper{background:rgba(255,255,255,.52);border:1px solid var(--rule-soft);border-radius:26px;padding:28px;min-height:520px;display:grid;grid-template-rows:auto 1fr auto;gap:24px}.diagram-title{font-family:var(--f-display);font-size:42px;color:var(--ink)}.diagram-flow{display:flex;align-items:center;gap:20px;justify-content:center;flex-wrap:wrap}.flow-node{min-width:185px;min-height:110px;border:1px solid var(--rule-medium);border-radius:22px;display:grid;place-items:center;text-align:center;padding:18px;font-family:var(--f-sans);font-size:30px;line-height:1.25;background:rgba(255,255,255,.44);opacity:.44;transition:transform .35s var(--ease),opacity .35s var(--ease),background .35s var(--ease)}.flow-node.is-on{opacity:1;background:rgba(214,221,99,.38)}.flow-node.is-current{transform:translateY(-8px);outline:4px solid rgba(166,76,124,.35)}.flow-arrow{font-family:var(--f-display);font-size:42px;color:var(--ink-soft)}.diagram-controls{display:flex;gap:12px;justify-content:flex-end}.diagram-controls button{font-family:var(--f-sans);font-size:24px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.52);border-radius:999px;padding:8px 18px;color:var(--ink)}.visual-area.duo .diagram-stepper{min-height:0;padding:10px 18px;gap:10px;display:flex;flex-wrap:wrap;align-items:center}.visual-area.duo .diagram-title{flex:1 1 auto;font-size:32px}.visual-area.duo .diagram-controls{flex:0 0 auto}.visual-area.duo .diagram-controls button{font-size:20px;padding:5px 12px}.visual-area.duo .diagram-flow{flex:1 1 100%;gap:12px}.visual-area.duo .flow-node{min-width:145px;min-height:84px;font-size:25px;padding:10px}.visual-area.duo .flow-arrow{font-size:34px}.visual-area.has-code:not(.ex){align-self:stretch;display:flex;flex-direction:column;gap:14px}.visual-area.has-code:not(.ex) .codepen-card{flex:1 1 auto;min-height:0}.visual-area.has-code:not(.ex) .code-pane{display:flex;flex-direction:column;min-height:0}.visual-area.has-code:not(.ex) .code-pane pre{flex:1 1 auto;min-height:0;max-height:none}.visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:34px}.code-pane pre .code-body{display:block;width:100%}.visual-area.has-code:not(.ex) .diagram-stepper{flex:0 0 auto}.visual-area.duo .code-pane pre{font-size:34px}.visual-area.ex .code-pane pre{font-size:30px;line-height:1.45;max-height:250px}.visual-area.ex .code-pane.js pre{font-size:32px;max-height:320px}.slide--cover .cover-title{font-family:var(--f-display);font-size:134px;line-height:1.02;position:absolute;left:90px;right:90px;top:270px}.slide--cover .cover-sub{font-family:var(--f-body);font-size:46px;position:absolute;left:90px;right:90px;top:575px}.cover-kicker{position:absolute;left:90px;top:150px;font-family:var(--f-sans);font-size:32px;color:var(--ink-soft)}@media (prefers-reduced-motion: reduce){.flow-node{transition:none}.flow-node.is-current{transform:none}}
+
+
+/* ===========================================
+   CH5 rich diagram additions
+   =========================================== */
+.diagram-stepper.rich{min-height:0;padding:18px 20px;gap:12px}
+.diagram-stepper.rich .diagram-title{font-size:36px}
+.diagram-stepper.rich .dgm{width:100%;height:auto;max-height:529px}
+.dgm .dstep{opacity:0;transform:translateY(14px);transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.dgm .dstep.is-on{opacity:1;transform:translateY(0)}
+.dgm .d-ring{opacity:0;fill:none;stroke:var(--pink);stroke-width:3;transition:opacity .3s var(--ease)}
+.dgm .dstep.is-current .d-ring{opacity:1;animation:dgmPulse 1.6s ease-in-out infinite}
+.dgm .dstep.is-on .a-line{stroke-dasharray:10 8;animation:dgmFlow 1.1s linear infinite}
+.dgm .d-cursor{fill:var(--ink);stroke:#fff;stroke-width:1.5}
+.dgm .d-dim{opacity:.42}
+.dgm .d-x{fill:none;stroke:var(--pink);stroke-width:6;stroke-linecap:round}
+.dgm .d-ripple{fill:none;stroke:var(--pink);stroke-width:2;opacity:.55;transform-box:fill-box;transform-origin:center;animation:dgmRipple 1.8s ease-out infinite}
+.dgm .d-ripple2{animation-delay:.4s;opacity:.3}
+/* duo 頁：圖解只佔一條窄帶，需與上方 code 卡共用 697px 預算，故收緊留白與標題行高 */
+.visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:6px}
+.visual-area.duo .diagram-stepper.rich .diagram-title{font-size:32px;line-height:1.2}
+.visual-area.duo .diagram-stepper.rich .dgm{max-height:122px}
+.dgm-dialog{position:fixed;inset:0;display:none;place-items:center;background:rgba(42,36,27,.34);z-index:30}
+.diagram-stepper.rich.is-dialog .dgm-dialog{display:grid}
+.dgm-dialog__card{width:1280px;max-height:820px;overflow:auto;background:var(--paper);border:1px solid var(--rule-medium);border-radius:28px;padding:38px 46px;box-shadow:0 26px 64px rgba(42,36,27,.3)}
+.dgm-dialog__hd{display:flex;justify-content:space-between;align-items:center;gap:24px;border-bottom:1px solid var(--rule-soft);padding-bottom:18px;margin-bottom:24px;font-family:var(--f-display);font-size:46px;color:var(--ink)}
+.dgm-dialog__hd button{font-family:var(--f-sans);font-size:26px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.6);border-radius:999px;padding:8px 22px;color:var(--ink);cursor:pointer}
+.dgm-dialog__body{display:grid;grid-template-columns:1fr 1fr;gap:28px 44px}
+.dgm-dialog__sec{display:grid;gap:10px;align-content:start}
+.dgm-dialog__h{margin:0;font-family:var(--f-sans);font-size:32px;font-weight:700;color:var(--ink)}
+.dgm-dialog__sec ul{list-style:none;display:grid;gap:8px;margin:0;padding:0}
+.dgm-dialog__sec li{position:relative;padding-left:28px;font-family:var(--f-body);font-size:28px;line-height:1.42;color:var(--ink-soft)}
+.dgm-dialog__sec li:before{content:'';position:absolute;left:0;top:.72em;width:14px;height:2px;background:var(--ink);opacity:.35}
+@keyframes dgmPulse{0%,100%{opacity:.9}50%{opacity:.3}}
+@keyframes dgmFlow{to{stroke-dashoffset:-36}}
+@keyframes dgmRipple{0%{transform:scale(.6);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dgm .dstep{transition:none;transform:none}.dgm .dstep.is-on{opacity:1}.dgm .dstep.is-current .d-ring,.dgm .dstep.is-on .a-line,.dgm .d-ripple{animation:none}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===========================================
+   CH6 additions
+   =========================================== */
+/* 固定單列高度，避免視覺欄隨內容長高而溢出 697px 預算 */
+.ch5-grid.ch6-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch6-grid>.visual-area{min-height:0;align-self:stretch}
+.ch5-grid.ch6-grid.tsjs-grid{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:16px}
+
+/* 程式碼卡：CH6 統一 32px（符合字級下限），收緊留白以容納較長片段 */
+.ch5-grid.ch6-grid .code-pane__hd{font-size:28px;padding:6px 16px}
+.ch5-grid.ch6-grid .code-pane pre{font-size:32px;line-height:1.4;padding:12px 16px}
+.ch5-grid.ch6-grid .visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:32px;line-height:1.35}
+.ch5-grid.ch6-grid .visual-area.duo .code-pane pre{font-size:32px;line-height:1.35}
+
+/* duo 圖解窄帶再收緊，讓程式碼卡有更多高度 */
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:4px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .diagram-title{font-size:28px;line-height:1.15}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .dgm{max-height:100px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 10px}
+
+/* TS / JS 並排對照 */
+.tsjs{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-content:start}
+.tsjs__col{border:1.5px solid var(--rule-medium);border-radius:14px;background:rgba(255,255,255,.72);overflow:hidden}
+.tsjs__hd{padding:6px 16px;border-bottom:1px solid var(--rule-soft)}
+.tsjs__pill{font-family:var(--f-sans);font-size:30px;font-weight:700;color:var(--ink)}
+.tsjs__col--js .tsjs__pill{color:var(--ink-soft)}
+.tsjs pre{margin:0;padding:12px 18px;font-family:var(--f-code);font-size:32px;line-height:1.42;white-space:pre-wrap;color:var(--ink)}
+.tsjs__note{grid-column:1/-1;font-size:30px;line-height:1.4;color:var(--ink-soft);border-left:4px solid var(--pink);padding-left:16px;margin:4px 0 0}
+.visual-area.tsjs-area{align-content:start;align-self:start}
+
+/* --- diagram autoplay（CH5／CH6 共用；deck.css 由 build.py 注入每一份簡報） --- */
+.diagram-controls [data-diagram-action="toggle"]{min-width:104px}
+.diagram-stepper.is-paused .diagram-controls [data-diagram-action="toggle"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.diagram-stepper.is-paused .dgm{opacity:.82}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls{gap:8px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 9px}
+
+/* ===========================================
+   CH9 additions
+   =========================================== */
+/* 與 CH6 同型的固定列高，避免視覺欄把 grid 撐高 */
+.ch5-grid.ch9-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch9-grid>.visual-area{min-height:0;align-self:stretch}
+/* 圖解不 letterbox：viewBox 高 ≤470，容器寬約 984 → 縮放 1.05，字級不低於 30px */
+.ch5-grid.ch9-grid .diagram-stepper.rich .dgm{max-height:500px}
+
+/* 說明卡（句型、範例骨架、可以／不可以） */
+.panel{background:rgba(255,255,255,.62);border:1.5px solid var(--rule-soft);border-radius:22px;padding:24px 28px}
+.panel__hd{margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--rule-soft);
+  font-family:var(--f-display);font-size:34px;color:var(--ink-soft)}
+.panel p{margin:0 0 12px;font-family:var(--f-body);font-size:30px;line-height:1.5;color:var(--ink)}
+.panel p:last-child{margin-bottom:0}
+.panel b{font-weight:500}
+.panel ul{list-style:none;display:grid;gap:10px;margin:0;padding:0}
+.panel li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:30px;line-height:1.45;color:var(--ink)}
+.panel li::before{content:'';position:absolute;left:0;top:.72em;width:16px;height:2px;background:var(--ink);opacity:.32}
+
+/* 兩欄對照卡 */
+.ch9-two{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+
+/* 窄欄用的小鍵值表（範例骨架） */
+.ktbl{display:grid;margin-top:6px}
+.ktbl__row{display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;
+  padding:11px 0;border-bottom:1px dashed var(--rule-soft)}
+.ktbl__row:last-child{border-bottom:0}
+.ktbl__k{font-family:var(--f-sans);font-size:28px;line-height:1.4;color:var(--ink-soft)}
+.ktbl__v{font-family:var(--f-body);font-size:30px;line-height:1.4;color:var(--ink)}
+
+/* 全寬表格（規格表、技術選型、評分規準） */
+.ch9-tbl{display:grid}
+.ch9-tbl__row{display:grid;grid-template-columns:var(--cols);gap:26px;align-items:baseline;
+  padding:13px 0;border-bottom:1px dashed var(--rule-soft);
+  font-family:var(--f-body);font-size:38px;line-height:1.42;color:var(--ink)}
+.ch9-tbl__row:last-child{border-bottom:0}
+.ch9-tbl__row>span:first-child{font-family:var(--f-sans);font-size:30px;color:var(--ink-soft)}
+.ch9-tbl__row--head{border-bottom:1px solid var(--rule-medium);font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}
+.ch9-tbl__row--head>span:first-child{font-size:28px}
+
+/* 兩欄檢查清單 */
+.ch9-chk{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 44px;margin:0;padding:0}
+.ch9-chk li{position:relative;padding-left:52px;font-family:var(--f-body);font-size:34px;line-height:1.4;color:var(--ink)}
+.ch9-chk li::before{content:"\e2e6";font-family:var(--f-icons);font-size:34px;line-height:1;
+  position:absolute;left:0;top:4px;color:var(--ink-soft)}
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+/* 真實成品截圖 */
+.shot { margin: 0; border: 1.5px solid var(--rule-medium); border-radius: 18px;
+  overflow: hidden; background: #fff; box-shadow: 0 14px 34px rgba(42,36,27,.14); }
+.shot img { display: block; width: 100%; height: auto; }
+.shot figcaption { font-family: var(--f-sans); font-size: 28px; line-height: 1.35;
+  padding: 10px 18px; color: var(--ink-soft); border-top: 1px solid var(--rule-soft); }
+.shots3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-content: start; }
+.shots3 .shot { border-radius: 14px; }
+.ch7-exgrid { grid-template-columns: 50% 50%; }
+/* 圖解頁：圖解在視覺欄內垂直居中，避免下方留一大片空白 */
+.visual-area > .diagram-stepper.rich { align-self: center; }
+.ch7-exgrid .visual-area { align-self: start; }
+
+/* 封面：左文字、右成品截圖 */
+.slide--cover.has-shot .cover-title { right: auto; width: 880px; font-size: 104px; line-height: 1.16; }
+.slide--cover.has-shot .cover-sub { right: auto; width: 820px; top: 650px; font-size: 38px; }
+.cover-shot { position: absolute; right: 80px; top: 210px; width: 780px; margin: 0;
+  border-radius: 22px; overflow: hidden; border: 1.5px solid var(--rule-medium);
+  box-shadow: 0 24px 60px rgba(42,36,27,.20); background: #fff; }
+.cover-shot img { display: block; width: 100%; height: auto; }
+
+</style><link rel="stylesheet" href="../assets/deck-fonts.css">
+<link rel="stylesheet" href="../assets/deck-site.css">
+</head><body><div class="deck-viewport"><main class="deck-stage" id="deckStage"><section class="slide slide--cover has-shot active visible" data-label="Angular 互動入門：下課後的宵夜地圖"><p class="cover-kicker">CH7 · Angular 互動入門</p><h1 class="cover-title">Angular 互動入門：下課後的宵夜地圖</h1><p class="cover-sub">用 signal 管資料、用 @if／@for 排畫面，做一張會動的宵夜菜單</p><figure class="cover-shot"><img src="assets/ex-counter.jpg" alt="本課成品：宵夜加點器"></figure><div class="footer"><span>互動式網頁設計</span><span>01/62</span></div></section><section class="slide" data-label="下課後，誰決定吃什麼"><p class="eyebrow">CH7 · 02</p><p class="pagedot">02/62</p><h2 class="headline">下課後，誰決定吃什麼</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：成果預覽</span></div><div class="ch5-grid ch6-grid ch7-exgrid"><div class="ch5-copy"><p class="mini-lead">下課十點半，站在騎樓下，手機裡有五家店——你先看價格，還是先看還開著沒？</p><ul class="lesson-points"><li>這張菜單會做三件事：依預算篩選、看店家開沒開、把想吃的收藏起來。</li><li>全部用本機的三筆資料，不需要後端、不需要帳號。</li><li>做完可以給同學操作，這就是本週的成果。</li></ul></div><div class="visual-area"><figure class="shot"><img src="assets/ex-favorite.jpg" alt="收藏 m1、m2：數量 2，愛心變實心" loading="lazy"><figcaption>收藏 m1、m2：數量 2，愛心變實心</figcaption></figure></div></div><div class="remember">這頁記住：先想「使用者要做什麼決定」，再決定畫面要有什麼。</div></section><section class="slide" data-label="投票：80 元能吃什麼"><p class="eyebrow">CH7 · 03</p><p class="pagedot">03/62</p><h2 class="headline">投票：80 元能吃什麼</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：條件改變結果</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">同樣三筆資料，預算換了，留下的卡片就換了。</p><ul class="lesson-points"><li>預算 50 元：三筆都超過，畫面應該顯示「吃不到」。</li><li>預算 80 元：炒飯 60、水餃 80 留下，牛肉麵 120 出局。</li><li>預算 120 元：三筆全部留下。</li><li>條件不同、結果不同——這就是「資料驅動畫面」。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="B" data-step="0"><div class="diagram-title">圖解 B｜80 元的門檻</div><svg class="dgm" viewBox="0 0 940 430" role="img" aria-label="80 元的門檻"><defs><pattern id="rg-B" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-B" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="430" fill="url(#rg-B)"/><rect class="d-panel" x="20" y="20" width="900" height="120" rx="12"/><text class="t-bold" x="44" y="66" text-anchor="start">預算 80 元</text><text class="t-note" x="44" y="112" text-anchor="start">只看「價格 ≤ 80」的餐點</text><path class="a-line" d="M 470 152 L 470 196" marker-end="url(#ra-B)"/><rect class="d-soft" x="40" y="206" width="230" height="150" rx="12"/><text class="t-bold" x="155.0" y="262" text-anchor="middle">炒飯</text><text class="t-mono" x="155.0" y="310" text-anchor="middle">60 元</text><text class="t-note" x="155.0" y="344" text-anchor="middle">留下</text><rect class="d-soft" x="355" y="206" width="230" height="150" rx="12"/><text class="t-bold" x="470.0" y="262" text-anchor="middle">水餃</text><text class="t-mono" x="470.0" y="310" text-anchor="middle">80 元</text><text class="t-note" x="470.0" y="344" text-anchor="middle">留下</text><rect class="d-slot" x="670" y="206" width="230" height="150" rx="12"/><text class="t-bold" x="785.0" y="262" text-anchor="middle">牛肉麵</text><text class="t-mono" x="785.0" y="310" text-anchor="middle">120 元</text><text class="t-note" x="785.0" y="344" text-anchor="middle">出局</text><text class="t-note" x="470" y="402" text-anchor="middle">條件寫一次，三張卡自己決定要不要留</text></svg></div></div></div><div class="remember">這頁記住：畫面不是寫死的；同樣的模板，餵不同的資料就長得不一樣。</div></section><section class="slide" data-label="今天帶走一張會動的菜單"><p class="eyebrow">CH7 · 04</p><p class="pagedot">04/62</p><h2 class="headline">今天帶走一張會動的菜單</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：成功標準</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">今晚只要求三件事，做到就有一張能展示的菜單。</p><ul class="lesson-points"><li>改得動：把店名、餐名、價格換成你自己的。</li><li>會互動：加點、重設、營業切換至少一個真的能用。</li><li>帶得走：關掉分頁再打開，修改還在。</li><li>六題是選做，不是作業；先完成主做的加點器。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="C" data-step="0"><div class="diagram-title">圖解 C｜三個里程碑</div><svg class="dgm" viewBox="0 0 940 420" role="img" aria-label="三個里程碑"><defs><pattern id="rg-C" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-C" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="420" fill="url(#rg-C)"/><rect class="d-card" x="40" y="26" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="26" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="72" text-anchor="start">改得動</text><text class="t-note" x="76" y="110" text-anchor="start">店名、餐名、價格換成自己的</text><path class="a-line-soft" d="M 470 130 L 470 150"/><rect class="d-card" x="40" y="150" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="150" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="196" text-anchor="start">會互動</text><text class="t-note" x="76" y="234" text-anchor="start">加點、重設、營業切換至少一個能用</text><path class="a-line-soft" d="M 470 254 L 470 274"/><rect class="d-card" x="40" y="274" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="274" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="320" text-anchor="start">帶得走</text><text class="t-note" x="76" y="358" text-anchor="start">關掉分頁再開，修改還在</text><text class="t-note" x="470" y="410" text-anchor="middle">今晚的驗收就這三條</text></svg></div></div></div><div class="remember">這頁記住：三個里程碑：改得動、會互動、帶得走。</div></section><section class="slide" data-label="元件怎麼被 App 使用"><p class="eyebrow">CH7 · 05</p><p class="pagedot">05/62</p><h2 class="headline">元件怎麼被 App 使用</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：Standalone 元件概念</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">預設的 App 已經是根元件；新增 MealCard 後，要讓 App 認得它、再把它放進模板。</p><ul class="lesson-points"><li>App：原本就存在，bootstrapApplication(App) 保持不動。</li><li>MealCard：新增的子元件，不會因為建立完成就自己出現在畫面。</li><li>概念先記三步：import → imports 註冊 → selector 放進模板；下一頁再實際操作。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="D" data-step="0"><div class="diagram-title">圖解 D｜元件怎麼被 App 使用</div><svg class="dgm" viewBox="0 0 940 450" role="img" aria-label="元件怎麼被 App 使用"><defs><pattern id="rg-D" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-D" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="450" fill="url(#rg-D)"/><rect class="d-card" x="30" y="78" width="250" height="176" rx="12"/><text class="t-bold" x="155" y="136" text-anchor="middle">① import</text><text class="t-note" x="155" y="198" text-anchor="middle">把 MealCard 引進來</text><path class="a-line" d="M 288 166 L 337 166" marker-end="url(#ra-D)"/><rect class="d-soft" x="345" y="78" width="250" height="176" rx="12"/><text class="t-bold" x="470" y="136" text-anchor="middle">② imports</text><text class="t-note" x="470" y="198" text-anchor="middle">告訴 App「我會用它」</text><path class="a-line" d="M 603 166 L 652 166" marker-end="url(#ra-D)"/><rect class="d-hot" x="660" y="78" width="250" height="176" rx="12"/><text class="t-bold" x="785" y="136" text-anchor="middle">③ selector</text><text class="t-note" x="785" y="198" text-anchor="middle">把元件放進模板</text><rect class="d-panel" x="120" y="302" width="700" height="86" rx="12"/><text class="t-note" x="470" y="354" text-anchor="middle">App 已存在；bootstrapApplication(App) 不需要改</text><text class="t-note" x="470" y="430" text-anchor="middle">下一頁再實際輸入 CLI 指令與程式碼</text></svg></div></div></div><div class="remember">這頁記住：建立元件不等於畫面會出現；App 要先引入、註冊，再使用 selector。</div></section><section class="slide" data-label="跟著做：新增並使用 MealCard"><p class="eyebrow">CH7 · 06</p><p class="pagedot">06/62</p><h2 class="headline">跟著做：新增並使用 MealCard</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：CLI 元件操作</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">現在才開始操作：用 Angular CLI 建立 MealCard，再把它接進既有 App。</p><ul class="lesson-points"><li>先做 ①②：確認 CLI 真的建立 src/app/meal-card/，而且 main.ts 找得到 MealCard。</li><li>再做 ③④：註冊後把 selector 放進模板，看到畫面才算接成功。</li><li>原本的 App 與 bootstrapApplication(App) 都不用重建、也不用搬動。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="E" data-step="0"><div class="diagram-title">圖解 E｜CLI 四步操作</div><svg class="dgm" viewBox="0 0 940 460" role="img" aria-label="CLI 四步操作"><defs><pattern id="rg-E" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-E" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="460" fill="url(#rg-E)"/><rect class="d-card" x="48" y="22" width="844" height="82" rx="12"/><text class="t-bold" x="78" y="56" text-anchor="start">① CLI 建立</text><text class="t-code" x="862" y="80" text-anchor="end">npx ng g c meal-card --skip-tests</text><path class="a-line" d="M 470 112 L 470 134" marker-end="url(#ra-E)"/><rect class="d-soft" x="48" y="122" width="844" height="82" rx="12"/><text class="t-bold" x="78" y="156" text-anchor="start">② import</text><text class="t-code" x="862" y="180" text-anchor="end">from &#x27;./app/meal-card/meal-card&#x27;</text><path class="a-line" d="M 470 212 L 470 234" marker-end="url(#ra-E)"/><rect class="d-card" x="48" y="222" width="844" height="82" rx="12"/><text class="t-bold" x="78" y="256" text-anchor="start">③ imports 註冊</text><text class="t-code" x="862" y="280" text-anchor="end">imports: [MealCard]</text><path class="a-line" d="M 470 312 L 470 334" marker-end="url(#ra-E)"/><rect class="d-hot" x="48" y="322" width="844" height="82" rx="12"/><text class="t-bold" x="78" y="356" text-anchor="start">④ template 使用</text><text class="t-code" x="862" y="380" text-anchor="end">&lt;app-meal-card /&gt;</text><text class="t-note" x="470" y="438" text-anchor="middle">建立完成後，再打開 meal-card.html 改內容</text></svg></div></div></div><div class="remember">這頁記住：操作順序：CLI 建立 → import → imports → selector；最後才改子元件模板。</div></section><section class="slide" data-label="從上週的 JS 搬過來"><p class="eyebrow">CH7 · 07</p><p class="pagedot">07/62</p><h2 class="headline">從上週的 JS 搬過來</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：JS 與框架</span></div><div class="ch5-grid ch6-grid tsjs-grid"><div class="ch5-copy"><p class="mini-lead">上週你用 textContent 改畫面；這週同一件事，換 Angular 幫你記住。</p><ul class="lesson-points"><li>上週：抓元素 → 改 textContent → 自己記得哪裡要更新。</li><li>這週：宣告資料 → 模板寫 {{ }} → 資料變了畫面自己變。</li><li>事件、資料、畫面三站沒變，變的是「誰負責更新」。</li><li>你不用再 querySelector，也不用記得同步幾個地方。</li></ul></div><div class="visual-area tsjs-area"><div class="tsjs"><div class="tsjs__col"><div class="tsjs__hd"><span class="tsjs__pill">上週 JavaScript</span></div><pre><span class="code-body">let count = 0;
+btn.onclick = () =&gt; {
+  count = count + 1;
+  num.textContent = count;
+};</span></pre></div><div class="tsjs__col tsjs__col--js"><div class="tsjs__hd"><span class="tsjs__pill">這週 Angular</span></div><pre><span class="code-body">count = signal(0);
+
+add() {
+  this.count.set(this.count() + 1);
+}</span></pre></div></div></div></div><div class="remember">這頁記住：框架不是新語言，是幫你把「更新畫面」這件事接走。</div></section><section class="slide" data-label="三個檔案各管一件事"><p class="eyebrow">CH7 · 08</p><p class="pagedot">08/62</p><h2 class="headline">三個檔案各管一件事</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：檔案分工</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">一個元件通常就三個檔案，各管一件事。</p><ul class="lesson-points"><li>app.ts：資料與行為（signal、方法）。</li><li>app.html：畫面結構（標籤、{{ }}、@if、@for）。</li><li>app.css：外觀（顏色、間距、字級）。</li><li>main.ts 只負責啟動 App；前面接好後，本週不用再改。</li></ul></div><div class="visual-area has-code"><div class="codepen-card"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;!-- app.html：畫面結構 --&gt;
+&lt;h1&gt;{{ shopName }}&lt;/h1&gt;
+&lt;p&gt;{{ price }} 元&lt;/p&gt;</span></pre></div><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">CSS</span><span class="code-pane__tag">樣式</span></div><pre><span class="code-body">/* app.css：外觀 */
+h1 { font-size: 40px; }
+.price { color: #2f5d50; }</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">// app.ts：資料與方法
+export class App {
+  shopName = &#x27;晚班補給站&#x27;;
+  price = 80;
+}</span></pre></div></div></div></div><div class="remember">這頁記住：要改字找 html、改行為找 ts、改外觀找 css。</div></section><section class="slide" data-label="保存不是留著分頁"><p class="eyebrow">CH7 · 09</p><p class="pagedot">09/62</p><h2 class="headline">保存不是留著分頁</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：保存</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">分頁關掉就沒了。今晚離開前一定要做一次「重開確認」。</p><ul class="lesson-points"><li>有登入：按 Fork／Save 存成自己的副本，另開網址確認修改還在。</li><li>沒登入：下載專案 ZIP，存到自己的雲端，確認檔案真的在。</li><li>只留著分頁、截圖、教室電腦，都不算保存。</li><li>下週有獨立起始專案，不會因為這週沒存好就接不上。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="H" data-step="0"><div class="diagram-title">圖解 H｜保存三步</div><svg class="dgm" viewBox="0 0 940 420" role="img" aria-label="保存三步"><defs><pattern id="rg-H" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-H" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="420" fill="url(#rg-H)"/><rect class="d-card" x="40" y="26" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="26" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="72" text-anchor="start">① 存</text><text class="t-note" x="76" y="110" text-anchor="start">Fork／Save，或下載 ZIP 到自己的雲端</text><path class="a-line-soft" d="M 470 130 L 470 150"/><rect class="d-card" x="40" y="150" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="150" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="196" text-anchor="start">② 關</text><text class="t-note" x="76" y="234" text-anchor="start">把分頁關掉（不是只切到別的網站）</text><path class="a-line-soft" d="M 470 254 L 470 274"/><rect class="d-card" x="40" y="274" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="274" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="320" text-anchor="start">③ 重開</text><text class="t-note" x="76" y="358" text-anchor="start">另開網址，看到自己的修改才算完成</text><text class="t-note" x="470" y="410" text-anchor="middle">只留著分頁、截圖、教室電腦，都不算保存</text></svg></div></div></div><div class="remember">這頁記住：另開一次、看到修改，才算保存完成。</div></section><section class="slide" data-label="元件與模板"><p class="chapter-num">01 / 06</p><h2 class="chapter-title">元件與模板</h2><p class="chapter-sub">把一整頁拆成可命名的積木，再讓資料流進模板。</p><div class="footer"><span>CH7 · 10/62</span><span>互動式網頁設計</span></div></section><section class="slide" data-label="把畫面拆成積木"><p class="eyebrow">CH7 · 11</p><p class="pagedot">11/62</p><h2 class="headline">把畫面拆成積木</h2><div class="lesson-tags"><span>課程進度：02 / 06 元件與模板</span><span>本頁語法／概念：Component</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">一整頁看起來很複雜，其實是幾個可以命名的區塊疊起來。</p><ul class="lesson-points"><li>頁首、菜單清單、單一餐點卡，各自是一個元件。</li><li>本週先操作最外層的 App；餐點卡留到下一週拆。</li><li>能命名的東西就能重複使用——三張卡不需要寫三次。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="I" data-step="0"><div class="diagram-title">圖解 I｜一頁拆成積木</div><svg class="dgm" viewBox="0 0 940 430" role="img" aria-label="一頁拆成積木"><defs><pattern id="rg-I" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-I" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="430" fill="url(#rg-I)"/><rect class="d-panel" x="30" y="24" width="560" height="356" rx="12"/><text class="t-head" x="54" y="66" text-anchor="start">一整頁</text><rect class="d-hot" x="56" y="86" width="508" height="62" rx="12"/><text class="t-bold" x="310" y="128" text-anchor="middle">頁首（店名）</text><rect class="d-soft" x="56" y="164" width="508" height="130" rx="12"/><text class="t-bold" x="310" y="208" text-anchor="middle">菜單清單</text><rect class="d-card" x="80" y="226" width="140" height="52" rx="10"/><text class="t-note" x="150" y="260" text-anchor="middle">餐點卡</text><rect class="d-card" x="240" y="226" width="140" height="52" rx="10"/><text class="t-note" x="310" y="260" text-anchor="middle">餐點卡</text><rect class="d-card" x="400" y="226" width="140" height="52" rx="10"/><text class="t-note" x="470" y="260" text-anchor="middle">餐點卡</text><rect class="d-cool" x="56" y="310" width="508" height="52" rx="12"/><text class="t-note" x="310" y="344" text-anchor="middle">頁尾（營業時間）</text><path class="a-line" d="M 594 116 L 646 96" marker-end="url(#ra-I)"/><rect class="d-card" x="650" y="66" width="260" height="74" rx="12"/><text class="t-bold" x="780" y="112" text-anchor="middle">Header</text><path class="a-line" d="M 594 194 L 646 212" marker-end="url(#ra-I)"/><rect class="d-card" x="650" y="182" width="260" height="74" rx="12"/><text class="t-bold" x="780" y="228" text-anchor="middle">MealList</text><path class="a-line" d="M 594 340 L 646 328" marker-end="url(#ra-I)"/><rect class="d-card" x="650" y="298" width="260" height="74" rx="12"/><text class="t-bold" x="780" y="344" text-anchor="middle">Footer</text><text class="t-note" x="470" y="400" text-anchor="middle">可以命名的，就能重複使用</text></svg></div></div></div><div class="remember">這頁記住：元件＝可以命名、可以重複使用的畫面區塊。</div></section><section class="slide" data-label="元件的三張工作單"><p class="eyebrow">CH7 · 12</p><p class="pagedot">12/62</p><h2 class="headline">元件的三張工作單</h2><div class="lesson-tags"><span>課程進度：02 / 06 元件與模板</span><span>本頁語法／概念：三份工作單</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">一個元件由三份工作單組成：長什麼樣、有什麼資料、看起來如何。</p><ul class="lesson-points"><li>模板（templateUrl）決定結構與要顯示哪些資料。</li><li>類別（class）放資料與方法。</li><li>樣式（styleUrl）只管外觀。</li><li>三份工作單合起來，才是一張看得到的卡片。</li></ul></div><div class="visual-area has-code"><div class="codepen-card"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;!-- app.html --&gt;
+&lt;h1&gt;{{ shopName }}&lt;/h1&gt;
+&lt;p&gt;{{ price }} 元&lt;/p&gt;</span></pre></div><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">CSS</span><span class="code-pane__tag">樣式</span></div><pre><span class="code-body">/* app.css */
+h1 { font-size: 40px; }</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">@Component({
+  selector: &#x27;app-root&#x27;,
+  <mark class="code-key">templateUrl</mark>: &#x27;./app.html&#x27;,
+  <mark class="code-key">styleUrl</mark>: &#x27;./app.css&#x27;,
+})
+export class App {}</span></pre></div></div></div></div><div class="remember">這頁記住：模板管結構、類別管資料、樣式管外觀。</div></section><section class="slide" data-label="自訂標籤從哪來"><p class="eyebrow">CH7 · 13</p><p class="pagedot">13/62</p><h2 class="headline">自訂標籤從哪來</h2><div class="lesson-tags"><span>課程進度：02 / 06 元件與模板</span><span>本頁語法／概念：selector、imports</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">你在模板寫 &lt;app-root&gt;，瀏覽器其實不認識它——是 Angular 認識。</p><ul class="lesson-points"><li>@Component 的 selector 決定這個元件叫什麼標籤。</li><li>要用別人的元件，得在自己的 imports 裡登記。</li><li>看到「unknown element」的錯誤，通常就是忘了 import。</li><li>不用背裝飾器，先會找「這個標籤是誰提供的」。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="K" data-step="0"><div class="diagram-title">圖解 K｜標籤從哪裡來</div><svg class="dgm" viewBox="0 0 940 420" role="img" aria-label="標籤從哪裡來"><defs><pattern id="rg-K" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-K" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="420" fill="url(#rg-K)"/><rect class="d-slot" x="30" y="90" width="250" height="130" rx="12"/><text class="t-code" x="155" y="148" text-anchor="middle">&lt;app-root&gt;</text><text class="t-note" x="155" y="192" text-anchor="middle">瀏覽器不認識</text><path class="a-line" d="M 292 155 L 336 155" marker-end="url(#ra-K)"/><rect class="d-card" x="346" y="60" width="250" height="190" rx="12"/><text class="t-code" x="471" y="106" text-anchor="middle">@Component</text><text class="t-note" x="471" y="152" text-anchor="middle">selector:</text><text class="t-code" x="471" y="190" text-anchor="middle">&#x27;app-root&#x27;</text><text class="t-note" x="471" y="226" text-anchor="middle">Angular 認識</text><path class="a-line" d="M 608 155 L 652 155" marker-end="url(#ra-K)"/><rect class="d-hot" x="662" y="90" width="250" height="130" rx="12"/><text class="t-bold" x="787" y="148" text-anchor="middle">畫面出現</text><text class="t-note" x="787" y="192" text-anchor="middle">標籤被換成內容</text><text class="t-note" x="470" y="320" text-anchor="middle">標籤名 → 元件定義 → 真正畫出來的內容</text><text class="t-note" x="470" y="366" text-anchor="middle">要用別人的元件：寫進 imports</text></svg></div></div></div><div class="remember">這頁記住：selector 是標籤名，imports 是「我用得到誰」的名單。</div></section><section class="slide" data-label="插值：把資料放進句子"><p class="eyebrow">CH7 · 14</p><p class="pagedot">14/62</p><h2 class="headline">插值：把資料放進句子</h2><div class="lesson-tags"><span>課程進度：02 / 06 元件與模板</span><span>本頁語法／概念：插值</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">雙大括號是「把資料放到這裡」的意思。</p><ul class="lesson-points"><li>app.ts 宣告 shopName = &#x27;晚班補給站&#x27;。</li><li>模板寫 &lt;h1&gt;{{ shopName }}&lt;/h1&gt;，畫面就出現那行字。</li><li>同一個資料可以在很多地方引用，改一次全部同步。</li><li>這就是插值：資料 → 文字。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;h1&gt;{{ shopName }}&lt;/h1&gt;
+&lt;p&gt;今天想吃什麼？&lt;/p&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">export class App {
+  <mark class="code-key">shopName</mark> = &#x27;晚班補給站&#x27;;
+}</span></pre></div></div></div></div><div class="remember">這頁記住：{{ }} 只能放「值」，不能寫一整段程式。</div></section><section class="slide" data-label="模板表達式：價格也是資料"><p class="eyebrow">CH7 · 15</p><p class="pagedot">15/62</p><h2 class="headline">模板表達式：價格也是資料</h2><div class="lesson-tags"><span>課程進度：02 / 06 元件與模板</span><span>本頁語法／概念：模板表達式</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">價格也不該寫死；寫在資料裡，改一處全部跟著變。</p><ul class="lesson-points"><li>price = 80，模板寫 {{ price }} 元。</li><li>大括號裡可以是表達式：{{ price * 2 }}、{{ price &gt; 100 ? &#x27;貴&#x27; : &#x27;可以&#x27; }}。</li><li>但別在模板裡塞一大段邏輯——超過一行就搬進方法或 computed。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;p&gt;{{ price }} 元&lt;/p&gt;
+&lt;p&gt;{{ price * 2 }} 元（兩份）&lt;/p&gt;
+&lt;p&gt;{{ price &gt; 100 ? &#x27;有點貴&#x27; : &#x27;可以&#x27; }}&lt;/p&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">export class App {
+  price = 80;
+}</span></pre></div></div></div></div><div class="remember">這頁記住：模板表達式保持簡短；複雜的算法留給程式。</div></section><section class="slide" data-label="文字與屬性是不同位置"><p class="eyebrow">CH7 · 16</p><p class="pagedot">16/62</p><h2 class="headline">文字與屬性是不同位置</h2><div class="lesson-tags"><span>課程進度：02 / 06 元件與模板</span><span>本頁語法／概念：屬性綁定</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">文字放雙大括號，元素的「設定」放中括號。</p><ul class="lesson-points"><li>[disabled]=&quot;soldOut&quot; 控制按鈕能不能按。</li><li>[src]、[value]、[class.night] 都是同一種寫法。</li><li>注意：disabled=&quot;false&quot; 還是「有這個屬性」，按鈕照樣禁用。</li><li>中括號代表「右邊是資料，不是字串」。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;!-- 屬性：放在標籤裡面 --&gt;
+&lt;button [disabled]=&quot;soldOut&quot;&gt;加點&lt;/button&gt;
+
+&lt;!-- 文字：放在標籤中間 --&gt;
+&lt;p&gt;{{ soldOut ? &#x27;已售完&#x27; : &#x27;可以點&#x27; }}&lt;/p&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">export class App {
+  soldOut = true;
+}</span></pre></div></div></div></div><div class="remember">這頁記住：文字用 {{ }}、屬性用 [ ]、事件用 ( )。</div></section><section class="slide" data-label="樣式也能跟著狀態走"><p class="eyebrow">CH7 · 17</p><p class="pagedot">17/62</p><h2 class="headline">樣式也能跟著狀態走</h2><div class="lesson-tags"><span>課程進度：02 / 06 元件與模板</span><span>本頁語法／概念：class 綁定</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">同一個區塊，白天和深夜只是換一組樣式。</p><ul class="lesson-points"><li>[class.night]=&quot;night()&quot;：條件成立才掛上 night 這個 class。</li><li>CSS 只負責 .night 的顏色，不管什麼時候該變。</li><li>狀態判斷留在程式，樣式留在 CSS，兩邊不要混。</li><li>除了顏色，也給文字提示——不能只靠顏色分辨狀態。</li></ul></div><div class="visual-area has-code"><div class="codepen-card"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;article [class.night]=&quot;night()&quot;&gt;
+  &lt;h1&gt;收店之後的那碗麵&lt;/h1&gt;
+&lt;/article&gt;</span></pre></div><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">CSS</span><span class="code-pane__tag">樣式</span></div><pre><span class="code-body">.night {
+  background: #232019;
+  color: #efe7d6;
+}</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">export class App {
+  night = signal(false);
+}</span></pre></div></div></div></div><div class="remember">這頁記住：class 綁定＝用資料決定「掛不掛這個樣式」。</div></section><section class="slide" data-label="三種括號配對賽"><p class="eyebrow">CH7 · 18</p><p class="pagedot">18/62</p><h2 class="headline">三種括號配對賽</h2><div class="lesson-tags"><span>課程進度：02 / 06 元件與模板</span><span>本頁語法／概念：三種括號</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">三種括號各管一件事，配錯就是最常見的錯誤來源。</p><ul class="lesson-points"><li>{{ }} 插值：把值變成文字。</li><li>[ ] 屬性綁定：把值交給元素的設定。</li><li>( ) 事件綁定：使用者做了什麼，呼叫哪個方法。</li><li>三個一起用：&lt;button [disabled]=&quot;count() === 0&quot; (click)=&quot;add()&quot;&gt;{{ count() }}&lt;/button&gt;。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="P" data-step="0"><div class="diagram-title">圖解 P｜三種括號</div><svg class="dgm" viewBox="0 0 940 320" role="img" aria-label="三種括號"><defs><pattern id="rg-P" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-P" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="320" fill="url(#rg-P)"/><rect class="d-card" x="30.0" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="168.66666666666666" y="72" text-anchor="middle">{{ }}</text><text class="t-note" x="168.66666666666666" y="122" text-anchor="middle">插值</text><text class="t-note" x="168.66666666666666" y="162" text-anchor="middle">把值變成文字</text><rect class="d-soft" x="331.3333333333333" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="470.0" y="72" text-anchor="middle">[ ]</text><text class="t-note" x="470.0" y="122" text-anchor="middle">屬性綁定</text><text class="t-note" x="470.0" y="162" text-anchor="middle">把值交給設定</text><rect class="d-hot" x="632.6666666666666" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="771.3333333333333" y="72" text-anchor="middle">( )</text><text class="t-note" x="771.3333333333333" y="122" text-anchor="middle">事件綁定</text><text class="t-note" x="771.3333333333333" y="162" text-anchor="middle">使用者做了什麼</text><text class="t-note" x="470" y="228" text-anchor="middle">[disabled]=&quot;count() === 0&quot;　(click)=&quot;add()&quot;</text></svg></div></div></div><div class="remember">這頁記住：雙大括號看資料、中括號給設定、小括號接動作。</div></section><section class="slide" data-label="事件與 signal"><p class="chapter-num">02 / 06</p><h2 class="chapter-title">事件與 signal</h2><p class="chapter-sub">按鈕按下去之後，資料怎麼變、畫面怎麼跟上。</p><div class="footer"><span>CH7 · 19/62</span><span>互動式網頁設計</span></div></section><section class="slide" data-label="你指令，我接招"><p class="eyebrow">CH7 · 20</p><p class="pagedot">20/62</p><h2 class="headline">你指令，我接招</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：事件綁定</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">小括號裡放事件名稱，等號右邊放要做的事。</p><ul class="lesson-points"><li>&lt;button (click)=&quot;add()&quot;&gt;加一份&lt;/button&gt;。</li><li>除了 click，還有 input、submit、keyup 等。</li><li>右邊通常是一個方法名稱，加上括號表示「呼叫它」。</li><li>寫成 (click)=&quot;add&quot; 不會執行——少了括號就差很多。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;button (click)=&quot;add()&quot;&gt;加一份&lt;/button&gt;
+
+&lt;input (input)=&quot;query.set(...)&quot;&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">// (事件)=&quot;方法()&quot;：左邊是誰觸發，右邊是叫誰做事</span></pre></div></div></div></div><div class="remember">這頁記住：(事件)=&quot;方法()&quot;：左邊是誰觸發，右邊是叫誰做事。</div></section><section class="slide" data-label="函式是按鈕的動作單"><p class="eyebrow">CH7 · 21</p><p class="pagedot">21/62</p><h2 class="headline">函式是按鈕的動作單</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：方法</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">方法寫在類別裡，按鈕只是「呼叫它」的開關。</p><ul class="lesson-points"><li>add() 寫在 App 類別裡，跟 signal 放在一起。</li><li>方法裡讀 signal 要加 this：this.count()。模板裡不用 this。</li><li>一個方法只做一件事，名字要說出它做什麼。</li><li>按鈕、輸入框、表單都能呼叫同一個方法。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;button (click)=&quot;add()&quot;&gt;＋&lt;/button&gt;
+&lt;span class=&quot;num&quot;&gt;{{ count() }}&lt;/span&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">export class App {
+  count = signal(0);
+
+  add() {
+    <mark class="code-key">this.count.set</mark>(this.count() + 1);
+  }
+}</span></pre></div></div></div></div><div class="remember">這頁記住：方法在 ts、呼叫在 html；ts 裡讀 signal 要加 this。</div></section><section class="slide" data-label="找錯：按鈕怎麼沒反應"><p class="eyebrow">CH7 · 22</p><p class="pagedot">22/62</p><h2 class="headline">找錯：按鈕怎麼沒反應</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：除錯</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">按了沒反應，九成是「名字接不上」。</p><ul class="lesson-points"><li>模板寫 (click)=&quot;ad()&quot;，方法卻叫 add()——差一個字母。</li><li>第二常見：方法忘了寫、或寫在別的類別裡。</li><li>第三：按鈕被別的透明元素蓋住（用開發者工具看得到）。</li><li>看錯誤訊息第一行，通常直接告訴你哪個名字找不到。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="S" data-step="0"><div class="diagram-title">圖解 S｜名字要接得上</div><svg class="dgm" viewBox="0 0 940 430" role="img" aria-label="名字要接得上"><defs><pattern id="rg-S" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-S" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="430" fill="url(#rg-S)"/><rect class="d-slot" x="30" y="34" width="420" height="330" rx="12"/><text class="t-bold" x="54" y="82" text-anchor="start">錯：名字接不上</text><text class="t-note" x="54" y="140" text-anchor="start">(click)=&quot;ad()&quot;</text><text class="t-note" x="54" y="188" text-anchor="start">方法叫 add()</text><rect class="d-soft" x="490" y="34" width="420" height="330" rx="12"/><text class="t-bold" x="514" y="82" text-anchor="start">對：一字不差</text><text class="t-note" x="514" y="140" text-anchor="start">(click)=&quot;add()&quot;</text><text class="t-note" x="514" y="188" text-anchor="start">add() { ... }</text><text class="t-note" x="470" y="408" text-anchor="middle">九成的「按了沒反應」都是這一種</text></svg></div></div></div><div class="remember">這頁記住：先比對「模板寫的名字」和「方法的名字」是否一字不差。</div></section><section class="slide" data-label="一份會通知畫面的資料"><p class="eyebrow">CH7 · 23</p><p class="pagedot">23/62</p><h2 class="headline">一份會通知畫面的資料</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：signal</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">signal 是一個盒子：裡面裝值，變的時候會通知畫面。</p><ul class="lesson-points"><li>count = signal(0)：宣告一個裝 0 的盒子。</li><li>要記得 import { signal } from &#x27;@angular/core&#x27;。</li><li>它跟普通變數最大的差別：改值時畫面會知道。</li><li>類比取餐號碼牌——號碼一換，螢幕就跟著換。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;span class=&quot;num&quot;&gt;{{ count() }}&lt;/span&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">import { Component, signal } from &#x27;@angular/core&#x27;;
+
+export class App {
+  count = <mark class="code-key">signal(0)</mark>;
+}</span></pre></div></div></div></div><div class="remember">這頁記住：signal 是「會通知畫面的資料盒子」。</div></section><section class="slide" data-label="讀值要打開盒子"><p class="eyebrow">CH7 · 24</p><p class="pagedot">24/62</p><h2 class="headline">讀值要打開盒子</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：讀值</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">盒子不會自己變成數字，要打開它。</p><ul class="lesson-points"><li>count() 加括號才是「現在的值」。</li><li>模板寫 {{ count() }}；少了括號會印出函式本身。</li><li>在 ts 裡讀要加 this：this.count()。</li><li>看到畫面上出現 function 字樣，就是漏了括號。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;p&gt;已加 {{ count() }} 份&lt;/p&gt;
+
+&lt;!-- 少了括號：印出函式本身 --&gt;
+&lt;p&gt;已加 {{ count }} 份&lt;/p&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">// 讀值一定加括號
+this.count()</span></pre></div></div></div></div><div class="remember">這頁記住：讀 signal 一定要加括號：count()。</div></section><section class="slide" data-label="寫值用 set"><p class="eyebrow">CH7 · 25</p><p class="pagedot">25/62</p><h2 class="headline">寫值用 set</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：set</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">改值不是 count = 1，而是呼叫 set。</p><ul class="lesson-points"><li>this.count.set(1)：直接換成 1。</li><li>this.count.set(this.count() + 1)：先讀、再加、再寫回。</li><li>不能用 count++ 或 count = 1，signal 不會收到通知。</li><li>set 之後，所有用到 count() 的地方一起更新。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;p&gt;已加 {{ count() }} 份&lt;/p&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">add() {
+  // 先讀、再加、再寫回
+  <mark class="code-key">this.count.set</mark>(this.count() + 1);
+}</span></pre></div></div></div></div><div class="remember">這頁記住：signal 只有 set（和 update）能改；直接賦值畫面不會動。</div></section><section class="slide" data-label="重設也是一次更新"><p class="eyebrow">CH7 · 26</p><p class="pagedot">26/62</p><h2 class="headline">重設也是一次更新</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：reset</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">重設不是「清掉」，而是「再設一次 0」。</p><ul class="lesson-points"><li>reset() { this.count.set(0); }。</li><li>加三次 → 重設 → 再加一次，結果應該是 1，不是 4。</li><li>重設與加點是同一條路：都是改同一個 signal。</li><li>按鈕的 disabled 也跟著回到初始狀態。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;button (click)=&quot;reset()&quot; [disabled]=&quot;count() === 0&quot;&gt;
+  重設
+&lt;/button&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">reset() {
+  this.count.set(0);
+}</span></pre></div></div></div></div><div class="remember">這頁記住：重設就是設回初始值；資料回去，畫面自然回去。</div></section><section class="slide" data-label="事件如何變成畫面"><p class="eyebrow">CH7 · 27</p><p class="pagedot">27/62</p><h2 class="headline">事件如何變成畫面</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：資料流</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">一個互動就是四個站：點擊 → 方法 → 資料 → 模板。</p><ul class="lesson-points"><li>使用者點「＋」：觸發 (click)。</li><li>呼叫 add()：方法執行。</li><li>this.count.set(...)：資料改變。</li><li>模板的 {{ count() }} 重新算出文字，畫面更新。</li><li>四站都會了，剩下的功能只是換資料形狀。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="X" data-step="0"><div class="diagram-title">圖解 X｜四站迴路</div><svg class="dgm" viewBox="0 0 940 400" role="img" aria-label="四站迴路"><defs><pattern id="rg-X" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-X" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="400" fill="url(#rg-X)"/><rect class="d-hot" x="20" y="70" width="190" height="150" rx="12"/><text class="t-bold" x="115.0" y="118" text-anchor="middle">① 點擊</text><text class="t-code" x="115.0" y="168" text-anchor="middle">(click)</text><text class="t-note" x="115.0" y="204" text-anchor="middle">使用者</text><path class="a-line" d="M 216 145 L 244 145" marker-end="url(#ra-X)"/><rect class="d-soft" x="250" y="70" width="190" height="150" rx="12"/><text class="t-bold" x="345.0" y="118" text-anchor="middle">② 方法</text><text class="t-code" x="345.0" y="168" text-anchor="middle">add()</text><text class="t-note" x="345.0" y="204" text-anchor="middle">程式</text><path class="a-line" d="M 446 145 L 474 145" marker-end="url(#ra-X)"/><rect class="d-cool" x="480" y="70" width="190" height="150" rx="12"/><text class="t-bold" x="575.0" y="118" text-anchor="middle">③ 資料</text><text class="t-code" x="575.0" y="168" text-anchor="middle">count.set()</text><text class="t-note" x="575.0" y="204" text-anchor="middle">盒子</text><path class="a-line" d="M 676 145 L 704 145" marker-end="url(#ra-X)"/><rect class="d-card" x="710" y="70" width="190" height="150" rx="12"/><text class="t-bold" x="805.0" y="118" text-anchor="middle">④ 模板</text><text class="t-code" x="805.0" y="168" text-anchor="middle">count()</text><text class="t-note" x="805.0" y="204" text-anchor="middle">{{ }} 讀值</text><path class="a-line-soft" d="M 815 232 L 815 280"/><path class="a-line-soft" d="M 815 280 L 125 280"/><path class="a-line" d="M 145 280 L 125 280" marker-end="url(#ra-X)"/><text class="t-note" x="470" y="318" text-anchor="middle">畫面更新後，使用者看到新的數字，再決定下一步</text><text class="t-note" x="470" y="372" text-anchor="middle">這四站就是本週所有互動的骨架</text></svg></div></div></div><div class="remember">這頁記住：事件 → 方法 → 資料 → 模板，四站缺一不可。</div></section><section class="slide" data-label="@if：資料不同，畫面不同"><p class="eyebrow">CH7 · 28</p><p class="pagedot">28/62</p><h2 class="headline">@if：資料不同，畫面不同</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：@if</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">有些內容，只有某種狀態下才該出現。</p><ul class="lesson-points"><li>@if (isOpen()) { ... }：條件成立才顯示裡面的內容。</li><li>不成立時，那段 HTML 根本不存在（不是隱藏）。</li><li>適合：營業才顯示的加點入口、有資料才顯示的清單。</li><li>不要用 CSS 的 display:none 假裝——資料層面就不該有它。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">@if (isOpen()) {
+  &lt;p&gt;現在可以加點&lt;/p&gt;
+}</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">export class App {
+  isOpen = signal(true);
+}</span></pre></div></div></div></div><div class="remember">這頁記住：@if 是「要不要放進畫面」，不是「要不要顯示」。</div></section><section class="slide" data-label="@else：替另一種狀態說句話"><p class="eyebrow">CH7 · 29</p><p class="pagedot">29/62</p><h2 class="headline">@else：替另一種狀態說句話</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：@else</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">條件不成立時，也要給一句話，不要留空白。</p><ul class="lesson-points"><li>@if (isOpen()) { 營業中 } @else { 明天見 }。</li><li>打烊不是錯誤，是另一種正常狀態。</li><li>文字要說清楚，不能只把顏色變灰。</li><li>兩個分支都測過，才算做完。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">@if (isOpen()) {
+  &lt;p class=&quot;state open&quot;&gt;營業中&lt;/p&gt;
+} @else {
+  &lt;p class=&quot;state closed&quot;&gt;明天見&lt;/p&gt;
+}</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">// 打烊不是錯誤，是另一種正常狀態</span></pre></div></div></div></div><div class="remember">這頁記住：@else 是給「另一種正常狀態」一個交代。</div></section><section class="slide" data-label="不要讓數量掉到負數"><p class="eyebrow">CH7 · 30</p><p class="pagedot">30/62</p><h2 class="headline">不要讓數量掉到負數</h2><div class="lesson-tags"><span>課程進度：03 / 06 事件與 signal</span><span>本頁語法／概念：邊界條件</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">互動一定有邊界：0 份的時候，不該再減。</p><ul class="lesson-points"><li>[disabled]=&quot;count() === 0&quot;：0 份時減號按不動。</li><li>方法裡也判斷 this.count() &gt; 0，雙層保護。</li><li>只做其中一層，還是有機會出現 -1。</li><li>測法：0 → 減（不動）、1 → 減（變 0）、0 → 加（變 1）。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;button (click)=&quot;minus()&quot;
+        [disabled]=&quot;count() === 0&quot;&gt;−&lt;/button&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">minus() {
+  if (this.<mark class="code-key">count() &gt; 0</mark>) {
+    this.count.set(this.count() - 1);
+  }
+}</span></pre></div></div></div></div><div class="remember">這頁記住：邊界要測：最小值、最大值、空資料。</div></section><section class="slide" data-label="清單與篩選"><p class="chapter-num">03 / 06</p><h2 class="chapter-title">清單與篩選</h2><p class="chapter-sub">三筆資料用同一段模板排出來，再依條件留下要的。</p><div class="footer"><span>CH7 · 31/62</span><span>互動式網頁設計</span></div></section><section class="slide" data-label="從一份餐點到一份菜單"><p class="eyebrow">CH7 · 32</p><p class="pagedot">32/62</p><h2 class="headline">從一份餐點到一份菜單</h2><div class="lesson-tags"><span>課程進度：04 / 06 清單與篩選</span><span>本頁語法／概念：interface、陣列</span></div><div class="ch5-grid ch6-grid tsjs-grid"><div class="ch5-copy"><p class="mini-lead">三筆餐點長得一樣，只是值不同——這就是陣列。</p><ul class="lesson-points"><li>interface Meal 描述形狀：id、name、price 三個欄位。</li><li>id 用字串（m1／m2／m3），比數字更不容易搞混。</li><li>三筆資料放在 meals.ts，元件 import 進來用。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js codepen-card--scroll"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">export interface Meal {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export const meals: Meal[] = [
+  { id: &#x27;m1&#x27;, name: &#x27;炒飯&#x27;, price: 60 },
+  { id: &#x27;m2&#x27;, name: &#x27;水餃&#x27;, price: 80 },
+  { id: &#x27;m3&#x27;, name: &#x27;牛肉麵&#x27;, price: 120 },
+];</span></pre></div></div></div></div><div class="remember">這頁記住：同一種形狀的資料，放成陣列；每筆都要有唯一 id。</div></section><section class="slide" data-label="@for：一段模板排出清單"><p class="eyebrow">CH7 · 33</p><p class="pagedot">33/62</p><h2 class="headline">@for：一段模板排出清單</h2><div class="lesson-tags"><span>課程進度：04 / 06 清單與篩選</span><span>本頁語法／概念：@for</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">@for 是「這段模板，每筆資料各做一次」。</p><ul class="lesson-points"><li>@for (meal of meals; track meal.id) { ... }。</li><li>三筆資料 → 同一段模板 → 三張卡。</li><li>新增第四筆，畫面自動多一張，不用改模板。</li><li>注意是 of 不是 in；寫錯會直接編譯失敗。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">@for (meal of meals; track meal.id) {
+  &lt;li class=&quot;card&quot;&gt;
+    &lt;span&gt;{{ meal.name }}&lt;/span&gt;
+    &lt;span&gt;{{ meal.price }} 元&lt;/span&gt;
+  &lt;/li&gt;
+}</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">import { Meal, meals } from &#x27;./meals&#x27;;
+
+export class App {
+  meals: Meal[] = meals;
+}</span></pre></div></div></div></div><div class="remember">這頁記住：@for 把「一筆的模板」套到每一筆資料上。</div></section><section class="slide" data-label="track 是卡片的名牌"><p class="eyebrow">CH7 · 34</p><p class="pagedot">34/62</p><h2 class="headline">track 是卡片的名牌</h2><div class="lesson-tags"><span>課程進度：04 / 06 清單與篩選</span><span>本頁語法／概念：track</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">track 告訴 Angular「這一筆是誰」，換位置也認得出來。</p><ul class="lesson-points"><li>track meal.id：用穩定不重複的 id 當識別。</li><li>不要用索引（第幾筆）——資料換順序時會認錯人。</li><li>id 重複會出錯，所以每筆都要唯一。</li><li>本週只要求「用 id」，不談效能原理。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="AD" data-step="0"><div class="diagram-title">圖解 AD｜track 名牌</div><svg class="dgm" viewBox="0 0 940 420" role="img" aria-label="track 名牌"><defs><pattern id="rg-AD" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AD" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="420" fill="url(#rg-AD)"/><text class="t-head" x="40" y="46" text-anchor="start">用 id 當名牌</text><rect class="d-card" x="40" y="70" width="380" height="78" rx="12"/><text class="t-code" x="66" y="118" text-anchor="start">m1</text><text class="t-note" x="150" y="118" text-anchor="start">炒飯</text><rect class="d-card" x="40" y="166" width="380" height="78" rx="12"/><text class="t-code" x="66" y="214" text-anchor="start">m2</text><text class="t-note" x="150" y="214" text-anchor="start">水餃</text><rect class="d-card" x="40" y="262" width="380" height="78" rx="12"/><text class="t-code" x="66" y="310" text-anchor="start">m3</text><text class="t-note" x="150" y="310" text-anchor="start">牛肉麵</text><text class="t-head" x="500" y="46" text-anchor="start">交換後，名牌跟著走</text><rect class="d-soft" x="500" y="70" width="380" height="78" rx="12"/><text class="t-code" x="526" y="118" text-anchor="start">m3</text><text class="t-note" x="610" y="118" text-anchor="start">牛肉麵</text><rect class="d-soft" x="500" y="166" width="380" height="78" rx="12"/><text class="t-code" x="526" y="214" text-anchor="start">m1</text><text class="t-note" x="610" y="214" text-anchor="start">炒飯</text><rect class="d-soft" x="500" y="262" width="380" height="78" rx="12"/><text class="t-code" x="526" y="310" text-anchor="start">m2</text><text class="t-note" x="610" y="310" text-anchor="start">水餃</text><text class="t-note" x="470" y="400" text-anchor="middle">不要用「第幾筆」當名牌：換順序就認錯人</text></svg></div></div></div><div class="remember">這頁記住：track 用唯一 id，不用陣列索引。</div></section><section class="slide" data-label="@empty：沒有資料也要有畫面"><p class="eyebrow">CH7 · 35</p><p class="pagedot">35/62</p><h2 class="headline">@empty：沒有資料也要有畫面</h2><div class="lesson-tags"><span>課程進度：04 / 06 清單與篩選</span><span>本頁語法／概念：@empty</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">資料是空的時候，畫面也要說人話。</p><ul class="lesson-points"><li>@for (...) { ... } @empty { 目前沒有餐點 }。</li><li>@empty 接在 @for 後面，清單為 0 筆時才出現。</li><li>空白畫面會讓人以為壞掉；一句提示就解決。</li><li>搜尋不到、預算太低，都走這一條。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">@for (meal of found(); track meal.id) {
+  &lt;li&gt;{{ meal.name }}&lt;/li&gt;
+} @empty {
+  &lt;p&gt;目前沒有餐點&lt;/p&gt;
+}</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">// 0 筆時顯示 <mark class="code-key">@empty</mark> 的內容</span></pre></div></div></div></div><div class="remember">這頁記住：空清單不是錯誤，但要給一句提示。</div></section><section class="slide" data-label="輸入從哪裡進來"><p class="eyebrow">CH7 · 36</p><p class="pagedot">36/62</p><h2 class="headline">輸入從哪裡進來</h2><div class="lesson-tags"><span>課程進度：04 / 06 清單與篩選</span><span>本頁語法／概念：模板參考、input 事件</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">輸入框的值要進到程式，才有辦法拿來篩選。</p><ul class="lesson-points"><li>&lt;input #search (input)=&quot;query.set(search.value)&quot;&gt;。</li><li>#search 是模板參考：直接拿到這個輸入框。</li><li>(input) 每打一個字就觸發一次。</li><li>比 $event.target.value 少一層型別麻煩。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;input #search
+       (input)=&quot;query.set(search.value)&quot;&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">export class App {
+  query = signal(&#x27;&#x27;);
+}</span></pre></div></div></div></div><div class="remember">這頁記住：#名字 取得元素，(input) 取得每一次輸入。</div></section><section class="slide" data-label="不用自己重算的結果"><p class="eyebrow">CH7 · 37</p><p class="pagedot">37/62</p><h2 class="headline">不用自己重算的結果</h2><div class="lesson-tags"><span>課程進度：04 / 06 清單與篩選</span><span>本頁語法／概念：computed</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">computed 是「會自己重算的結果」，不必手動更新。</p><ul class="lesson-points"><li>visible = computed(() =&gt; meals.filter(...))。</li><li>它會記住自己用到哪些 signal；那些 signal 一變就重算。</li><li>模板讀 visible()，跟讀 signal 一樣加括號。</li><li>箭頭函式 m =&gt; ... 就是 function(m) { return ... } 的短寫法。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;p&gt;共 {{ found().length }} 道&lt;/p&gt;
+
+@for (meal of found(); track meal.id) {
+  &lt;li&gt;{{ meal.name }}&lt;/li&gt;
+}</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">found = <mark class="code-key">computed</mark>(() =&gt; {
+  const q = this.query().trim();
+  return this.meals.filter((m) =&gt; m.name.includes(q));
+});</span></pre></div></div></div></div><div class="remember">這頁記住：computed 只算不存；來源變了才重算。</div></section><section class="slide" data-label="Demo：50／80／120 元會剩幾道"><p class="eyebrow">CH7 · 38</p><p class="pagedot">38/62</p><h2 class="headline">Demo：50／80／120 元會剩幾道</h2><div class="lesson-tags"><span>課程進度：04 / 06 清單與篩選</span><span>本頁語法／概念：computed 篩選</span></div><div class="ch5-grid ch6-grid tsjs-grid"><div class="ch5-copy"><p class="mini-lead">現在把 computed 真的拿來 Demo：按預算，畫面只留下買得起的餐點。</p><ul class="lesson-points"><li>先看初始 80 元：炒飯 60、水餃 80 留下，共 2 道。</li><li>按 50 元：三道都超過，清單變 0 筆並顯示「沒有符合預算的餐點」。</li><li>再按 120 元：三道全部回來，共 3 道；不用手動重建清單。</li><li>觀察資料流：按鈕 set budget → computed 重算 affordable → @for 重畫結果。</li></ul><ul class="lesson-links"><li><a href="examples/ch7_budget.html" target="_blank" rel="noopener">開啟預算菜單 Demo｜50／80／120 元</a></li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--demo"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;div class=&quot;budget-buttons&quot;&gt;
+  &lt;button (click)=&quot;budget.set(50)&quot;&gt;50 元&lt;/button&gt;
+  &lt;button (click)=&quot;budget.set(80)&quot;&gt;80 元&lt;/button&gt;
+  &lt;button (click)=&quot;budget.set(120)&quot;&gt;120 元&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;p&gt;目前預算：{{ budget() }} 元｜可選 {{ affordable().length }} 道&lt;/p&gt;
+
+@for (meal of affordable(); track meal.id) {
+  &lt;p&gt;{{ meal.name }} · {{ meal.price }} 元&lt;/p&gt;
+} @empty {
+  &lt;p&gt;沒有符合預算的餐點&lt;/p&gt;
+}</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">import { <mark class="code-key">computed</mark>, signal } from &#x27;@angular/core&#x27;;
+import { meals } from &#x27;./meals&#x27;;
+
+export class App {
+  meals = meals;
+  <mark class="code-key">budget = signal(80)</mark>;
+
+  <mark class="code-key">affordable</mark> = computed(() =&gt;
+    this.meals.filter((meal) =&gt; meal.price &lt;= this.budget()),
+  );
+}</span></pre></div></div></div></div><div class="remember">這頁記住：Demo 驗收：50 元 0 道、80 元 2 道、120 元 3 道。</div></section><section class="slide" data-label="收藏要換一份新清單"><p class="eyebrow">CH7 · 39</p><p class="pagedot">39/62</p><h2 class="headline">收藏要換一份新清單</h2><div class="lesson-tags"><span>課程進度：04 / 06 清單與篩選</span><span>本頁語法／概念：陣列更新</span></div><div class="ch5-grid ch6-grid tsjs-grid"><div class="ch5-copy"><p class="mini-lead">收藏是「一份 id 清單」，改它要換一份新的，不是就地修改。</p><ul class="lesson-points"><li>ids = signal&lt;string[]&gt;([])，只存 id。</li><li>加入用展開、移除用 filter，兩者都產生新陣列。</li><li>直接 push 進原陣列，signal 不會發現內容變了。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">toggle(id: string) {
+  if (this.isFav(id)) {
+    this.ids.set(this.ids().<mark class="code-key">filter</mark>((x) =&gt; x !== id));
+  } else {
+    this.ids.set(<mark class="code-key">[...this.ids(), id]</mark>);
+  }
+}</span></pre></div></div></div></div><div class="remember">這頁記住：改陣列要換一份新陣列：展開加、filter 減。</div></section><section class="slide" data-label="整合與轉用"><p class="chapter-num">04 / 06</p><h2 class="chapter-title">整合與轉用</h2><p class="chapter-sub">把六個零件組成一個互動，換個主題就是你的作品。</p><div class="footer"><span>CH7 · 40/62</span><span>互動式網頁設計</span></div></section><section class="slide" data-label="把零件接成一個互動"><p class="eyebrow">CH7 · 41</p><p class="pagedot">41/62</p><h2 class="headline">把零件接成一個互動</h2><div class="lesson-tags"><span>課程進度：05 / 06 整合與六題</span><span>本頁語法／概念：整合資料流</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">這頁不學新語法，把前面學過的事件、signal、computed 和模板接成一條完整互動。</p><ul class="lesson-points"><li>① 使用者先做動作：按鈕 click 或輸入 input。</li><li>② 事件更新 signal；如果畫面需要加工後的結果，再交給 computed 計算。</li><li>③ 模板用 {{ }}、@if、@for 讀資料，Angular 自動把新結果畫出來。</li><li>回頭看預算 Demo：按 50／80／120 元，就是這條資料流一直重跑。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="AJ" data-step="0"><div class="diagram-title">圖解 AJ｜事件 → 資料 → 畫面</div><svg class="dgm" viewBox="0 0 940 420" role="img" aria-label="事件 → 資料 → 畫面"><defs><pattern id="rg-AJ" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AJ" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="420" fill="url(#rg-AJ)"/><rect class="d-card" x="40" y="26" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="26" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="72" text-anchor="start">① 使用者操作</text><text class="t-note" x="76" y="110" text-anchor="start">(click)／(input) 觸發事件</text><path class="a-line-soft" d="M 470 130 L 470 150"/><rect class="d-card" x="40" y="150" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="150" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="196" text-anchor="start">② 資料更新</text><text class="t-note" x="76" y="234" text-anchor="start">signal 存狀態；computed 算衍生結果</text><path class="a-line-soft" d="M 470 254 L 470 274"/><rect class="d-card" x="40" y="274" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="274" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="320" text-anchor="start">③ 畫面更新</text><text class="t-note" x="76" y="358" text-anchor="start">{{ }}／@if／@for 讀資料並重新顯示</text><text class="t-note" x="470" y="410" text-anchor="middle">一個完整 Angular 互動：事件 → 資料 → 畫面</text></svg></div></div></div><div class="remember">這頁記住：完整互動：事件改狀態 → computed 算結果 → 模板顯示結果。</div></section><section class="slide" data-label="把菜單改成你的主題"><p class="eyebrow">CH7 · 42</p><p class="pagedot">42/62</p><h2 class="headline">把菜單改成你的主題</h2><div class="lesson-tags"><span>課程進度：05 / 06 整合與六題</span><span>本頁語法／概念：轉用</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">架構不用換，換內容就是另一個作品。</p><ul class="lesson-points"><li>宵夜菜單可以換成書單、公仔收藏、打工班表。</li><li>欄位沿用 id／name／price（或改成 title／author／year）。</li><li>換完要重新測：顯示、篩選、空資料。</li><li>一分鐘跟同桌說你要改成什麼，再開始動工。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane"><div class="code-pane__hd"><span class="code-pane__lang">HTML</span><span class="code-pane__tag">模板</span></div><pre><span class="code-body">&lt;!-- 換內容，不換架構 --&gt;
+&lt;span&gt;{{ item.name }}&lt;/span&gt;
+&lt;span&gt;{{ item.price }} 元&lt;/span&gt;</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">資料與方法</span></div><pre><span class="code-body">export interface Item {
+  id: string;
+  name: string;
+  price: number;
+}
+
+// 宵夜 → 書單、公仔、班表都行</span></pre></div></div></div></div><div class="remember">這頁記住：同一個資料結構，換內容就是新題目。</div></section><section class="slide" data-label="卡住先看這三處"><p class="eyebrow">CH7 · 43</p><p class="pagedot">43/62</p><h2 class="headline">卡住先看這三處</h2><div class="lesson-tags"><span>課程進度：05 / 06 整合與六題</span><span>本頁語法／概念：除錯順序</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">卡住的時候，按這個順序查，比亂改快。</p><ul class="lesson-points"><li>一、檔案：改的是 html 還是 ts？存檔了嗎？</li><li>二、錯誤第一行：它通常直接說哪個名字找不到。</li><li>三、最近改動：把最後改的那行註解掉，看是否恢復。</li><li>把「哪一頁、哪一行、什麼錯誤」講清楚，求救才有效。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="AK" data-step="0"><div class="diagram-title">圖解 AK｜卡住先看三處</div><svg class="dgm" viewBox="0 0 940 320" role="img" aria-label="卡住先看三處"><defs><pattern id="rg-AK" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AK" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="320" fill="url(#rg-AK)"/><rect class="d-card" x="30.0" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="168.66666666666666" y="72" text-anchor="middle">檔案</text><text class="t-note" x="168.66666666666666" y="122" text-anchor="middle">改的是 html 還是 ts</text><text class="t-note" x="168.66666666666666" y="162" text-anchor="middle">存檔了嗎</text><rect class="d-hot" x="331.3333333333333" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="470.0" y="72" text-anchor="middle">錯誤第一行</text><text class="t-note" x="470.0" y="122" text-anchor="middle">它通常直接說</text><text class="t-note" x="470.0" y="162" text-anchor="middle">哪個名字找不到</text><rect class="d-soft" x="632.6666666666666" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="771.3333333333333" y="72" text-anchor="middle">最近改動</text><text class="t-note" x="771.3333333333333" y="122" text-anchor="middle">註解掉最後那行</text><text class="t-note" x="771.3333333333333" y="162" text-anchor="middle">看是否恢復</text><text class="t-note" x="470" y="228" text-anchor="middle">把「哪一頁、哪一行、什麼錯誤」講清楚，求救才有效</text></svg></div></div></div><div class="remember">這頁記住：先看檔案、再看錯誤第一行、最後看最近改動。</div></section><section class="slide" data-label="這張菜單的五個關鍵字"><p class="eyebrow">CH7 · 44</p><p class="pagedot">44/62</p><h2 class="headline">這張菜單的五個關鍵字</h2><div class="lesson-tags"><span>課程進度：05 / 06 整合與六題</span><span>本頁語法／概念：關鍵字總結</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">整晚的東西，其實就五個字。</p><ul class="lesson-points"><li>signal：會通知畫面的資料盒子。</li><li>computed：會自己重算的結果。</li><li>@if／@else：要不要放進畫面。</li><li>@for／@empty：一筆的模板套到每一筆。</li><li>{{ }}／[ ]／( )：讀值、給設定、接動作。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="AL" data-step="0"><div class="diagram-title">圖解 AL｜五個關鍵字</div><svg class="dgm" viewBox="0 0 940 560" role="img" aria-label="五個關鍵字"><defs><pattern id="rg-AL" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AL" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="560" fill="url(#rg-AL)"/><rect class="d-hot" x="30.0" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="168.66666666666666" y="72" text-anchor="middle">signal</text><text class="t-note" x="168.66666666666666" y="122" text-anchor="middle">會通知畫面的盒子</text><rect class="d-soft" x="331.3333333333333" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="470.0" y="72" text-anchor="middle">computed</text><text class="t-note" x="470.0" y="122" text-anchor="middle">會自己重算的結果</text><rect class="d-card" x="632.6666666666666" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="771.3333333333333" y="72" text-anchor="middle">@if／@else</text><text class="t-note" x="771.3333333333333" y="122" text-anchor="middle">要不要放進畫面</text><rect class="d-cool" x="30.0" y="216" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="168.66666666666666" y="262" text-anchor="middle">@for／@empty</text><text class="t-note" x="168.66666666666666" y="312" text-anchor="middle">一筆的模板套到每一筆</text><rect class="d-card" x="331.3333333333333" y="216" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="470.0" y="262" text-anchor="middle">{{ }}／[ ]／( )</text><text class="t-note" x="470.0" y="312" text-anchor="middle">讀值、給設定、接動作</text><text class="t-note" x="470" y="418" text-anchor="middle">整晚的東西，其實就這五個字</text></svg></div></div></div><div class="remember">這頁記住：signal、computed、@if、@for、三種括號——五個字帶走。</div></section><section class="slide" data-label="六題與工作坊"><p class="chapter-num">05 / 06</p><h2 class="chapter-title">六題與工作坊</h2><p class="chapter-sub">選一條路，30 分鐘做出可以給別人操作的菜單。</p><div class="footer"><span>CH7 · 45/62</span><span>互動式網頁設計</span></div></section><section class="slide" data-label="六條路，先走一條"><p class="eyebrow">CH7 · 46</p><p class="pagedot">46/62</p><h2 class="headline">六條路，先走一條</h2><div class="lesson-tags"><span>課程進度：05 / 06 整合與六題</span><span>本頁語法／概念：練習選單</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">六題難度不同，先走一條，不用全做。</p><ul class="lesson-points"><li>主做：練習 1 宵夜加點器（今晚一定要完成）。</li><li>基礎：練習 2 營業切換、練習 4 深夜閱讀模式。</li><li>標準：練習 3 預算菜單、練習 5 餐點搜尋器。</li><li>進階：練習 6 菜單收藏切換。</li></ul><ul class="lesson-links lesson-links--multi"><li><a href="examples/ch7_counter.html" target="_blank" rel="noopener">1 加點器</a></li><li><a href="examples/ch7_open.html" target="_blank" rel="noopener">2 營業切換</a></li><li><a href="examples/ch7_budget.html" target="_blank" rel="noopener">3 預算菜單</a></li><li><a href="examples/ch7_reading.html" target="_blank" rel="noopener">4 閱讀模式</a></li><li><a href="examples/ch7_search.html" target="_blank" rel="noopener">5 搜尋器</a></li><li><a href="examples/ch7_favorite.html" target="_blank" rel="noopener">6 收藏切換</a></li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="AM" data-step="0"><div class="diagram-title">圖解 AM｜六題難度地圖</div><svg class="dgm" viewBox="0 0 940 560" role="img" aria-label="六題難度地圖"><defs><pattern id="rg-AM" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AM" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="560" fill="url(#rg-AM)"/><rect class="d-hot" x="30.0" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="168.66666666666666" y="72" text-anchor="middle">1 加點器</text><text class="t-note" x="168.66666666666666" y="122" text-anchor="middle">主做</text><text class="t-note" x="168.66666666666666" y="162" text-anchor="middle">signal、事件</text><rect class="d-card" x="331.3333333333333" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="470.0" y="72" text-anchor="middle">2 營業切換</text><text class="t-note" x="470.0" y="122" text-anchor="middle">基礎</text><text class="t-note" x="470.0" y="162" text-anchor="middle">@if／@else</text><rect class="d-soft" x="632.6666666666666" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="771.3333333333333" y="72" text-anchor="middle">3 預算菜單</text><text class="t-note" x="771.3333333333333" y="122" text-anchor="middle">標準</text><text class="t-note" x="771.3333333333333" y="162" text-anchor="middle">@for、computed</text><rect class="d-card" x="30.0" y="216" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="168.66666666666666" y="262" text-anchor="middle">4 閱讀模式</text><text class="t-note" x="168.66666666666666" y="312" text-anchor="middle">基礎</text><text class="t-note" x="168.66666666666666" y="352" text-anchor="middle">class 綁定</text><rect class="d-soft" x="331.3333333333333" y="216" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="470.0" y="262" text-anchor="middle">5 搜尋器</text><text class="t-note" x="470.0" y="312" text-anchor="middle">標準</text><text class="t-note" x="470.0" y="352" text-anchor="middle">input、computed</text><rect class="d-cool" x="632.6666666666666" y="216" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="771.3333333333333" y="262" text-anchor="middle">6 收藏切換</text><text class="t-note" x="771.3333333333333" y="312" text-anchor="middle">進階</text><text class="t-note" x="771.3333333333333" y="352" text-anchor="middle">陣列、signal</text><text class="t-note" x="470" y="418" text-anchor="middle">先走一條：主做題完成，其餘依時間選做</text></svg></div></div></div><div class="remember">這頁記住：先完成主做題，其餘依剩餘時間選做。</div></section><section class="slide" data-label="六步範例怎麼看"><p class="eyebrow">CH7 · 47</p><p class="pagedot">47/62</p><h2 class="headline">六步範例怎麼看</h2><div class="lesson-tags"><span>課程進度：05 / 06 整合與六題</span><span>本頁語法／概念：六步範例</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">每個範例頁都有六步，每步都是「到這裡為止的完整程式」。</p><ul class="lesson-points"><li>左側依實際檔名分頁：app.ts／app.html／app.css（需要時加 meals.ts）。</li><li>右側是那一步真實建置出來的 Angular 成果，不是示意圖。</li><li>切換步驟會重新載入預覽，回到該步的初始狀態。</li><li>「複製這一步」帶走單一檔案；「開新視窗」把成果開大來看。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="AN" data-step="0"><div class="diagram-title">圖解 AN｜六步怎麼看</div><svg class="dgm" viewBox="0 0 940 320" role="img" aria-label="六步怎麼看"><defs><pattern id="rg-AN" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-AN" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="320" fill="url(#rg-AN)"/><rect class="d-card" x="30.0" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="168.66666666666666" y="72" text-anchor="middle">① 選步驟</text><text class="t-note" x="168.66666666666666" y="122" text-anchor="middle">六格任一點</text><text class="t-note" x="168.66666666666666" y="162" text-anchor="middle">每格都是完整程式</text><rect class="d-soft" x="331.3333333333333" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="470.0" y="72" text-anchor="middle">② 看檔案</text><text class="t-note" x="470.0" y="122" text-anchor="middle">app.ts／html／css</text><text class="t-note" x="470.0" y="162" text-anchor="middle">分頁切換</text><rect class="d-hot" x="632.6666666666666" y="26" width="277.3333333333333" height="164" rx="12"/><text class="t-bold" x="771.3333333333333" y="72" text-anchor="middle">③ 看預覽</text><text class="t-note" x="771.3333333333333" y="122" text-anchor="middle">真實 Angular 建置</text><text class="t-note" x="771.3333333333333" y="162" text-anchor="middle">不是示意圖</text><text class="t-note" x="470" y="228" text-anchor="middle">切換步驟會重新載入，回到該步的初始狀態</text></svg></div></div></div><div class="remember">這頁記住：六步是累積的：每一步都能獨立執行。</div></section><section class="slide" data-label="練習 1｜宵夜加點器"><p class="eyebrow">CH7 · 48</p><p class="pagedot">48/62</p><h2 class="headline">練習 1｜宵夜加點器</h2><div class="lesson-tags"><span>課程進度：工作坊與收尾</span><span>本頁語法／概念：signal、事件</span></div><div class="ch5-grid ch6-grid ch7-exgrid"><div class="ch5-copy"><p class="mini-lead">從 0 開始，每一次點擊都只改一個數字。</p><div class="ch7-ex"><div class="panel"><p class="panel__hd">主做｜今晚一定要完成</p><ul class="ch9-chk"><li>初始 0；0 份時減號按不動。</li><li>加三次是 3；重設回 0；再加是 1。</li><li>按鈕文案跟著份數改變。</li></ul></div><ul class="lesson-links"><li><a href="examples/ch7_counter.html" target="_blank" rel="noopener">完整程式碼、真實預覽與 6 個製作步驟</a></li></ul></div></div><div class="visual-area"><figure class="shot"><img src="assets/ex-counter.jpg" alt="加點器：0 份時減號禁用，重設按鈕變灰" loading="lazy"><figcaption>加點器：0 份時減號禁用，重設按鈕變灰</figcaption></figure></div></div><div class="remember">這頁記住：加、減、重設，三個方法共用同一個 signal。</div></section><section class="slide" data-label="練習 2｜店家營業切換"><p class="eyebrow">CH7 · 49</p><p class="pagedot">49/62</p><h2 class="headline">練習 2｜店家營業切換</h2><div class="lesson-tags"><span>課程進度：工作坊與收尾</span><span>本頁語法／概念：@if、@else</span></div><div class="ch5-grid ch6-grid ch7-exgrid"><div class="ch5-copy"><p class="mini-lead">一個開關，決定兩個區塊要不要出現。</p><div class="ch7-ex"><div class="panel"><p class="panel__hd">基礎｜條件顯示</p><ul class="ch9-chk"><li>一開始是營業中、看得到加點入口。</li><li>打烊後入口消失並顯示「明天見」。</li><li>再開店恢復，按鈕文字跟著換。</li></ul></div><ul class="lesson-links"><li><a href="examples/ch7_open.html" target="_blank" rel="noopener">完整程式碼、真實預覽與 6 個製作步驟</a></li></ul></div></div><div class="visual-area"><figure class="shot"><img src="assets/ex-closed.jpg" alt="打烊：入口整段消失，只剩一句「明天見」" loading="lazy"><figcaption>打烊：入口整段消失，只剩一句「明天見」</figcaption></figure></div></div><div class="remember">這頁記住：同一個 signal 可以同時控制文字、面板與按鈕文案。</div></section><section class="slide" data-label="練習 3｜預算菜單"><p class="eyebrow">CH7 · 50</p><p class="pagedot">50/62</p><h2 class="headline">練習 3｜預算菜單</h2><div class="lesson-tags"><span>課程進度：工作坊與收尾</span><span>本頁語法／概念：@for、computed</span></div><div class="ch5-grid ch6-grid ch7-exgrid"><div class="ch5-copy"><p class="mini-lead">三顆按鈕、一份清單，換一個條件就換一批結果。</p><div class="ch7-ex"><div class="panel"><p class="panel__hd">標準｜清單與 computed</p><ul class="ch9-chk"><li>50 元 0 道並顯示提示。</li><li>80 元 2 道；120 元 3 道。</li><li>來回切換不累加、不殘留。</li></ul></div><ul class="lesson-links"><li><a href="examples/ch7_budget.html" target="_blank" rel="noopener">完整程式碼、真實預覽與 6 個製作步驟</a></li></ul></div></div><div class="visual-area"><figure class="shot"><img src="assets/ex-budget.jpg" alt="預算 50 元：三道全出局，顯示提示文字" loading="lazy"><figcaption>預算 50 元：三道全出局，顯示提示文字</figcaption></figure></div></div><div class="remember">這頁記住：條件是 signal，結果是 computed，兩者不必手動同步。</div></section><section class="slide" data-label="練習 4｜深夜閱讀模式"><p class="eyebrow">CH7 · 51</p><p class="pagedot">51/62</p><h2 class="headline">練習 4｜深夜閱讀模式</h2><div class="lesson-tags"><span>課程進度：工作坊與收尾</span><span>本頁語法／概念：class 綁定</span></div><div class="ch5-grid ch6-grid ch7-exgrid"><div class="ch5-copy"><p class="mini-lead">同一個區塊、兩組顏色，切換只改一個 class。</p><div class="ch7-ex"><div class="panel"><p class="panel__hd">基礎｜class 綁定</p><ul class="ch9-chk"><li>初始亮色；按一次轉暗、兩次回亮。</li><li>按鈕文字描述下一個動作。</li><li>兩種模式下文字都看得清楚。</li></ul></div><ul class="lesson-links"><li><a href="examples/ch7_reading.html" target="_blank" rel="noopener">完整程式碼、真實預覽與 6 個製作步驟</a></li></ul></div></div><div class="visual-area"><figure class="shot"><img src="assets/ex-night.jpg" alt="深夜模式：同一個 class 換一組樣式" loading="lazy"><figcaption>深夜模式：同一個 class 換一組樣式</figcaption></figure></div></div><div class="remember">這頁記住：狀態判斷在程式，顏色在 CSS，兩邊不要混。</div></section><section class="slide" data-label="練習 5｜餐點搜尋器"><p class="eyebrow">CH7 · 52</p><p class="pagedot">52/62</p><h2 class="headline">練習 5｜餐點搜尋器</h2><div class="lesson-tags"><span>課程進度：工作坊與收尾</span><span>本頁語法／概念：input、computed</span></div><div class="ch5-grid ch6-grid ch7-exgrid"><div class="ch5-copy"><p class="mini-lead">打一個字，清單跟著縮小；清空，全部回來。</p><div class="ch7-ex"><div class="panel"><p class="panel__hd">標準｜輸入與 computed</p><ul class="ch9-chk"><li>搜「飯」1 筆；搜「披薩」0 筆並提示。</li><li>清空回 3 筆。</li><li>連續打字結果都正確。</li></ul></div><ul class="lesson-links"><li><a href="examples/ch7_search.html" target="_blank" rel="noopener">完整程式碼、真實預覽與 6 個製作步驟</a></li></ul></div></div><div class="visual-area"><figure class="shot"><img src="assets/ex-search.jpg" alt="搜「麵」：只剩牛肉麵，筆數跟著變" loading="lazy"><figcaption>搜「麵」：只剩牛肉麵，筆數跟著變</figcaption></figure></div></div><div class="remember">這頁記住：輸入存進 signal，篩選交給 computed。</div></section><section class="slide" data-label="練習 6｜菜單收藏切換"><p class="eyebrow">CH7 · 53</p><p class="pagedot">53/62</p><h2 class="headline">練習 6｜菜單收藏切換</h2><div class="lesson-tags"><span>課程進度：工作坊與收尾</span><span>本頁語法／概念：陣列、output</span></div><div class="ch5-grid ch6-grid ch7-exgrid"><div class="ch5-copy"><p class="mini-lead">一份 id 清單，決定哪幾張卡是實心的。</p><div class="ch7-ex"><div class="panel"><p class="panel__hd">進階｜陣列更新</p><ul class="ch9-chk"><li>點 m1、m2 為 2 筆。</li><li>再點 m1 只剩 m2、數量 1。</li><li>三顆都取消後回 0。</li></ul></div><ul class="lesson-links"><li><a href="examples/ch7_favorite.html" target="_blank" rel="noopener">完整程式碼、真實預覽與 6 個製作步驟</a></li></ul></div></div><div class="visual-area"><figure class="shot"><img src="assets/ex-favorite.jpg" alt="收藏 m1、m2：數量 2，愛心變實心" loading="lazy"><figcaption>收藏 m1、m2：數量 2，愛心變實心</figcaption></figure></div></div><div class="remember">這頁記住：陣列只換不改：展開加、filter 減。</div></section><section class="slide" data-label="動手：做出可展示的菜單"><p class="eyebrow">CH7 · 54</p><p class="pagedot">54/62</p><h2 class="headline">動手：做出可展示的菜單</h2><div class="lesson-tags"><span>課程進度：工作坊與收尾</span><span>本頁語法／概念：工作坊</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">接下來 30 分鐘不教新東西，只做一件事：讓你的菜單能給別人操作。</p><ul class="lesson-points"><li>前 5 分鐘：選定主題、改好店名與三筆餐點。</li><li>中間 20 分鐘：完成主做題的加點器（加、減、重設、禁用）。</li><li>最後 5 分鐘：自己照驗收清單測一次。</li><li>完成的人再挑一題延伸；做不完的帶回去補，不算作業。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：30 分鐘只做一個能動的東西，不追求功能多。</div></section><section class="slide" data-label="交換測試：換一雙眼睛"><p class="eyebrow">CH7 · 55</p><p class="pagedot">55/62</p><h2 class="headline">交換測試：換一雙眼睛</h2><div class="lesson-tags"><span>課程進度：工作坊與收尾</span><span>本頁語法／概念：互測</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">自己測會漏，換一雙眼睛最快。</p><ul class="lesson-points"><li>同桌測四件事：加三次是 3、0 份不能減、重設回 0、再加是 1。</li><li>不看程式碼，只用滑鼠和鍵盤操作。</li><li>各說一個「已經成功」與一個「還要修」。</li><li>修完再測一次，通過才舉手。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：測試看行為，不看程式碼；通過才叫完成。</div></section><section class="slide" data-label="保存，下一週再見"><p class="eyebrow">CH7 · 56</p><p class="pagedot">56/62</p><h2 class="headline">保存，下一週再見</h2><div class="lesson-tags"><span>課程進度：工作坊與收尾</span><span>本頁語法／概念：保存</span></div><div class="ch5-grid ch6-grid no-visual"><div class="ch5-copy"><p class="mini-lead">最後五分鐘，把東西帶走。</p><ul class="lesson-points"><li>有登入：Fork／Save 後另開網址，確認修改還在。</li><li>沒登入：下載 ZIP 存到自己的雲端，確認檔案在。</li><li>下週做多頁網站，會用到今天的菜單——但下週有獨立起始專案。</li><li>離開前關掉分頁，明天再開一次確認。</li></ul></div><div class="visual-area"></div></div><div class="remember">這頁記住：重開看得到，才算真的做完。</div></section><section class="slide" data-label="每週精選｜AI × 前端"><p class="chapter-num">06 / 06</p><h2 class="chapter-title">每週精選｜AI × 前端</h2><p class="chapter-sub">每週看兩個近期作品：不是追工具，而是看 AI 怎麼把前端的可能性往外推。</p><div class="footer"><span>CH7 · 57/62</span><span>互動式網頁設計</span></div></section><section class="slide" data-label="Colorfigures：AI 畫出「真的能操作」的物件"><p class="eyebrow">每週精選 1｜AI × 互動 SVG</p><p class="pagedot">58/62</p><h2 class="headline">Colorfigures：AI 畫出「真的能操作」的物件</h2><div class="body-split body-split--shot showcase-split"><div><span class="code-label">實際畫面截圖</span><div class="shot-frame"><img class="shot" src="assets/showcase-colorfigures.png" alt="Colorfigures 的互動式手繪等軸自動販賣機"></div></div><div><ul class="points showcase-points"><li>Colorfigures 把日常物件做成手繪等軸風格的互動 HTML／SVG。</li><li>自動販賣機 Demo 可以投幣、選飲料、開取物門、找零，還能切換 See-through 與 Labels。</li></ul><div class="showcase-tech"><p class="showcase-tech__hd">前端技術／框架分析｜頁面結構與公開資料</p><ul><li>原生 HTML／SVG／JavaScript／CSS</li><li>無 React／Vue／Angular；無繪圖套件</li><li>固定等軸投影＋state／render＋CSS 動畫</li></ul></div><div class="note"><a href="https://colorfigures.vercel.app/#vending" target="_blank" rel="noopener">開啟這個作品</a>（colorfigures.vercel.app/#vending）</div><p class="mini-lead">跟這堂課的關聯</p><ul class="points showcase-points showcase-points--rel"><li>按鈕就是事件，投幣／選品／找零就是狀態；概念和今天 Angular 的資料流完全一樣。</li><li>SVG 不是只能畫圖；加上事件與狀態後，就能成為可操作的教學介面。</li></ul></div></div><div class="footer"><span>每週精選｜AI × 前端</span><span>CH7 · 58/62</span></div></section><section class="slide" data-label="仿作 Colorfigures：Prompt 怎麼下？"><p class="eyebrow">每週精選｜如果自己要做</p><p class="pagedot">59/62</p><h2 class="headline">仿作 Colorfigures：Prompt 怎麼下？</h2><div class="showcase-build-grid"><div><span class="code-label">可以直接交給 Coding Agent 的第一版 Prompt</span><pre class="showcase-prompt">請建立一個「單檔 index.html」的互動等軸 SVG 自動販賣機。
+
+限制：不用 React／Vue／Angular，不用外部繪圖套件；使用原生 HTML、SVG、CSS、JavaScript。
+
+視覺：手繪線稿、暖色紙張背景、固定等軸視角，有正確遮擋與陰影。
+
+互動：投 50 元、選 A1 飲料、開取物門、拿飲料、退幣、取硬幣、搖機器；另有 See-through 與 Labels 切換。
+
+狀態：集中在一個 state 物件，由 render() 統一更新；CSS transition 做動態。
+
+驗收：每一步只能在正確狀態執行；信用額、商品、門與找零狀態都正確；桌機與手機可操作。</pre></div><div><p class="mini-lead">預估工作時數</p><div class="showcase-hours"><div class="showcase-hours__row"><span>AI + 現成 skill</span><b>4–8 小時</b><span>一台完整可玩的物件</span></div><div class="showcase-hours__row"><span>從零刻 SVG／互動</span><b>12–24 小時</b><span>含投影、狀態、動畫、RWD</span></div></div><p class="showcase-hours__note">工時是假設熟悉前端、AI 輔助，並包含 2–3 輪視覺與互動修正。</p></div></div><div class="footer"><span>每週精選｜AI × 前端</span><span>CH7 · 59/62</span></div></section><section class="slide" data-label="fab24hr：一個人＋AI 做出 3D 晶圓廠"><p class="eyebrow">每週精選 2｜AI × 3D Web</p><p class="pagedot">60/62</p><h2 class="headline">fab24hr：一個人＋AI 做出 3D 晶圓廠</h2><div class="body-split body-split--shot showcase-split"><div><span class="code-label">實際畫面截圖</span><div class="shot-frame"><img class="shot" src="assets/showcase-fab24hr.png" alt="fab24hr 3D 晶圓廠模擬遊戲首頁"></div></div><div><ul class="points showcase-points"><li>fab24hr 是免費的 3D 晶圓廠網頁模擬遊戲，手機、平板、電腦都能直接玩，不用安裝。</li><li>主線「晶片的一生」與不同工程角色，把半導體流程變成「走進去、對話、做選擇」的體驗。</li></ul><div class="showcase-tech"><p class="showcase-tech__hd">前端技術／框架分析｜頁面結構與公開資料</p><ul><li>原生 JavaScript + three.js r128</li><li>esbuild 打包；Web Audio 合成音效</li><li>Playwright-core 自動遊玩測試；無 React／Vue／Angular</li></ul></div><div class="note"><a href="https://fab24hr.com/" target="_blank" rel="noopener">開啟這個作品</a>（fab24hr.com）</div><p class="mini-lead">跟這堂課的關聯</p><ul class="points showcase-points showcase-points--rel"><li>按鍵、角色位置、任務與對話，本質仍是「事件 → 狀態 → 畫面」。</li><li>一個網址跨手機與桌機直接玩，展示 Web 作為互動平台的優勢。</li></ul></div></div><div class="footer"><span>每週精選｜AI × 前端</span><span>CH7 · 60/62</span></div></section><section class="slide" data-label="仿作 fab24hr：Prompt 怎麼下？"><p class="eyebrow">每週精選｜如果自己要做</p><p class="pagedot">61/62</p><h2 class="headline">仿作 fab24hr：Prompt 怎麼下？</h2><div class="showcase-build-grid"><div><span class="code-label">可以直接交給 Coding Agent 的第一版 Prompt</span><pre class="showcase-prompt">基於 fab24hr-engine，做一個 5–10 分鐘可完成的「半導體夜班工程師」3D 網頁故事。
+
+沿用 engine，不重做移動、對話、存檔與分享系統。
+
+內容：1 個廠區、4 位角色、6 個任務節點、3 個可點術語、1 通電話事件、1 個小遊戲、1 張結局卡。
+
+流程：玩家可用鍵盤／螢幕方向鍵走動，靠近角色對話；next step 能帶路；手機與桌機皆可操作。
+
+技術：維持原生 JavaScript + three.js；使用現有 build／test。
+
+驗收：npm test 通過；桌機與手機各完整走完一次；重開可續玩；結局卡可分享。</pre></div><div><p class="mini-lead">預估工作時數</p><div class="showcase-hours"><div class="showcase-hours__row"><span>沿用 fab24hr-engine + AI</span><b>12–24 小時</b><span>5–10 分鐘可玩章節</span></div><div class="showcase-hours__row"><span>完整內容量</span><b>40–80 小時</b><span>多角色／多區域／完整故事</span></div><div class="showcase-hours__row"><span>連 engine 都從零做</span><b>120–240+ 小時</b><span>3D、移動、對話、存檔、分享、RWD</span></div></div><p class="showcase-hours__note">最大差異不是模型能力，而是有沒有沿用現成 engine；重造引擎會讓工時直接跳一個量級。</p></div></div><div class="footer"><span>每週精選｜AI × 前端</span><span>CH7 · 61/62</span></div></section><section class="slide" data-label="這週兩個作品，帶走三個觀察"><p class="eyebrow">每週精選｜收尾</p><p class="pagedot">62/62</p><h2 class="headline">這週兩個作品，帶走三個觀察</h2><div class="body-full showcase-outro"><div class="tbl"><div class="tbl__row tbl__row--head"><span>作品</span><span>核心技術</span><span>如果自己做</span></div><div class="tbl__row"><span class="tbl__el">Colorfigures</span><span class="tbl__use">SVG + 原生 JS／CSS</span><span class="tbl__use">AI + skill 約 4–8 小時；從零約 12–24 小時</span></div><div class="tbl__row"><span class="tbl__el">fab24hr</span><span class="tbl__use">three.js + 原生 JS</span><span class="tbl__use">用 engine 約 12–24 小時；重造 engine 約 120–240+ 小時</span></div></div><ul class="points showcase-points"><li>AI 前端作品正在從「生成內容」走向「生成互動」。</li><li>Prompt 越接近規格書：技術限制、狀態、驗收寫清楚，返工越少。</li><li>今天的事件 → 狀態 → 畫面，就是這兩個大型作品都在使用的基本模型。</li></ul></div><div class="footer"><span>每週精選｜AI × 前端</span><span>CH7 · 62/62</span></div></section></main></div><a class="deck-backlink" href="../">← 回簡報總覽</a>
+<div class="progress" id="progress"></div><div class="counter" id="counter">1 / 62</div><script>/* ===========================================
+   SLIDE PRESENTATION CONTROLLER（CH5／CH6／CH9 共用）
+   由 make_ch5.py / make_ch6.py / make_ch9.py 讀入後內嵌到產出的 HTML。
+   要改行為請改本檔，不要改產出的簡報 HTML。
+   2026-10-17：移除圖解步驟動畫（逐步揭示／自動播放／下一步／重播／暫停），
+               圖解內容一次全部呈現；「深入說明」Dialog 保留。
+   =========================================== */
+class SlidePresentation{
+  constructor(){
+    this.slides=[...document.querySelectorAll('.slide')];
+    this.total=this.slides.length;
+    this.current=0;
+    this.stage=document.getElementById('deckStage');
+    this.progress=document.getElementById('progress');
+    this.counter=document.getElementById('counter');
+    this.scale();
+    addEventListener('resize',()=>this.scale());
+    this.nav();
+    this.initDiagrams();
+    this.show(0);
+  }
+  /* 固定 16:9：整個 stage 等比縮放並置中，不重排內容 */
+  scale(){
+    const f=Math.min(innerWidth/1920,innerHeight/1080),
+          x=(innerWidth-1920*f)/2,y=(innerHeight-1080*f)/2;
+    this.stage.style.transform=`translate(${x}px, ${y}px) scale(${f})`;
+  }
+  nav(){
+    document.addEventListener('keydown',e=>{
+      const open=document.querySelector('.diagram-stepper.is-dialog');
+      if(open){e.preventDefault();if(e.key==='Escape')open.classList.remove('is-dialog');return;}
+      if(e.target.closest('input,textarea,[contenteditable=true]'))return;
+      if(e.target.closest('button')&&(e.key===' '||e.key==='Enter'))return;
+      if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();this.show(this.current+1);}
+      if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();this.show(this.current-1);}
+      if(e.key==='Home')this.show(0);
+      if(e.key==='End')this.show(this.total-1);
+    });
+  }
+  show(i){
+    this.current=Math.max(0,Math.min(i,this.total-1));
+    this.slides.forEach((s,n)=>{s.classList.toggle('active',n===this.current);s.classList.toggle('visible',n===this.current);});
+    this.progress.style.width=((this.current+1)/this.total*100)+'%';
+    this.counter.textContent=(this.current+1)+' / '+this.total;
+  }
+  /* ---------- 圖解：內容一次全部呈現（無步驟動畫） ---------- */
+  initDiagrams(){
+    document.querySelectorAll('.diagram-stepper').forEach(d=>{
+      const nodes=[...d.querySelectorAll('.flow-node,.dstep')];
+      nodes.forEach(n=>{n.classList.add('is-on');n.classList.remove('is-current');});
+      d.dataset.step=String(nodes.length);
+      const bind=(sel,fn)=>{const el=d.querySelector(sel);if(el)el.addEventListener('click',e=>{e.currentTarget.blur();fn();});};
+      bind('[data-diagram-action="more"]',()=>d.classList.add('is-dialog'));
+      bind('[data-diagram-action="close"]',()=>this.closeDialog(d));
+      const dlg=d.querySelector('.dgm-dialog');
+      if(dlg)dlg.addEventListener('click',e=>{if(e.target===dlg)this.closeDialog(d);});
+    });
+  }
+  closeDialog(d){ d.classList.remove('is-dialog'); }
+  /* 保留介面：匯出／列印流程會呼叫，現已無計時器 */
+  pauseAll(){}
+}
+const deck=new SlidePresentation();
+window.__deckPauseAll=()=>deck.pauseAll();
+</script></body></html>

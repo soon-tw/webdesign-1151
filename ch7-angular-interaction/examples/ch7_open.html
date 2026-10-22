@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-TW"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>練習 2｜店家營業切換</title><style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  background: #f4efe4; color: #2a241b; font-size: 15px;
+}
+header { padding: 16px 24px 14px; background: #2f5d50; color: #fff; }
+header h1 { margin: 0 0 4px; font-size: 24px; }
+header .sub { margin: 0; font-size: 14px; opacity: .92; }
+.hd-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.hd-actions button {
+  border: 1px solid rgba(255,255,255,.45); background: rgba(255,255,255,.12);
+  color: #fff; border-radius: 999px; padding: 7px 14px; cursor: pointer; font-size: 14px;
+}
+.hd-actions button:hover { background: rgba(255,255,255,.26); }
+
+.steps { padding: 12px 24px 14px; background: #fff; border-bottom: 1px solid #d8d0c5; }
+.steps__hd {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 10px; font-size: 13px; color: #6b6355;
+}
+.steps__hd b { color: #2a241b; }
+.steps__hd .pos { margin-left: auto; font-weight: 700; color: #2f5d50; }
+.steps__nav { display: flex; gap: 6px; }
+.steps__nav button {
+  border: 1px solid #cfc4b5; background: #fff; border-radius: 8px;
+  padding: 4px 10px; cursor: pointer; font-size: 13px;
+}
+.steps__nav button:disabled { opacity: .35; cursor: default; }
+.steps__list {
+  list-style: none; display: grid; grid-template-columns: repeat(6, minmax(0,1fr));
+  gap: 8px; margin: 0; padding: 0;
+}
+.steps__list button {
+  width: 100%; height: 100%; display: flex; gap: 8px; text-align: left;
+  padding: 8px 10px; background: #faf7f0; border: 1px solid #e1d8cc;
+  border-radius: 10px; cursor: pointer; font-size: 13px; line-height: 1.35; color: inherit;
+}
+.steps__list button b {
+  flex: 0 0 20px; height: 20px; border-radius: 50%; background: #e1d8cc;
+  display: grid; place-items: center; font-size: 12px;
+}
+.steps__list button.active { background: #eef5f1; border-color: #2f5d50; }
+.steps__list button.active b { background: #2f5d50; color: #fff; }
+
+.how {
+  margin: 12px 0 0; padding: 10px 14px; background: #eef5f1;
+  border-left: 4px solid #2f5d50; border-radius: 0 10px 10px 0;
+}
+.how__hd { margin: 0 0 4px; font-weight: 700; color: #2f5d50; font-size: 14px; }
+.how__body { margin: 0; line-height: 1.65; }
+.steps__check { margin: 12px 0 0; font-size: 13px; color: #4a4238; line-height: 1.6; }
+.note { margin: 10px 0 0; font-size: 13px; color: #7a6f5e; }
+
+main { display: grid; grid-template-columns: 46% 54%; gap: 14px; padding: 14px; }
+.tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.tabs button {
+  border: 1px solid #d7cdbf; background: #fff; border-radius: 10px 10px 0 0;
+  padding: 7px 14px; cursor: pointer; font-size: 13px; color: #6b6355;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.tabs button.on { background: #2f5d50; border-color: #2f5d50; color: #fff; }
+.pane {
+  border: 1px solid #d7cdbf; border-radius: 0 12px 12px 12px;
+  background: #fff; overflow: hidden;
+}
+.pane pre {
+  margin: 0; padding: 14px; font-size: 13px; line-height: 1.5; white-space: pre-wrap;
+  font-family: "JetBrains Mono", ui-monospace, monospace; max-height: 620px; overflow: auto;
+}
+.pane .fname {
+  font-size: 12px; color: #8a7f6d; padding: 6px 14px; border-bottom: 1px solid #eee6da;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.preview-wrap { display: grid; gap: 8px; align-content: start; }
+iframe {
+  width: 100%; height: 620px; border: 1px solid #d7cdbf; border-radius: 14px; background: #fff;
+}
+.status { font-size: 13px; color: #625a50; }
+
+@media (max-width: 1100px) {
+  main { grid-template-columns: 1fr; }
+  iframe { height: 460px; }
+  .steps__list { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+</style></head><body>
+<header>
+  <h1>練習 2｜店家營業切換</h1>
+  <p class="sub">檢查點：初始營業、加點入口可見；打烊後入口消失並顯示「明天見」；再開店恢復。</p>
+  <div class="hd-actions">
+    <button id="copy">複製這一步的檔案</button>
+    <button id="reload">重新整理預覽</button>
+    <button id="open">開新視窗</button>
+  </div>
+</header>
+<section class="steps">
+  <p class="steps__hd">製作步驟（<b>點任一步</b>可切換檔案與右側畫面）
+    <span class="pos" id="pos">第 1 步／共 6 步</span>
+    <span class="steps__nav"><button id="prev">◀ 上一步</button><button id="next">下一步 ▶</button></span>
+  </p>
+  <ol class="steps__list" id="stepList"><li><button data-step="1"><b>1</b><span>開啟店家卡樣板</span></button></li><li><button data-step="2"><b>2</b><span>宣告 isOpen 這個開關</span></button></li><li><button data-step="3"><b>3</b><span>接上切換按鈕</span></button></li><li><button data-step="4"><b>4</b><span>@if / @else：兩種狀態兩種畫面</span></button></li><li><button data-step="5"><b>5</b><span>讓加點入口只在營業時出現</span></button></li><li><button data-step="6"><b>6</b><span>完整解答與回扣</span></button></li></ol>
+  <div class="how">
+    <p class="how__hd" id="howTitle"></p>
+    <p class="how__body" id="howBody"></p>
+  </div>
+  <p class="steps__check"><b>做完自己檢查：</b>一開始是營業中、看得到「來一份炒飯」；按一次變明天見、按鈕消失；再按一次恢復。</p>
+  <p class="note">右側是這一步的程式碼以 <b>Angular 20 實際建置</b>出來的成果（不是示意圖）；左側是該步的完整檔案，可整份複製到 StackBlitz。<br><b>預覽是單一 HTML 檔，雙擊就能開，不需要伺服器。</b></p>
+</section>
+<main>
+  <section>
+    <div class="tabs" id="tabs"></div>
+    <div class="pane"><div class="fname" id="fname"></div><pre id="code"></pre></div>
+    <div class="status" id="status"></div>
+  </section>
+  <section class="preview-wrap">
+    <iframe id="preview" title="Angular 預覽"></iframe>
+    <div class="status">預覽路徑：<span id="ppath"></span></div>
+  </section>
+</main>
+<script id="data" type="application/json">[{"title": "開啟店家卡樣板", "desc": "右側有店名、狀態膠囊與加點面板，全部寫死。狀態目前固定顯示「營業中」。", "files": [{"name": "app.ts", "code": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>今天有開嗎</h1>\n\n  <p class=\"state open\"><span class=\"dot\"></span>營業中</p>\n\n  <div class=\"panel\">\n    <p>現在可以加點，廚房還熱著。</p>\n    <button>來一份炒飯</button>\n  </div>\n\n  <button class=\"toggle\">打烊</button>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 560px;\n  margin: 0 auto;\n  padding: 56px 32px 64px;\n  text-align: center;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 24px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.state {\n  display: inline-flex;\n  align-items: center;\n  gap: 12px;\n  border-radius: 999px;\n  padding: 12px 28px;\n  font-size: 22px;\n  font-weight: 700;\n}\n.state.open {\n  background: #e6f0ea;\n  color: #2f5d50;\n}\n.state.closed {\n  background: #f1e6e6;\n  color: #9c4a4a;\n}\n.dot {\n  width: 14px;\n  height: 14px;\n  border-radius: 50%;\n  background: currentColor;\n}\n.panel {\n  margin-top: 32px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 18px;\n  background: #fff;\n  padding: 28px 24px;\n}\n.panel p {\n  margin: 0 0 18px;\n  font-size: 18px;\n  color: #6b6355;\n}\n.panel button {\n  border: 0;\n  border-radius: 999px;\n  padding: 14px 32px;\n  background: #2f5d50;\n  color: #fff;\n  font-size: 18px;\n  cursor: pointer;\n}\n.toggle {\n  margin-top: 28px;\n  border: 2px solid #2f5d50;\n  border-radius: 999px;\n  padding: 13px 32px;\n  background: transparent;\n  color: #2f5d50;\n  font-size: 18px;\n  font-weight: 700;\n  cursor: pointer;\n}\n"}], "preview": "ch7_open/preview/step01.html"}, {"title": "宣告 isOpen 這個開關", "desc": "isOpen = signal(true) 代表「現在有開」。模板先直接印出布林值，確認它真的在讀資料。", "files": [{"name": "app.ts", "code": "import { Component, signal } from '@angular/core';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  isOpen = signal(true);\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>今天有開嗎</h1>\n\n  <p class=\"state open\"><span class=\"dot\"></span>目前狀態：{{ isOpen() }}</p>\n\n  <div class=\"panel\">\n    <p>現在可以加點，廚房還熱著。</p>\n    <button>來一份炒飯</button>\n  </div>\n\n  <button class=\"toggle\">打烊</button>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 560px;\n  margin: 0 auto;\n  padding: 56px 32px 64px;\n  text-align: center;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 24px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.state {\n  display: inline-flex;\n  align-items: center;\n  gap: 12px;\n  border-radius: 999px;\n  padding: 12px 28px;\n  font-size: 22px;\n  font-weight: 700;\n}\n.state.open {\n  background: #e6f0ea;\n  color: #2f5d50;\n}\n.state.closed {\n  background: #f1e6e6;\n  color: #9c4a4a;\n}\n.dot {\n  width: 14px;\n  height: 14px;\n  border-radius: 50%;\n  background: currentColor;\n}\n.panel {\n  margin-top: 32px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 18px;\n  background: #fff;\n  padding: 28px 24px;\n}\n.panel p {\n  margin: 0 0 18px;\n  font-size: 18px;\n  color: #6b6355;\n}\n.panel button {\n  border: 0;\n  border-radius: 999px;\n  padding: 14px 32px;\n  background: #2f5d50;\n  color: #fff;\n  font-size: 18px;\n  cursor: pointer;\n}\n.toggle {\n  margin-top: 28px;\n  border: 2px solid #2f5d50;\n  border-radius: 999px;\n  padding: 13px 32px;\n  background: transparent;\n  color: #2f5d50;\n  font-size: 18px;\n  font-weight: 700;\n  cursor: pointer;\n}\n"}], "preview": "ch7_open/preview/step02.html"}, {"title": "接上切換按鈕", "desc": "toggle() 每次把值反過來：!this.isOpen()。按一下 true → false，再按變回來。", "files": [{"name": "app.ts", "code": "import { Component, signal } from '@angular/core';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  isOpen = signal(true);\n\n  toggle() {\n    this.isOpen.set(!this.isOpen());\n  }\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>今天有開嗎</h1>\n\n  <p class=\"state open\"><span class=\"dot\"></span>目前狀態：{{ isOpen() }}</p>\n\n  <div class=\"panel\">\n    <p>現在可以加點，廚房還熱著。</p>\n    <button>來一份炒飯</button>\n  </div>\n\n  <button class=\"toggle\" (click)=\"toggle()\">打烊</button>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 560px;\n  margin: 0 auto;\n  padding: 56px 32px 64px;\n  text-align: center;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 24px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.state {\n  display: inline-flex;\n  align-items: center;\n  gap: 12px;\n  border-radius: 999px;\n  padding: 12px 28px;\n  font-size: 22px;\n  font-weight: 700;\n}\n.state.open {\n  background: #e6f0ea;\n  color: #2f5d50;\n}\n.state.closed {\n  background: #f1e6e6;\n  color: #9c4a4a;\n}\n.dot {\n  width: 14px;\n  height: 14px;\n  border-radius: 50%;\n  background: currentColor;\n}\n.panel {\n  margin-top: 32px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 18px;\n  background: #fff;\n  padding: 28px 24px;\n}\n.panel p {\n  margin: 0 0 18px;\n  font-size: 18px;\n  color: #6b6355;\n}\n.panel button {\n  border: 0;\n  border-radius: 999px;\n  padding: 14px 32px;\n  background: #2f5d50;\n  color: #fff;\n  font-size: 18px;\n  cursor: pointer;\n}\n.toggle {\n  margin-top: 28px;\n  border: 2px solid #2f5d50;\n  border-radius: 999px;\n  padding: 13px 32px;\n  background: transparent;\n  color: #2f5d50;\n  font-size: 18px;\n  font-weight: 700;\n  cursor: pointer;\n}\n"}], "preview": "ch7_open/preview/step03.html"}, {"title": "@if / @else：兩種狀態兩種畫面", "desc": "把印出布林值的地方換成 @if / @else 兩個分支：營業中、明天見。狀態不只靠顏色，文字也說清楚。", "files": [{"name": "app.ts", "code": "import { Component, signal } from '@angular/core';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  isOpen = signal(true);\n\n  toggle() {\n    this.isOpen.set(!this.isOpen());\n  }\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>今天有開嗎</h1>\n\n  @if (isOpen()) {\n    <p class=\"state open\"><span class=\"dot\"></span>營業中</p>\n  } @else {\n    <p class=\"state closed\"><span class=\"dot\"></span>明天見</p>\n  }\n\n  <div class=\"panel\">\n    <p>現在可以加點，廚房還熱著。</p>\n    <button>來一份炒飯</button>\n  </div>\n\n  <button class=\"toggle\" (click)=\"toggle()\">打烊</button>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 560px;\n  margin: 0 auto;\n  padding: 56px 32px 64px;\n  text-align: center;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 24px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.state {\n  display: inline-flex;\n  align-items: center;\n  gap: 12px;\n  border-radius: 999px;\n  padding: 12px 28px;\n  font-size: 22px;\n  font-weight: 700;\n}\n.state.open {\n  background: #e6f0ea;\n  color: #2f5d50;\n}\n.state.closed {\n  background: #f1e6e6;\n  color: #9c4a4a;\n}\n.dot {\n  width: 14px;\n  height: 14px;\n  border-radius: 50%;\n  background: currentColor;\n}\n.panel {\n  margin-top: 32px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 18px;\n  background: #fff;\n  padding: 28px 24px;\n}\n.panel p {\n  margin: 0 0 18px;\n  font-size: 18px;\n  color: #6b6355;\n}\n.panel button {\n  border: 0;\n  border-radius: 999px;\n  padding: 14px 32px;\n  background: #2f5d50;\n  color: #fff;\n  font-size: 18px;\n  cursor: pointer;\n}\n.toggle {\n  margin-top: 28px;\n  border: 2px solid #2f5d50;\n  border-radius: 999px;\n  padding: 13px 32px;\n  background: transparent;\n  color: #2f5d50;\n  font-size: 18px;\n  font-weight: 700;\n  cursor: pointer;\n}\n"}], "preview": "ch7_open/preview/step04.html"}, {"title": "讓加點入口只在營業時出現", "desc": "再加一組 @if 包住整個面板——打烊時入口直接不存在。按鈕文案也跟著狀態換。", "files": [{"name": "app.ts", "code": "import { Component, signal } from '@angular/core';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  isOpen = signal(true);\n\n  toggle() {\n    this.isOpen.set(!this.isOpen());\n  }\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>今天有開嗎</h1>\n\n  @if (isOpen()) {\n    <p class=\"state open\"><span class=\"dot\"></span>營業中</p>\n  } @else {\n    <p class=\"state closed\"><span class=\"dot\"></span>明天見</p>\n  }\n\n  @if (isOpen()) {\n    <div class=\"panel\">\n      <p>現在可以加點，廚房還熱著。</p>\n      <button>來一份炒飯</button>\n    </div>\n  }\n\n  <button class=\"toggle\" (click)=\"toggle()\">{{ isOpen() ? '打烊' : '開始營業' }}</button>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 560px;\n  margin: 0 auto;\n  padding: 56px 32px 64px;\n  text-align: center;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 24px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.state {\n  display: inline-flex;\n  align-items: center;\n  gap: 12px;\n  border-radius: 999px;\n  padding: 12px 28px;\n  font-size: 22px;\n  font-weight: 700;\n}\n.state.open {\n  background: #e6f0ea;\n  color: #2f5d50;\n}\n.state.closed {\n  background: #f1e6e6;\n  color: #9c4a4a;\n}\n.dot {\n  width: 14px;\n  height: 14px;\n  border-radius: 50%;\n  background: currentColor;\n}\n.panel {\n  margin-top: 32px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 18px;\n  background: #fff;\n  padding: 28px 24px;\n}\n.panel p {\n  margin: 0 0 18px;\n  font-size: 18px;\n  color: #6b6355;\n}\n.panel button {\n  border: 0;\n  border-radius: 999px;\n  padding: 14px 32px;\n  background: #2f5d50;\n  color: #fff;\n  font-size: 18px;\n  cursor: pointer;\n}\n.toggle {\n  margin-top: 28px;\n  border: 2px solid #2f5d50;\n  border-radius: 999px;\n  padding: 13px 32px;\n  background: transparent;\n  color: #2f5d50;\n  font-size: 18px;\n  font-weight: 700;\n  cursor: pointer;\n}\n"}], "preview": "ch7_open/preview/step05.html"}, {"title": "完整解答與回扣", "desc": "一個 signal 決定兩個區塊要不要出現。這就是 @if 的用途：資料不同，畫面不同。", "files": [{"name": "app.ts", "code": "import { Component, signal } from '@angular/core';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.html',\n  styleUrl: './app.css',\n})\nexport class App {\n  isOpen = signal(true);\n\n  toggle() {\n    this.isOpen.set(!this.isOpen());\n  }\n}\n"}, {"name": "app.html", "code": "<main class=\"wrap\">\n  <p class=\"kicker\">晚班補給站</p>\n  <h1>今天有開嗎</h1>\n\n  @if (isOpen()) {\n    <p class=\"state open\"><span class=\"dot\"></span>營業中</p>\n  } @else {\n    <p class=\"state closed\"><span class=\"dot\"></span>明天見</p>\n  }\n\n  @if (isOpen()) {\n    <div class=\"panel\">\n      <p>現在可以加點，廚房還熱著。</p>\n      <button>來一份炒飯</button>\n    </div>\n  }\n\n  <button class=\"toggle\" (click)=\"toggle()\">{{ isOpen() ? '打烊' : '開始營業' }}</button>\n</main>\n"}, {"name": "app.css", "code": ".wrap {\n  max-width: 560px;\n  margin: 0 auto;\n  padding: 56px 32px 64px;\n  text-align: center;\n}\n.kicker {\n  margin: 0 0 10px;\n  font-size: 18px;\n  letter-spacing: 4px;\n  color: #8a7f6d;\n}\nh1 {\n  margin: 0 0 24px;\n  font-size: 38px;\n  font-weight: 700;\n}\n.state {\n  display: inline-flex;\n  align-items: center;\n  gap: 12px;\n  border-radius: 999px;\n  padding: 12px 28px;\n  font-size: 22px;\n  font-weight: 700;\n}\n.state.open {\n  background: #e6f0ea;\n  color: #2f5d50;\n}\n.state.closed {\n  background: #f1e6e6;\n  color: #9c4a4a;\n}\n.dot {\n  width: 14px;\n  height: 14px;\n  border-radius: 50%;\n  background: currentColor;\n}\n.panel {\n  margin-top: 32px;\n  border: 1.5px solid #ddd3c5;\n  border-radius: 18px;\n  background: #fff;\n  padding: 28px 24px;\n}\n.panel p {\n  margin: 0 0 18px;\n  font-size: 18px;\n  color: #6b6355;\n}\n.panel button {\n  border: 0;\n  border-radius: 999px;\n  padding: 14px 32px;\n  background: #2f5d50;\n  color: #fff;\n  font-size: 18px;\n  cursor: pointer;\n}\n.toggle {\n  margin-top: 28px;\n  border: 2px solid #2f5d50;\n  border-radius: 999px;\n  padding: 13px 32px;\n  background: transparent;\n  color: #2f5d50;\n  font-size: 18px;\n  font-weight: 700;\n  cursor: pointer;\n}\n"}], "preview": "ch7_open/preview/step06.html"}]</script>
+<script>
+const steps = JSON.parse(document.getElementById('data').textContent);
+let cur = 0, tab = 0;
+const $ = s => document.querySelector(s);
+
+function render() {
+  const st = steps[cur];
+  $('#pos').textContent = '第 ' + (cur + 1) + ' 步／共 ' + steps.length + ' 步';
+  $('#howTitle').textContent = st.title;
+  $('#howBody').textContent = st.desc;
+  $('#prev').disabled = cur === 0;
+  $('#next').disabled = cur === steps.length - 1;
+  document.querySelectorAll('#stepList button').forEach((b, i) => b.classList.toggle('active', i === cur));
+
+  if (tab >= st.files.length) tab = 0;
+  $('#tabs').innerHTML = st.files.map((f, i) =>
+    '<button data-tab="' + i + '" class="' + (i === tab ? 'on' : '') + '">' + f.name + '</button>').join('');
+  $('#tabs').querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => { tab = +b.dataset.tab; render(); });
+  });
+  $('#fname').textContent = st.files[tab].name;
+  $('#code').textContent = st.files[tab].code;
+
+  $('#preview').src = st.preview;
+  $('#ppath').textContent = st.preview;
+  $('#status').textContent = '';
+}
+
+document.querySelectorAll('#stepList button').forEach(b => {
+  b.addEventListener('click', () => { cur = +b.dataset.step - 1; tab = 0; render(); });
+});
+$('#prev').addEventListener('click', () => { if (cur > 0) { cur--; tab = 0; render(); } });
+$('#next').addEventListener('click', () => { if (cur < steps.length - 1) { cur++; tab = 0; render(); } });
+$('#reload').addEventListener('click', () => { const f = $('#preview'); f.src = f.src; });
+$('#open').addEventListener('click', () => { window.open(steps[cur].preview, '_blank', 'noopener'); });
+$('#copy').addEventListener('click', async () => {
+  const code = steps[cur].files[tab].code;
+  const name = steps[cur].files[tab].name;
+  // file:// 下沒有 navigator.clipboard，退回 execCommand
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(code);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!ok) throw new Error('copy failed');
+    }
+    $('#status').textContent = '已複製 ' + name;
+  } catch (e) { $('#status').textContent = '複製失敗，請手動選取程式碼'; }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea')) return;
+  if (e.key === 'ArrowLeft' && cur > 0) { cur--; tab = 0; render(); }
+  if (e.key === 'ArrowRight' && cur < steps.length - 1) { cur++; tab = 0; render(); }
+});
+render();
+</script>
+</body></html>
