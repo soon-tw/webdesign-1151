@@ -1,0 +1,930 @@
+<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CH8A VS Code 環境設定</title><style>
+/* ===========================================================
+   CH2 簡報樣式 — soft-editorial
+   由 output/簡報建置/build.py 內嵌字型後寫入簡報檔案。
+   修改樣式請改本檔，再重跑 build.py。
+   =========================================================== */
+
+/* ===== 內嵌字型子集（離線可用；由 build.py 產生） ===== */
+
+/* ===========================================
+   1. THEME TOKENS
+   =========================================== */
+:root {
+  /* Colors */
+  --paper:        #F2EEDF;
+  --paper-2:      #ECE6D2;
+  --ink:          #2A241B;
+  --ink-soft:     #5C5345;
+  --pink:         #E1A4C2;
+  --lemon:        #D6DD63;
+  --blush:        #E8C9B6;
+  --sage:         #B7C7A8;
+  --lilac:        #C9BEDC;
+  --card:         rgba(255, 255, 255, 0.55);
+  --rule-soft:    rgba(42, 36, 27, 0.18);
+  --rule-medium:  rgba(42, 36, 27, 0.35);
+
+  /* 程式碼語法色（同一色票的加深版） */
+  --code-tag: #8C5A3C;
+  --code-attr: #6E7F45;
+  --code-str: #A64C7C;
+  --code-cmt: #8A8072;
+
+  /* Fonts — 全部內嵌，離線可用 */
+  --f-display: 'Cormorant Garamond', 'LXGW WenKai TC', 'Noto Serif TC', serif;
+  --f-body:    'Work Sans', 'Noto Serif TC', serif;
+  --f-sans:    'Work Sans', 'Noto Sans TC', sans-serif;
+  --f-code:    'JetBrains Mono', 'Noto Sans TC', monospace;
+  --f-icons:   'Material Symbols Outlined';
+
+  /* Type scale（1920×1080 stage；字級下限見 CLAUDE.md 規範） */
+  --t-display:  168px;
+  --t-chapter:  132px;
+  --t-headline: 76px;
+  --t-subhead:  48px;
+  --t-body:     38px;
+  --t-body-sm:  34px;
+  --t-code:     32px;
+  --t-min:      28px;
+  --t-eyebrow:  30px;
+
+  --pad-outer: 80px;
+  --pad-top: 60px;
+  --pad-bottom: 50px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.6s;
+
+  --stage-bg: #1a1713;
+  --slide-bg: var(--paper);
+}
+
+/* ===========================================
+   2. BASE（viewport-base.css 全文強制納入）
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html,
+body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-stage {
+  position: absolute; left: 0; top: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  background: var(--slide-bg, #fff);
+}
+.slide {
+  position: absolute; inset: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  display: block;
+  visibility: hidden; opacity: 0; pointer-events: none;
+  background: var(--slide-bg, #fff);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+
+@media print {
+  html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+  .deck-viewport { position: static; overflow: visible; background: #fff; }
+  .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+  .slide {
+    position: relative; display: block !important; visibility: visible !important;
+    opacity: 1 !important; pointer-events: auto !important;
+    width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   3. SLIDE CHROME
+   =========================================== */
+.eyebrow {
+  position: absolute; top: var(--pad-top); left: var(--pad-outer);
+  font-family: var(--f-sans); font-size: var(--t-eyebrow); font-weight: 400;
+  color: var(--ink);
+}
+.pagedot {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.footer {
+  position: absolute; bottom: var(--pad-bottom); left: var(--pad-outer); right: var(--pad-outer);
+  display: flex; justify-content: space-between;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+
+/* ===========================================
+   4. LAYOUT PRIMITIVES
+   =========================================== */
+.headline {
+  position: absolute; top: 128px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-headline);
+  line-height: 1.24; color: var(--ink);
+}
+.headline em { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+/* 標題下方的極細分隔線（編輯排版手法，非裝飾卡片） */
+.headline::after {
+  content: ''; display: block; width: 160px; height: 1px;
+  background: var(--rule-medium); margin-top: 26px;
+}
+
+.body-split {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; grid-template-columns: 44% minmax(0, 1fr); gap: 44px; align-items: start;
+}
+.body-split--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+/* 範例頁：截圖給 58%，投影時字才看得清楚 */
+.body-split--shot { grid-template-columns: 58% minmax(0, 1fr); }
+.body-full {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; gap: 34px; align-content: start;
+}
+
+/* 要點條列 — 單一墨色短橫線標記，不做彩色圓點循環 */
+.points { list-style: none; display: grid; gap: 24px; }
+.points li {
+  position: relative; padding-left: 40px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.62; color: var(--ink);
+}
+.points li::before {
+  content: ''; position: absolute; left: 0; top: 0.74em;
+  width: 22px; height: 2px; background: var(--ink); opacity: 0.34;
+}
+.points b, .points strong { font-weight: 500; }
+.points code {
+  font-family: var(--f-code); font-size: 0.92em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* ===========================================
+   5. CODE PANEL
+   =========================================== */
+.code-label {
+  display: block; margin-bottom: 14px;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.code {
+  font-family: var(--f-code); font-size: var(--t-code); line-height: 1.62;
+  color: var(--ink);
+  background: var(--card); border-radius: 22px;
+  padding: 38px 42px;
+  white-space: pre; overflow: hidden;
+}
+.code .tag  { color: var(--code-tag); }
+.code .attr { color: var(--code-attr); }
+.code .str  { color: var(--code-str); }
+.code .cmt  { color: var(--code-cmt); }
+.code .ok   { color: var(--code-attr); }
+.code .no   { color: var(--code-str); }
+
+/* 程式碼一律顯示原始字元：JetBrains Mono 的連字會把 <!-- 畫成箭頭、把 === 併成三條長橫線，對初學者是反效果 */
+.code, code, .keys__k, .tbl__el, .dgm .t-code, .dgm .t-mono,
+.code-pane pre, .tsjs pre {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0, "calt" 0;
+}
+
+/* ===========================================
+   6. 推薦資源 — 編輯式出處行（無外框、無彩色邊條）
+   =========================================== */
+.res {
+  margin-top: 34px; padding-top: 18px;
+  border-top: 1px dashed var(--rule-medium);
+}
+.res__kind {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.res__kind::before {
+  font-family: var(--f-icons); font-size: 30px; font-weight: normal;
+  font-style: normal; line-height: 1; color: var(--ink-soft);
+}
+.res__title {
+  display: block; margin-top: 8px;
+  font-family: var(--f-display); font-size: var(--t-body-sm); font-weight: 500; color: var(--ink);
+}
+.res__desc {
+  font-family: var(--f-body); font-size: 28px; line-height: 1.55;
+  color: var(--ink-soft); margin-top: 4px;
+}
+.res--card   .res__kind::before { content: "\e8e7"; }  /* bookmark */
+.res--video  .res__kind::before { content: "\e1c4"; }  /* play_circle */
+.res--mind   .res__kind::before { content: "\e97a"; }  /* account_tree */
+.res--chart  .res__kind::before { content: "\e26b"; }  /* bar_chart */
+.res--audio  .res__kind::before { content: "\f01f"; }  /* headphones */
+.res--slides .res__kind::before { content: "\e41b"; }  /* slideshow */
+.res--quiz   .res__kind::before { content: "\f04c"; }  /* quiz */
+.res--check  .res__kind::before { content: "\e2e6"; }  /* task_alt */
+
+/* ===========================================
+   7. 行內小圖示與狀態藥丸
+   =========================================== */
+.ic {
+  font-family: var(--f-icons); font-style: normal; font-weight: normal;
+  line-height: 1; vertical-align: -0.14em; display: inline-block;
+}
+.ic--warn::before  { content: "\f083"; }  /* warning */
+.ic--check::before { content: "\e2e6"; }  /* task_alt */
+.ic--no::before    { content: "\e888"; }  /* cancel */
+.ic--tip::before   { content: "\e90f"; }  /* lightbulb */
+.ic--info::before  { content: "\e88e"; }  /* info */
+
+.pill {
+  display: inline-block; border-radius: 999px; padding: 1px 18px 3px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink);
+}
+.pill--yes { background: var(--lemon); }
+.pill--no  { background: var(--pink); }
+
+/* ===========================================
+   8. 章節頁 / 封面 / 收尾
+   =========================================== */
+.chapter-num {
+  position: absolute; top: 250px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-weight: 500;
+  font-size: 120px; color: var(--blush);
+}
+.chapter-title {
+  position: absolute; top: 400px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-chapter);
+  line-height: 1.22; color: var(--ink);
+}
+.chapter-title::after {
+  content: ''; display: block; width: 240px; height: 1px;
+  background: var(--rule-medium); margin-top: 34px;
+}
+.chapter-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink-soft);
+}
+
+.cover-kicker {
+  position: absolute; top: 240px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-subhead);
+  color: var(--ink-soft);
+}
+.cover-title {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-display);
+  line-height: 1.16; color: var(--ink);
+}
+.cover-sub {
+  position: absolute; top: 560px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 64px;
+  line-height: 1.3; color: var(--ink-soft);
+}
+.cover-swatches {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  display: flex; gap: 20px;
+}
+.cover-swatches span { width: 56px; height: 56px; border-radius: 50%; display: block; }
+.cover-swatches span:nth-child(1) { background: var(--pink); }
+.cover-swatches span:nth-child(2) { background: var(--lemon); }
+.cover-swatches span:nth-child(3) { background: var(--sage); }
+
+.slide--accent { background: var(--pink); }
+.closer-title {
+  position: absolute; top: 380px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 140px;
+  line-height: 1.2; color: var(--ink);
+}
+.closer-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink);
+}
+
+/* ===========================================
+   9. ANIMATION
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(28px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal:nth-child(1) { transition-delay: 0.08s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: 0.16s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: 0.24s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: 0.32s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: 0.40s; }
+
+/* ===========================================
+   10. DECK CHROME（舞台外）
+   =========================================== */
+.progress {
+  position: fixed; left: 0; bottom: 0; height: 4px; width: 0;
+  background: var(--pink); z-index: 1001; transition: width 0.3s var(--ease);
+}
+.counter {
+  position: fixed; right: 18px; bottom: 14px; z-index: 1001;
+  font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+  position: fixed; top: 16px; left: 16px; z-index: 10001;
+  font-size: 18px; line-height: 1; padding: 10px 12px; border: 0; border-radius: 12px;
+  background: var(--paper); color: var(--ink); cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); outline-offset: 4px; }
+
+/* ===========================================
+   11. 補充元件（備注／步驟／雙平台快捷鍵表）
+   =========================================== */
+/* 頁尾備注：虛線細規 + 小字，用於補充說明 */
+.note {
+  margin-top: 28px; padding-top: 16px;
+  border-top: 1px dashed var(--rule-medium);
+  font-family: var(--f-body); font-size: var(--t-min); line-height: 1.6;
+  color: var(--ink-soft);
+}
+.note b { color: var(--ink); font-weight: 500; }
+.note code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 編號步驟：斜體羅馬數字，符合 soft-editorial 的步驟記號 */
+.steps { list-style: none; counter-reset: step; display: grid; gap: 18px; }
+.steps li {
+  position: relative; padding-left: 76px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.6; color: var(--ink);
+}
+.steps li::before {
+  counter-increment: step; content: counter(step, lower-roman) ".";
+  position: absolute; left: 0; top: 0;
+  font-family: var(--f-display); font-style: italic; font-size: 32px; color: var(--ink-soft);
+}
+.steps code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 雙平台快速鍵表 */
+.keys { display: grid; gap: 0; }
+.keys__row {
+  display: grid; grid-template-columns: 1fr 300px 300px; gap: 18px;
+  align-items: baseline; padding: 13px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-min);
+}
+.keys__row:last-child { border-bottom: 0; }
+.keys__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.keys__fn { font-family: var(--f-body); color: var(--ink); }
+.keys__k  { font-family: var(--f-code); font-size: var(--t-min); color: var(--code-tag); }
+
+/* 行內連結（CodePen、數位學習平台等） */
+.points a, .note a, .res__desc a, .code a {
+  color: var(--code-tag);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+/* 頁尾備注：佔用固定底槽，主體區域讓出空間 */
+.body-split--note, .body-full--note { bottom: 232px; }
+.note--bottom {
+  position: absolute; left: var(--pad-outer); right: var(--pad-outer); bottom: 120px;
+  margin: 0;
+}
+
+/* ===========================================
+   12. 內容表格（常用元素速查）
+   =========================================== */
+.tbl { display: grid; }
+.tbl__row {
+  display: grid; grid-template-columns: 420px 1fr 1.3fr; gap: 28px;
+  align-items: baseline; padding: 15px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-body);
+}
+.tbl__row:last-child { border-bottom: 0; }
+.tbl__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.tbl__el { font-family: var(--f-code); color: var(--code-tag); }
+.tbl__use { font-family: var(--f-body); line-height: 1.45; color: var(--ink); }
+.tbl__row--head .tbl__el { color: var(--ink-soft); }
+
+/* ===========================================
+   13. 作業範例的成品截圖
+   =========================================== */
+.shot {
+  display: block; width: auto; max-width: 100%; max-height: 560px;
+  border-radius: 12px; background: #fff;
+}
+.shot-frame {
+  background: var(--card); border-radius: 22px; padding: 22px;
+  display: inline-block; max-width: 100%;
+}
+
+/* ===========================================
+   14. 內嵌圖解（語彙取自 archify：格線底、泳道標頭、
+       節點卡、語意色票、箭頭先用 marker 定義）
+       —— 只用 CSS class 上色，不寫 inline fill，
+          換主題時整組跟著變
+   =========================================== */
+.dgm { display: block; width: 100%; height: auto; }
+
+.dgm .d-grid   { fill: none; stroke: rgba(42, 36, 27, 0.07); stroke-width: 1; }
+
+/* 節點卡：一律「先遮罩、再上色」兩層，避免半透明底色讓線穿過去 */
+.dgm .d-mask   { fill: var(--paper); stroke: none; }
+.dgm .d-card   { fill: rgba(255, 255, 255, 0.72); stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-margin { fill: rgba(232, 201, 182, 0.40); stroke: var(--blush); stroke-width: 2; stroke-dasharray: 9 7; }
+.dgm .d-border { fill: none; stroke: var(--ink); stroke-width: 4; }
+.dgm .d-padding{ fill: rgba(183, 199, 168, 0.45); stroke: var(--sage); stroke-width: 2; }
+.dgm .d-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-hot    { fill: rgba(225, 164, 194, 0.35); stroke: var(--pink); stroke-width: 2; }
+.dgm .d-cool   { fill: rgba(201, 190, 220, 0.35); stroke: var(--lilac); stroke-width: 2; }
+.dgm .d-soft   { fill: rgba(214, 221, 99, 0.32);  stroke: var(--lemon); stroke-width: 2; }
+
+/* 文字：字級已按「1920×1080 舞台的 28px 下限」放大，不沿用 archify 的 7–12px */
+.dgm .t-head { font-family: var(--f-display); font-style: italic; font-size: 30px; fill: var(--ink-soft); }
+.dgm .t-lab  { font-family: var(--f-sans);  font-size: 30px; fill: var(--ink); }
+.dgm .t-bold { font-family: var(--f-sans);  font-size: 30px; font-weight: 700; fill: var(--ink); }
+.dgm .t-code { font-family: var(--f-code);  font-size: 28px; fill: var(--code-tag); }
+.dgm .t-note { font-family: var(--f-body);  font-size: 28px; fill: var(--ink-soft); }
+.dgm .t-mono { font-family: var(--f-code);  font-size: 28px; fill: var(--ink-soft); }
+
+/* 色票小方塊（圖例用） */
+.dgm .sw-margin { fill: var(--blush); }
+.dgm .sw-border { fill: var(--ink); }
+.dgm .sw-padding{ fill: var(--sage); }
+.dgm .sw-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+
+/* 流程線與箭頭（marker 在各圖的 <defs> 內定義） */
+.dgm .a-line     { fill: none; stroke: var(--ink-soft); stroke-width: 2.5; }
+.dgm .a-line-soft{ fill: none; stroke: var(--rule-medium); stroke-width: 2; }
+.dgm .d-arrowhead{ fill: var(--ink-soft); }
+
+/* 原位／預設位置的虛線殘影 */
+.dgm .d-ghost { fill: none; stroke: var(--rule-medium); stroke-width: 2; stroke-dasharray: 7 7; }
+
+/* 小標籤（狀態、勝出、標記用） */
+.dgm .d-pill   { fill: rgba(214, 221, 99, 0.55); stroke: var(--lemon); stroke-width: 1.5; }
+.dgm .d-pill-w { fill: rgba(225, 164, 194, 0.45); stroke: var(--pink); stroke-width: 1.5; }
+
+/* 面板底色（比較用的分格） */
+.dgm .d-panel  { fill: rgba(255, 255, 255, 0.55); stroke: var(--rule-soft); stroke-width: 1.5; }
+.dgm .d-slot   { fill: rgba(42, 36, 27, 0.06); stroke: var(--rule-medium); stroke-width: 1.5; }
+
+
+/* ===========================================
+   CH5 70-page JavaScript deck additions
+   =========================================== */
+.lesson-tags{position:absolute;top:60px;left:250px;right:250px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.lesson-tags span{border:1px solid var(--rule-soft);border-radius:999px;padding:8px 18px;background:rgba(255,255,255,.48)}.ch5-grid{position:absolute;top:265px;left:80px;right:80px;bottom:118px;display:grid;grid-template-columns:43% 57%;gap:34px;align-items:start}.visual-area{display:grid;gap:14px;align-content:start}.ch5-grid.no-visual{grid-template-columns:1fr}.ch5-copy{display:grid;gap:22px}.mini-lead{font-family:var(--f-display);font-size:42px;line-height:1.35;color:var(--ink)}.lesson-points{list-style:none;display:grid;gap:16px}.lesson-points li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:34px;line-height:1.48;color:var(--ink)}.lesson-points li:before{content:'';position:absolute;left:0;top:.72em;width:18px;height:2px;background:var(--ink);opacity:.32}.lesson-links{list-style:none;display:grid;grid-template-columns:1fr;gap:12px;margin:22px 0 0;padding:0}.lesson-links--multi{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-links a{display:flex;align-items:center;gap:14px;font-family:var(--f-sans);font-size:28px;line-height:1.32;color:var(--ink);text-decoration:none;border:1.5px solid var(--rule-medium);border-radius:14px;padding:12px 20px;background:rgba(255,255,255,.62);transition:background .2s var(--ease),border-color .2s var(--ease)}.lesson-links a::before{content:'開啟';flex:0 0 auto;font-size:26px;font-weight:700;letter-spacing:1px;color:var(--paper);background:var(--ink);border-radius:999px;padding:2px 13px}.lesson-links a:hover{background:rgba(214,221,99,.4);border-color:var(--ink)}.remember{position:absolute;left:80px;right:80px;bottom:50px;border-top:1px solid var(--rule-soft);padding-top:12px;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.codepen-card{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:14px}.codepen-card--js{grid-template-columns:1fr}.code-pane{background:rgba(255,255,255,.72);border:1.5px solid var(--rule-medium);border-radius:18px;overflow:hidden}.code-pane.js{grid-column:1 / -1}.code-pane__hd{font-family:var(--f-display);font-style:italic;font-size:30px;line-height:1.3;padding:8px 16px;border-bottom:1px solid var(--rule-soft);display:flex;align-items:center;justify-content:space-between;gap:14px;color:var(--ink-soft)}.code-pane__tag{font-family:var(--f-sans);font-style:normal;font-size:28px;line-height:1.15;border:1.5px solid var(--rule-medium);border-radius:999px;padding:0 14px;background:rgba(214,221,99,.42);color:var(--ink)}.code-pane pre{font-family:var(--f-code);font-size:30px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px 16px;max-height:270px;overflow:hidden}.code-pane.js pre{font-size:31px;max-height:470px}.code-pane .todo,.code-pane .code-key{background:rgba(214,221,99,.5);border-radius:4px;box-shadow:0 0 0 3px rgba(214,221,99,.5);box-decoration-break:clone;-webkit-box-decoration-break:clone}.diagram-stepper{background:rgba(255,255,255,.52);border:1px solid var(--rule-soft);border-radius:26px;padding:28px;min-height:520px;display:grid;grid-template-rows:auto 1fr auto;gap:24px}.diagram-title{font-family:var(--f-display);font-size:42px;color:var(--ink)}.diagram-flow{display:flex;align-items:center;gap:20px;justify-content:center;flex-wrap:wrap}.flow-node{min-width:185px;min-height:110px;border:1px solid var(--rule-medium);border-radius:22px;display:grid;place-items:center;text-align:center;padding:18px;font-family:var(--f-sans);font-size:30px;line-height:1.25;background:rgba(255,255,255,.44);opacity:.44;transition:transform .35s var(--ease),opacity .35s var(--ease),background .35s var(--ease)}.flow-node.is-on{opacity:1;background:rgba(214,221,99,.38)}.flow-node.is-current{transform:translateY(-8px);outline:4px solid rgba(166,76,124,.35)}.flow-arrow{font-family:var(--f-display);font-size:42px;color:var(--ink-soft)}.diagram-controls{display:flex;gap:12px;justify-content:flex-end}.diagram-controls button{font-family:var(--f-sans);font-size:24px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.52);border-radius:999px;padding:8px 18px;color:var(--ink)}.visual-area.duo .diagram-stepper{min-height:0;padding:10px 18px;gap:10px;display:flex;flex-wrap:wrap;align-items:center}.visual-area.duo .diagram-title{flex:1 1 auto;font-size:32px}.visual-area.duo .diagram-controls{flex:0 0 auto}.visual-area.duo .diagram-controls button{font-size:20px;padding:5px 12px}.visual-area.duo .diagram-flow{flex:1 1 100%;gap:12px}.visual-area.duo .flow-node{min-width:145px;min-height:84px;font-size:25px;padding:10px}.visual-area.duo .flow-arrow{font-size:34px}.visual-area.has-code:not(.ex){align-self:stretch;display:flex;flex-direction:column;gap:14px}.visual-area.has-code:not(.ex) .codepen-card{flex:1 1 auto;min-height:0}.visual-area.has-code:not(.ex) .code-pane{display:flex;flex-direction:column;min-height:0}.visual-area.has-code:not(.ex) .code-pane pre{flex:1 1 auto;min-height:0;max-height:none}.visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:34px}.code-pane pre .code-body{display:block;width:100%}.visual-area.has-code:not(.ex) .diagram-stepper{flex:0 0 auto}.visual-area.duo .code-pane pre{font-size:34px}.visual-area.ex .code-pane pre{font-size:30px;line-height:1.45;max-height:250px}.visual-area.ex .code-pane.js pre{font-size:32px;max-height:320px}.slide--cover .cover-title{font-family:var(--f-display);font-size:134px;line-height:1.02;position:absolute;left:90px;right:90px;top:270px}.slide--cover .cover-sub{font-family:var(--f-body);font-size:46px;position:absolute;left:90px;right:90px;top:575px}.cover-kicker{position:absolute;left:90px;top:150px;font-family:var(--f-sans);font-size:32px;color:var(--ink-soft)}@media (prefers-reduced-motion: reduce){.flow-node{transition:none}.flow-node.is-current{transform:none}}
+
+
+/* ===========================================
+   CH5 rich diagram additions
+   =========================================== */
+.diagram-stepper.rich{min-height:0;padding:18px 20px;gap:12px}
+.diagram-stepper.rich .diagram-title{font-size:36px}
+.diagram-stepper.rich .dgm{width:100%;height:auto;max-height:529px}
+.dgm .dstep{opacity:0;transform:translateY(14px);transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.dgm .dstep.is-on{opacity:1;transform:translateY(0)}
+.dgm .d-ring{opacity:0;fill:none;stroke:var(--pink);stroke-width:3;transition:opacity .3s var(--ease)}
+.dgm .dstep.is-current .d-ring{opacity:1;animation:dgmPulse 1.6s ease-in-out infinite}
+.dgm .dstep.is-on .a-line{stroke-dasharray:10 8;animation:dgmFlow 1.1s linear infinite}
+.dgm .d-cursor{fill:var(--ink);stroke:#fff;stroke-width:1.5}
+.dgm .d-dim{opacity:.42}
+.dgm .d-x{fill:none;stroke:var(--pink);stroke-width:6;stroke-linecap:round}
+.dgm .d-ripple{fill:none;stroke:var(--pink);stroke-width:2;opacity:.55;transform-box:fill-box;transform-origin:center;animation:dgmRipple 1.8s ease-out infinite}
+.dgm .d-ripple2{animation-delay:.4s;opacity:.3}
+/* duo 頁：圖解只佔一條窄帶，需與上方 code 卡共用 697px 預算，故收緊留白與標題行高 */
+.visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:6px}
+.visual-area.duo .diagram-stepper.rich .diagram-title{font-size:32px;line-height:1.2}
+.visual-area.duo .diagram-stepper.rich .dgm{max-height:122px}
+.dgm-dialog{position:fixed;inset:0;display:none;place-items:center;background:rgba(42,36,27,.34);z-index:30}
+.diagram-stepper.rich.is-dialog .dgm-dialog{display:grid}
+.dgm-dialog__card{width:1280px;max-height:820px;overflow:auto;background:var(--paper);border:1px solid var(--rule-medium);border-radius:28px;padding:38px 46px;box-shadow:0 26px 64px rgba(42,36,27,.3)}
+.dgm-dialog__hd{display:flex;justify-content:space-between;align-items:center;gap:24px;border-bottom:1px solid var(--rule-soft);padding-bottom:18px;margin-bottom:24px;font-family:var(--f-display);font-size:46px;color:var(--ink)}
+.dgm-dialog__hd button{font-family:var(--f-sans);font-size:26px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.6);border-radius:999px;padding:8px 22px;color:var(--ink);cursor:pointer}
+.dgm-dialog__body{display:grid;grid-template-columns:1fr 1fr;gap:28px 44px}
+.dgm-dialog__sec{display:grid;gap:10px;align-content:start}
+.dgm-dialog__h{margin:0;font-family:var(--f-sans);font-size:32px;font-weight:700;color:var(--ink)}
+.dgm-dialog__sec ul{list-style:none;display:grid;gap:8px;margin:0;padding:0}
+.dgm-dialog__sec li{position:relative;padding-left:28px;font-family:var(--f-body);font-size:28px;line-height:1.42;color:var(--ink-soft)}
+.dgm-dialog__sec li:before{content:'';position:absolute;left:0;top:.72em;width:14px;height:2px;background:var(--ink);opacity:.35}
+@keyframes dgmPulse{0%,100%{opacity:.9}50%{opacity:.3}}
+@keyframes dgmFlow{to{stroke-dashoffset:-36}}
+@keyframes dgmRipple{0%{transform:scale(.6);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dgm .dstep{transition:none;transform:none}.dgm .dstep.is-on{opacity:1}.dgm .dstep.is-current .d-ring,.dgm .dstep.is-on .a-line,.dgm .d-ripple{animation:none}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===========================================
+   CH6 additions
+   =========================================== */
+/* 固定單列高度，避免視覺欄隨內容長高而溢出 697px 預算 */
+.ch5-grid.ch6-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch6-grid>.visual-area{min-height:0;align-self:stretch}
+.ch5-grid.ch6-grid.tsjs-grid{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:16px}
+
+/* 程式碼卡：CH6 統一 32px（符合字級下限），收緊留白以容納較長片段 */
+.ch5-grid.ch6-grid .code-pane__hd{font-size:28px;padding:6px 16px}
+.ch5-grid.ch6-grid .code-pane pre{font-size:32px;line-height:1.4;padding:12px 16px}
+.ch5-grid.ch6-grid .visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:32px;line-height:1.35}
+.ch5-grid.ch6-grid .visual-area.duo .code-pane pre{font-size:32px;line-height:1.35}
+
+/* duo 圖解窄帶再收緊，讓程式碼卡有更多高度 */
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:4px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .diagram-title{font-size:28px;line-height:1.15}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .dgm{max-height:100px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 10px}
+
+/* TS / JS 並排對照 */
+.tsjs{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-content:start}
+.tsjs__col{border:1.5px solid var(--rule-medium);border-radius:14px;background:rgba(255,255,255,.72);overflow:hidden}
+.tsjs__hd{padding:6px 16px;border-bottom:1px solid var(--rule-soft)}
+.tsjs__pill{font-family:var(--f-sans);font-size:30px;font-weight:700;color:var(--ink)}
+.tsjs__col--js .tsjs__pill{color:var(--ink-soft)}
+.tsjs pre{margin:0;padding:12px 18px;font-family:var(--f-code);font-size:32px;line-height:1.42;white-space:pre-wrap;color:var(--ink)}
+.tsjs__note{grid-column:1/-1;font-size:30px;line-height:1.4;color:var(--ink-soft);border-left:4px solid var(--pink);padding-left:16px;margin:4px 0 0}
+.visual-area.tsjs-area{align-content:start;align-self:start}
+
+/* --- diagram autoplay（CH5／CH6 共用；deck.css 由 build.py 注入每一份簡報） --- */
+.diagram-controls [data-diagram-action="toggle"]{min-width:104px}
+.diagram-stepper.is-paused .diagram-controls [data-diagram-action="toggle"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.diagram-stepper.is-paused .dgm{opacity:.82}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls{gap:8px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 9px}
+
+/* ===========================================
+   CH9 additions
+   =========================================== */
+/* 與 CH6 同型的固定列高，避免視覺欄把 grid 撐高 */
+.ch5-grid.ch9-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch9-grid>.visual-area{min-height:0;align-self:stretch}
+/* 圖解不 letterbox：viewBox 高 ≤470，容器寬約 984 → 縮放 1.05，字級不低於 30px */
+.ch5-grid.ch9-grid .diagram-stepper.rich .dgm{max-height:500px}
+
+/* 說明卡（句型、範例骨架、可以／不可以） */
+.panel{background:rgba(255,255,255,.62);border:1.5px solid var(--rule-soft);border-radius:22px;padding:24px 28px}
+.panel__hd{margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--rule-soft);
+  font-family:var(--f-display);font-size:34px;color:var(--ink-soft)}
+.panel p{margin:0 0 12px;font-family:var(--f-body);font-size:30px;line-height:1.5;color:var(--ink)}
+.panel p:last-child{margin-bottom:0}
+.panel b{font-weight:500}
+.panel ul{list-style:none;display:grid;gap:10px;margin:0;padding:0}
+.panel li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:30px;line-height:1.45;color:var(--ink)}
+.panel li::before{content:'';position:absolute;left:0;top:.72em;width:16px;height:2px;background:var(--ink);opacity:.32}
+
+/* 兩欄對照卡 */
+.ch9-two{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+
+/* 窄欄用的小鍵值表（範例骨架） */
+.ktbl{display:grid;margin-top:6px}
+.ktbl__row{display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;
+  padding:11px 0;border-bottom:1px dashed var(--rule-soft)}
+.ktbl__row:last-child{border-bottom:0}
+.ktbl__k{font-family:var(--f-sans);font-size:28px;line-height:1.4;color:var(--ink-soft)}
+.ktbl__v{font-family:var(--f-body);font-size:30px;line-height:1.4;color:var(--ink)}
+
+/* 全寬表格（規格表、技術選型、評分規準） */
+.ch9-tbl{display:grid}
+.ch9-tbl__row{display:grid;grid-template-columns:var(--cols);gap:26px;align-items:baseline;
+  padding:13px 0;border-bottom:1px dashed var(--rule-soft);
+  font-family:var(--f-body);font-size:38px;line-height:1.42;color:var(--ink)}
+.ch9-tbl__row:last-child{border-bottom:0}
+.ch9-tbl__row>span:first-child{font-family:var(--f-sans);font-size:30px;color:var(--ink-soft)}
+.ch9-tbl__row--head{border-bottom:1px solid var(--rule-medium);font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}
+.ch9-tbl__row--head>span:first-child{font-size:28px}
+
+/* 兩欄檢查清單 */
+.ch9-chk{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 44px;margin:0;padding:0}
+.ch9-chk li{position:relative;padding-left:52px;font-family:var(--f-body);font-size:34px;line-height:1.4;color:var(--ink)}
+.ch9-chk li::before{content:"\e2e6";font-family:var(--f-icons);font-size:34px;line-height:1;
+  position:absolute;left:0;top:4px;color:var(--ink-soft)}
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+/* 真實成品截圖 */
+.shot { margin: 0; border: 1.5px solid var(--rule-medium); border-radius: 18px;
+  overflow: hidden; background: #fff; box-shadow: 0 14px 34px rgba(42,36,27,.14); }
+.shot img { display: block; width: 100%; height: auto; }
+.shot figcaption { font-family: var(--f-sans); font-size: 28px; line-height: 1.35;
+  padding: 10px 18px; color: var(--ink-soft); border-top: 1px solid var(--rule-soft); }
+.shots3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-content: start; }
+.shots3 .shot { border-radius: 14px; }
+.ch7-exgrid { grid-template-columns: 50% 50%; }
+/* 圖解頁：圖解在視覺欄內垂直居中，避免下方留一大片空白 */
+.visual-area > .diagram-stepper.rich { align-self: center; }
+.ch7-exgrid .visual-area { align-self: start; }
+
+/* 封面：左文字、右成品截圖 */
+.slide--cover.has-shot .cover-title { right: auto; width: 880px; font-size: 104px; line-height: 1.16; }
+.slide--cover.has-shot .cover-sub { right: auto; width: 820px; top: 650px; font-size: 38px; }
+.cover-shot { position: absolute; right: 80px; top: 210px; width: 780px; margin: 0;
+  border-radius: 22px; overflow: hidden; border: 1.5px solid var(--rule-medium);
+  box-shadow: 0 24px 60px rgba(42,36,27,.20); background: #fff; }
+.cover-shot img { display: block; width: 100%; height: auto; }
+
+
+/* ===========================================
+   CH8 additions
+   =========================================== */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+.visual-area > .diagram-stepper.rich { align-self: center; }
+
+</style><link rel="stylesheet" href="../assets/deck-fonts.css">
+<link rel="stylesheet" href="../assets/deck-site.css">
+</head><body><div class="deck-viewport"><main class="deck-stage" id="deckStage"><section class="slide slide--cover active visible" data-label="VS Code 環境設定"><p class="cover-kicker">CH8A · 環境設定</p><h1 class="cover-title">VS Code 環境設定</h1><p class="cover-sub">安裝 Node.js、npm、Angular CLI 與 VS Code，建立第一個 Angular 專案</p><div class="footer"><span>互動式網頁設計</span><span>01/21</span></div></section><section class="slide" data-label="本週要裝四樣工具"><p class="eyebrow">CH8A · 02</p><p class="pagedot">02/21</p><h2 class="headline">本週要裝四樣工具</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：環境總覽</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">本週改在自己的電腦上開發：先把四樣工具裝好。</p><ul class="lesson-points"><li>Node.js：讓 JavaScript 工具能在電腦上執行。</li><li>npm：下載與管理套件，隨 Node.js 一起安裝。</li><li>Angular CLI：用 ng 指令建專案、開預覽。</li><li>VS Code：寫程式的地方，內建終端機。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="A" data-step="0"><div class="diagram-title">圖解 A｜四樣工具</div><svg class="dgm" viewBox="0 0 940 430" role="img" aria-label="四樣工具"><defs><pattern id="rg-A" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-A" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="430" fill="url(#rg-A)"/><rect class="d-hot" x="30.0" y="26" width="428.0" height="164" rx="12"/><text class="t-bold" x="244.0" y="72" text-anchor="middle">1 Node.js</text><text class="t-note" x="244.0" y="122" text-anchor="middle">JavaScript 執行環境</text><text class="t-note" x="244.0" y="162" text-anchor="middle">讓工具在電腦上跑</text><rect class="d-card" x="482.0" y="26" width="428.0" height="164" rx="12"/><text class="t-bold" x="696.0" y="72" text-anchor="middle">2 npm</text><text class="t-note" x="696.0" y="122" text-anchor="middle">套件管理員</text><text class="t-note" x="696.0" y="162" text-anchor="middle">隨 Node.js 一起裝</text><rect class="d-soft" x="30.0" y="216" width="428.0" height="164" rx="12"/><text class="t-bold" x="244.0" y="262" text-anchor="middle">3 Angular CLI</text><text class="t-note" x="244.0" y="312" text-anchor="middle">ng 指令</text><text class="t-note" x="244.0" y="352" text-anchor="middle">建專案、跑預覽</text><rect class="d-cool" x="482.0" y="216" width="428.0" height="164" rx="12"/><text class="t-bold" x="696.0" y="262" text-anchor="middle">4 VS Code</text><text class="t-note" x="696.0" y="312" text-anchor="middle">程式編輯器</text><text class="t-note" x="696.0" y="352" text-anchor="middle">寫檔案、開終端機</text><text class="t-note" x="470" y="418" text-anchor="middle">依序安裝：沒有 Node 就沒有 npm，沒有 npm 就裝不了 CLI</text></svg></div></div></div><div class="remember">這頁記住：Node.js → npm → Angular CLI → VS Code，由前往後裝。</div></section><section class="slide" data-label="先學會打開終端機"><p class="eyebrow">CH8A · 03</p><p class="pagedot">03/21</p><h2 class="headline">先學會打開終端機</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：終端機</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">安裝與建專案都靠指令，先知道指令打在哪裡。</p><ul class="lesson-points"><li>Windows：開始選單搜尋「PowerShell」。</li><li>macOS：Spotlight 搜尋「終端機」。</li><li>之後可直接用 VS Code 內建終端機（Ctrl + `）。</li><li>輸入指令後按 Enter 執行。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">Terminal</span><span class="code-pane__tag">先檢查</span></div><pre><span class="code-body">node -v
+npm -v
+ng version</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">結果怎麼看</span></div><pre><span class="code-body">// 顯示版本號：已經安裝
+// command not found：還沒安裝</span></pre></div></div></div></div><div class="remember">這頁記住：指令打在終端機；先用 -v 檢查有沒有裝。</div></section><section class="slide" data-label="安裝 Node.js"><p class="eyebrow">CH8A · 04</p><p class="pagedot">04/21</p><h2 class="headline">安裝 Node.js</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：Node.js</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">到官網下載 LTS 版，像一般軟體一樣安裝。</p><ul class="lesson-points"><li>網址：nodejs.org，下載標示 LTS 的版本。</li><li>Windows 執行 .msi；macOS 開啟 .pkg。</li><li>裝完要關掉終端機再重開。</li><li>Angular 20 需要 Node 20.19、22.12 或 24 以上。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="N" data-step="0"><div class="diagram-title">圖解 N｜安裝 Node.js</div><svg class="dgm" viewBox="0 0 940 460" role="img" aria-label="安裝 Node.js"><defs><pattern id="rg-N" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-N" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="460" fill="url(#rg-N)"/><rect class="d-hot" x="44" y="28" width="852" height="76" rx="12"/><text class="t-code" x="76" y="77" text-anchor="start">01</text><text class="t-bold" x="162" y="77" text-anchor="start">下載 LTS</text><text class="t-note" x="872" y="77" text-anchor="end">nodejs.org 首頁的綠色按鈕</text><rect class="d-card" x="44" y="120" width="852" height="76" rx="12"/><text class="t-code" x="76" y="169" text-anchor="start">02</text><text class="t-bold" x="162" y="169" text-anchor="start">執行安裝檔</text><text class="t-note" x="872" y="169" text-anchor="end">Windows .msi／macOS .pkg，一路下一步</text><rect class="d-soft" x="44" y="212" width="852" height="76" rx="12"/><text class="t-code" x="76" y="261" text-anchor="start">03</text><text class="t-bold" x="162" y="261" text-anchor="start">重開終端機</text><text class="t-note" x="872" y="261" text-anchor="end">環境變數才會更新</text><rect class="d-cool" x="44" y="304" width="852" height="76" rx="12"/><text class="t-code" x="76" y="353" text-anchor="start">04</text><text class="t-bold" x="162" y="353" text-anchor="start">輸入 node -v</text><text class="t-note" x="872" y="353" text-anchor="end">看到版本號就成功</text><text class="t-note" x="470" y="420" text-anchor="middle">選 LTS（長期支援版），不要選 Current</text></svg></div></div></div><div class="remember">這頁記住：選 LTS，裝完重開終端機。</div></section><section class="slide" data-label="確認 Node 與 npm"><p class="eyebrow">CH8A · 05</p><p class="pagedot">05/21</p><h2 class="headline">確認 Node 與 npm</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：node -v／npm -v</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">兩個指令都有版本號，才算安裝成功。</p><ul class="lesson-points"><li>node -v：Node.js 的版本，要 v20.19 以上。</li><li>npm -v：npm 的版本，例如 10.x。</li><li>看到 command not found：重開終端機再試。</li><li>還是找不到：回上一頁重新安裝。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">Terminal</span><span class="code-pane__tag">輸入指令</span></div><pre><span class="code-body">node -v
+npm -v</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">範例輸出</span></div><pre><span class="code-body">// v22.12.0（只要 20.19 以上即可）
+// 10.9.0</span></pre></div></div></div></div><div class="remember">這頁記住：node -v 與 npm -v 都要看到版本號。</div></section><section class="slide" data-label="npm 是什麼"><p class="eyebrow">CH8A · 06</p><p class="pagedot">06/21</p><h2 class="headline">npm 是什麼</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：npm</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">npm 是套件管理員：幫你下載專案需要的別人寫好的程式。</p><ul class="lesson-points"><li>package.json：記錄專案需要哪些套件。</li><li>node_modules：下載下來的套件，很大，不用改、不上傳。</li><li>npm install：依 package.json 把套件補齊。</li><li>-g：安裝到整台電腦，而不是單一專案。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">Terminal</span><span class="code-pane__tag">常用指令</span></div><pre><span class="code-body">npm install
+npm install -g &lt;套件名&gt;
+npm run start</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">各自做什麼</span></div><pre><span class="code-body">// 補齊目前專案的套件
+// 全域安裝，任何資料夾都能用
+// 執行 package.json 裡的 start</span></pre></div></div></div></div><div class="remember">這頁記住：package.json 是清單，node_modules 是下載結果。</div></section><section class="slide" data-label="安裝 VS Code"><p class="eyebrow">CH8A · 07</p><p class="pagedot">07/21</p><h2 class="headline">安裝 VS Code</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：VS Code</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">VS Code 是本週寫程式的地方。</p><ul class="lesson-points"><li>網址：code.visualstudio.com，下載你的系統版本。</li><li>Windows 安裝時勾選「加入 PATH」，之後才能用 code 指令。</li><li>開啟後底下可叫出終端機。</li><li>已經裝過就直接用，不用重裝。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="V" data-step="0"><div class="diagram-title">圖解 V｜安裝 VS Code</div><svg class="dgm" viewBox="0 0 940 460" role="img" aria-label="安裝 VS Code"><defs><pattern id="rg-V" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-V" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="460" fill="url(#rg-V)"/><rect class="d-hot" x="44" y="28" width="852" height="76" rx="12"/><text class="t-code" x="76" y="77" text-anchor="start">01</text><text class="t-bold" x="162" y="77" text-anchor="start">下載</text><text class="t-note" x="872" y="77" text-anchor="end">code.visualstudio.com</text><rect class="d-card" x="44" y="120" width="852" height="76" rx="12"/><text class="t-code" x="76" y="169" text-anchor="start">02</text><text class="t-bold" x="162" y="169" text-anchor="start">安裝</text><text class="t-note" x="872" y="169" text-anchor="end">Windows 勾選「加入 PATH」</text><rect class="d-soft" x="44" y="212" width="852" height="76" rx="12"/><text class="t-code" x="76" y="261" text-anchor="start">03</text><text class="t-bold" x="162" y="261" text-anchor="start">開啟</text><text class="t-note" x="872" y="261" text-anchor="end">第一次可選擇主題</text><rect class="d-cool" x="44" y="304" width="852" height="76" rx="12"/><text class="t-code" x="76" y="353" text-anchor="start">04</text><text class="t-bold" x="162" y="353" text-anchor="start">開終端機</text><text class="t-note" x="872" y="353" text-anchor="end">快捷鍵 Ctrl + `（反引號）</text><text class="t-note" x="470" y="420" text-anchor="middle">終端機就在編輯器底下，不用另外切換視窗</text></svg></div></div></div><div class="remember">這頁記住：VS Code 同時是編輯器與終端機。</div></section><section class="slide" data-label="擴充套件：怎麼安裝"><p class="eyebrow">CH8A · 08</p><p class="pagedot">08/21</p><h2 class="headline">擴充套件：怎麼安裝</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：Extensions</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">只裝幾個有用的，跟著清單一個一個裝。</p><ul class="lesson-points"><li>左側積木圖示（Ctrl + Shift + X），搜尋名稱，按 Install。</li><li>或把右側指令貼到終端機，一次裝好（需要 code 指令）。</li><li>認明發行者與安裝數：Angular、Microsoft 等，安裝數上百萬。</li><li>裝太多會拖慢編輯器，不要為了好看亂裝。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">Terminal</span><span class="code-pane__tag">一次安裝四個</span></div><pre><span class="code-body">code --install-extension Angular.ng-template
+code --install-extension esbenp.prettier-vscode
+code --install-extension usernamehw.errorlens
+code --install-extension yoavbls.pretty-ts-errors</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">指令格式</span></div><pre><span class="code-body">// code --install-extension 發行者.套件名
+// 完整名單見下兩頁</span></pre></div></div></div></div><div class="remember">這頁記住：搜尋名稱或用指令安裝；下兩頁有完整清單。</div></section><section class="slide" data-label="推薦擴充套件（一）建議安裝"><p class="eyebrow">CH8A · 09</p><p class="pagedot">09/21</p><h2 class="headline">推薦擴充套件（一）建議安裝</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：Angular／TypeScript 擴充</span></div><div class="ch5-grid ch9-grid no-visual"><div class="ch5-copy"><p class="mini-lead">Angular 與 TypeScript 開發的最小組合；ID 可直接貼進搜尋框。</p><div class="ch9-tbl" style="--cols:380px 780px minmax(0,1fr)"><div class="ch9-tbl__row ch9-tbl__row--head"><span>名稱</span><span>套件 ID</span><span>用途</span></div><div class="ch9-tbl__row"><span>Angular Language Service</span><span><code>Angular.ng-template</code></span><span>模板提示、錯誤檢查（必裝）</span></div><div class="ch9-tbl__row"><span>Prettier</span><span><code>esbenp.prettier-vscode</code></span><span>存檔自動排版</span></div><div class="ch9-tbl__row"><span>Error Lens</span><span><code>usernamehw.errorlens</code></span><span>錯誤直接顯示在行尾</span></div><div class="ch9-tbl__row"><span>Pretty TypeScript Errors</span><span><code>yoavbls.pretty-ts-errors</code></span><span>TS 錯誤訊息變好讀</span></div></div></div></div><div class="remember">這頁記住：先裝 Angular Language Service，其餘三個提升排版與除錯。</div></section><section class="slide" data-label="推薦擴充套件（二）視需求選用"><p class="eyebrow">CH8A · 10</p><p class="pagedot">10/21</p><h2 class="headline">推薦擴充套件（二）視需求選用</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：選用擴充</span></div><div class="ch5-grid ch9-grid no-visual"><div class="ch5-copy"><p class="mini-lead">視需求再裝；依網路評價與 Marketplace 資料評估（2026-10 查詢）。</p><div class="ch9-tbl" style="--cols:390px 870px minmax(0,1fr)"><div class="ch9-tbl__row ch9-tbl__row--head"><span>名稱</span><span>套件 ID</span><span>評估</span></div><div class="ch9-tbl__row"><span>Tailwind CSS IntelliSense</span><span><code>bradlc.vscode-tailwindcss</code></span><span>用 Tailwind 才需要</span></div><div class="ch9-tbl__row"><span>繁體中文語言套件</span><span><code>MS-CEINTL.vscode-language-pack-zh-hant</code></span><span>選單改成中文</span></div><div class="ch9-tbl__row"><span>ESLint</span><span><code>dbaeumer.vscode-eslint</code></span><span>需另外設定，進階</span></div></div></div></div><div class="remember">這頁記住：用 Tailwind 才裝 IntelliSense；ESLint 需另外設定，先不急。</div></section><section class="slide" data-label="安裝 Angular CLI"><p class="eyebrow">CH8A · 11</p><p class="pagedot">11/21</p><h2 class="headline">安裝 Angular CLI</h2><div class="lesson-tags"><span>課程進度：準備工具</span><span>本頁概念：Angular CLI</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">用 npm 把 ng 指令裝到整台電腦。</p><ul class="lesson-points"><li>-g 表示全域安裝，任何資料夾都能用 ng。</li><li>@20 鎖定本課使用的主版本。</li><li>安裝需要網路，約一分鐘。</li><li>成功後 ng version 會顯示 Angular CLI: 20.x。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">Terminal</span><span class="code-pane__tag">安裝與檢查</span></div><pre><span class="code-body">npm install -g @angular/cli@20
+ng version</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">看什麼</span></div><pre><span class="code-body">// 出現 Angular CLI: 20.x 就成功
+// 失敗請看第 19 頁的卡關對照</span></pre></div></div></div></div><div class="remember">這頁記住：npm install -g @angular/cli@20，再用 ng version 確認。</div></section><section class="slide" data-label="建立專案：ng new"><p class="eyebrow">CH8A · 12</p><p class="pagedot">12/21</p><h2 class="headline">建立專案：ng new</h2><div class="lesson-tags"><span>課程進度：建立專案</span><span>本頁概念：ng new</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">一行指令，建出完整的 Angular 專案。</p><ul class="lesson-points"><li>先 cd 到你要放專案的資料夾，例如桌面。</li><li>專案名稱用小寫英文與連字號。</li><li>若還有提問：需要路由選 Yes，AI 工具選 None，其餘按 Enter。</li><li>過程會自動 npm install，約 1–3 分鐘。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">Terminal</span><span class="code-pane__tag">建立專案</span></div><pre><span class="code-body">cd Desktop
+ng new midnight-menu --style=css --ssr=false --zoneless --skip-tests</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">旗標意思</span></div><pre><span class="code-body">// --style=css：用純 CSS
+// --ssr=false：不做伺服器渲染
+// --zoneless：與課堂範例一致
+// --skip-tests：不產生測試檔</span></pre></div></div></div></div><div class="remember">這頁記住：ng new 專案名 加四個旗標，與課堂範例一致。</div></section><section class="slide" data-label="用 VS Code 開啟專案"><p class="eyebrow">CH8A · 13</p><p class="pagedot">13/21</p><h2 class="headline">用 VS Code 開啟專案</h2><div class="lesson-tags"><span>課程進度：建立專案</span><span>本頁概念：code .</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">要開的是專案資料夾本身，不是外面那一層。</p><ul class="lesson-points"><li>在終端機 cd 進專案，輸入 code . 開啟。</li><li>或 VS Code：File → Open Folder，選 midnight-menu。</li><li>出現「信任作者」視窗，選 Yes, I trust。</li><li>左側 Explorer 看得到 src、public、package.json 才對。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">Terminal</span><span class="code-pane__tag">開啟專案</span></div><pre><span class="code-body">cd midnight-menu
+code .</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">找不到 code 指令</span></div><pre><span class="code-body">// macOS：Cmd+Shift+P，輸入 shell command
+// 選 Install code command in PATH</span></pre></div></div></div></div><div class="remember">這頁記住：用 Open Folder 開專案資料夾本身。</div></section><section class="slide" data-label="啟動預覽：ng serve"><p class="eyebrow">CH8A · 14</p><p class="pagedot">14/21</p><h2 class="headline">啟動預覽：ng serve</h2><div class="lesson-tags"><span>課程進度：建立專案</span><span>本頁概念：ng serve</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">開發伺服器跑起來，網頁就能在瀏覽器看到。</p><ul class="lesson-points"><li>在 VS Code 終端機（Ctrl + `）輸入 ng serve。</li><li>看到 Local: http://localhost:4200/ 就用瀏覽器開它。</li><li>存檔後瀏覽器會自動更新，終端機要一直開著。</li><li>停止預覽：Ctrl + C。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">Terminal</span><span class="code-pane__tag">啟動預覽</span></div><pre><span class="code-body">ng serve</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">重點</span></div><pre><span class="code-body">// 紅字是錯誤，先看終端機
+// 埠號被占用：ng serve --port 4300</span></pre></div></div></div></div><div class="remember">這頁記住：ng serve 要一直開著；存檔就會自動更新。</div></section><section class="slide" data-label="認識專案資料夾"><p class="eyebrow">CH8A · 15</p><p class="pagedot">15/21</p><h2 class="headline">認識專案資料夾</h2><div class="lesson-tags"><span>課程進度：建立專案</span><span>本頁概念：專案結構</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">本週只會動到 src/app 裡的檔案。</p><ul class="lesson-points"><li>app.ts：根元件，放導覽列與出口。</li><li>app.routes.ts：路線表。</li><li>app.config.ts：把 Router 提供給應用程式。</li><li>node_modules 與 package.json 不用手動改。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="T" data-step="0"><div class="diagram-title">圖解 T｜專案資料夾</div><svg class="dgm" viewBox="0 0 940 440" role="img" aria-label="專案資料夾"><defs><pattern id="rg-T" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-T" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="440" fill="url(#rg-T)"/><text class="t-code" x="34" y="40" text-anchor="start">midnight-menu/</text><text class="t-note" x="900" y="40" text-anchor="end">專案資料夾</text><text class="t-code" x="70" y="78" text-anchor="start">public/</text><text class="t-note" x="900" y="78" text-anchor="end">靜態檔，如圖片</text><text class="t-code" x="70" y="116" text-anchor="start">src/</text><text class="t-code" x="106" y="154" text-anchor="start">main.ts</text><text class="t-note" x="900" y="154" text-anchor="end">啟動入口</text><text class="t-code" x="106" y="192" text-anchor="start">index.html</text><text class="t-note" x="900" y="192" text-anchor="end">外殼 HTML</text><rect class="d-hot" x="20" y="204" width="900" height="34" rx="8"/><text class="t-code" x="106" y="230" text-anchor="start">app/</text><text class="t-note" x="900" y="230" text-anchor="end">本週主要工作區</text><text class="t-code" x="142" y="268" text-anchor="start">app.ts</text><text class="t-note" x="900" y="268" text-anchor="end">根元件</text><text class="t-code" x="142" y="306" text-anchor="start">app.routes.ts</text><text class="t-note" x="900" y="306" text-anchor="end">路線表</text><text class="t-code" x="142" y="344" text-anchor="start">app.config.ts</text><text class="t-note" x="900" y="344" text-anchor="end">提供 Router</text><text class="t-code" x="70" y="382" text-anchor="start">package.json</text><text class="t-note" x="900" y="382" text-anchor="end">套件清單</text><text class="t-code" x="70" y="420" text-anchor="start">node_modules/</text><text class="t-note" x="900" y="420" text-anchor="end">別動，也別上傳</text></svg></div></div></div><div class="remember">這頁記住：src/app 是工作區，其他先不動。</div></section><section class="slide" data-label="手把手：新增資料夾與檔案"><p class="eyebrow">CH8A · 16</p><p class="pagedot">16/21</p><h2 class="headline">手把手：新增資料夾與檔案</h2><div class="lesson-tags"><span>課程進度：手把手新增檔案</span><span>本頁概念：New Folder／New File</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">在 VS Code 左側 Explorer 用右鍵操作。</p><ul class="lesson-points"><li>1　在 app 上按右鍵 → New Folder，輸入 pages。</li><li>2　在 pages 上按右鍵 → New File，輸入 home.ts。</li><li>3　貼上右側程式碼。</li><li>4　存檔（Ctrl + S），看終端機有沒有紅字。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">TypeScript</span><span class="code-pane__tag">pages/home.ts</span></div><pre><span class="code-body">import { Component } from &#x27;@angular/core&#x27;;
+
+@Component({
+  selector: &#x27;app-home&#x27;,
+  template: `&lt;h1&gt;首頁&lt;/h1&gt;`,
+})
+export class HomePage {}</span></pre></div></div></div></div><div class="remember">這頁記住：資料夾 New Folder，檔案 New File，存檔再看終端機。</div></section><section class="slide" data-label="用 CLI 產生元件"><p class="eyebrow">CH8A · 17</p><p class="pagedot">17/21</p><h2 class="headline">用 CLI 產生元件</h2><div class="lesson-tags"><span>課程進度：手把手新增檔案</span><span>本頁概念：ng generate component</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">CLI 也能一次建好元件的檔案，與手動建立擇一使用。</p><ul class="lesson-points"><li>ng generate component 可縮寫成 ng g c。</li><li>預設會建 pages/home/ 資料夾，內含 .ts、.html、.css。</li><li>加 --flat 就不建子資料夾。</li><li>類別名稱是 Home；課堂範例用 HomePage，建完需自行改名。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">Terminal</span><span class="code-pane__tag">產生元件</span></div><pre><span class="code-body">ng generate component pages/home
+ng g c pages/home --flat</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">差別</span></div><pre><span class="code-body">// 第一行：pages/home/home.ts
+// 第二行：pages/home.ts（無子資料夾）</span></pre></div></div></div></div><div class="remember">這頁記住：CLI 建檔快，但類別名稱要自己對齊範例。</div></section><section class="slide" data-label="本週要建立的檔案"><p class="eyebrow">CH8A · 18</p><p class="pagedot">18/21</p><h2 class="headline">本週要建立的檔案</h2><div class="lesson-tags"><span>課程進度：手把手新增檔案</span><span>本頁概念：檔案清單</span></div><div class="ch5-grid ch9-grid no-visual"><div class="ch5-copy"><p class="mini-lead">這份清單對應後面 Router 單元要貼的檔案。</p><div class="ch9-tbl" style="--cols:420px 380px minmax(0,1fr)"><div class="ch9-tbl__row ch9-tbl__row--head"><span>檔案</span><span>位置</span><span>這個檔案做什麼</span></div><div class="ch9-tbl__row"><span><code>app.config.ts</code></span><span>src/app</span><span>提供 Router</span></div><div class="ch9-tbl__row"><span><code>app.routes.ts</code></span><span>src/app</span><span>路線表：path 對應頁面</span></div><div class="ch9-tbl__row"><span><code>app.ts／app.html</code></span><span>src/app</span><span>外殼：導覽列與出口</span></div><div class="ch9-tbl__row"><span><code>home.ts</code></span><span>src/app/pages</span><span>首頁元件</span></div><div class="ch9-tbl__row"><span><code>menu.ts</code></span><span>src/app/pages</span><span>菜單元件</span></div><div class="ch9-tbl__row"><span><code>about.ts</code></span><span>src/app/pages</span><span>關於元件</span></div></div></div></div><div class="remember">這頁記住：先建 pages 三個元件，再改路線表與外殼。</div></section><section class="slide" data-label="卡關：指令與權限"><p class="eyebrow">CH8A · 19</p><p class="pagedot">19/21</p><h2 class="headline">卡關：指令與權限</h2><div class="lesson-tags"><span>課程進度：卡關與驗收</span><span>本頁概念：常見錯誤（一）</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">指令跑不出來，先對照這四種情況。</p><ul class="lesson-points"><li>ng 找不到：關掉終端機重開，再 ng version。</li><li>Windows 出現 ng.ps1 無法載入：用右側指令放寬執行原則。</li><li>macOS／Linux 出現 EACCES：不要用 sudo，請老師協助。</li><li>Node 版本太舊：回 nodejs.org 重新安裝 LTS。</li></ul></div><div class="visual-area has-code"><div class="codepen-card codepen-card--js"><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">PowerShell</span><span class="code-pane__tag">只在 Windows 執行</span></div><pre><span class="code-body">Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</span></pre></div><div class="code-pane js"><div class="code-pane__hd"><span class="code-pane__lang">說明</span><span class="code-pane__tag">注意</span></div><pre><span class="code-body">// 詢問時輸入 Y 確認
+// 只影響目前使用者</span></pre></div></div></div></div><div class="remember">這頁記住：先重開終端機；權限問題再用右側指令。</div></section><section class="slide" data-label="卡關：預覽與編輯"><p class="eyebrow">CH8A · 20</p><p class="pagedot">20/21</p><h2 class="headline">卡關：預覽與編輯</h2><div class="lesson-tags"><span>課程進度：卡關與驗收</span><span>本頁概念：常見錯誤（二）</span></div><div class="ch5-grid ch9-grid no-visual"><div class="ch5-copy"><p class="mini-lead">預覽出問題時，先看終端機有沒有紅字。</p><div class="ch9-tbl" style="--cols:360px 480px minmax(0,1fr)"><div class="ch9-tbl__row ch9-tbl__row--head"><span>症狀</span><span>原因</span><span>怎麼做</span></div><div class="ch9-tbl__row"><span><code>4200 埠被占用</code></span><span>舊的 ng serve 還在</span><span>關掉舊的，或換 --port</span></div><div class="ch9-tbl__row"><span><code>畫面空白</code></span><span>程式有錯</span><span>看終端機與 F12</span></div><div class="ch9-tbl__row"><span><code>改了沒反應</code></span><span>沒存檔，或預覽停了</span><span>存檔，確認 ng serve</span></div><div class="ch9-tbl__row"><span><code>紅色波浪線</code></span><span>拼字或缺 import</span><span>滑鼠移上去看提示</span></div></div></div></div><div class="remember">這頁記住：先看終端機，再看瀏覽器 F12 的 Console。</div></section><section class="slide" data-label="環境驗收清單"><p class="eyebrow">CH8A · 21</p><p class="pagedot">21/21</p><h2 class="headline">環境驗收清單</h2><div class="lesson-tags"><span>課程進度：卡關與驗收</span><span>本頁概念：驗收</span></div><div class="ch5-grid ch9-grid no-visual"><div class="ch5-copy"><p class="mini-lead">五項都打勾，才能進入 Router 單元。</p><div class="panel"><ul class="ch9-chk"><li>node -v 顯示 v20.19 以上（或 v22.12、v24）</li><li>npm -v 顯示版本號</li><li>ng version 顯示 Angular CLI 20.x</li><li>ng serve 後，在 localhost:4200 看到 Angular 預設頁</li><li>VS Code 開著 midnight-menu，能新增 pages/home.ts</li></ul></div></div></div><div class="remember">這頁記住：五項都打勾，才開始寫路由。</div></section></main></div><a class="deck-backlink" href="../">← 回簡報總覽</a>
+<div class="progress" id="progress"></div><div class="counter" id="counter">1 / 21</div><script>/* ===========================================
+   SLIDE PRESENTATION CONTROLLER（CH5／CH6／CH9 共用）
+   由 make_ch5.py / make_ch6.py / make_ch9.py 讀入後內嵌到產出的 HTML。
+   要改行為請改本檔，不要改產出的簡報 HTML。
+   2026-10-17：移除圖解步驟動畫（逐步揭示／自動播放／下一步／重播／暫停），
+               圖解內容一次全部呈現；「深入說明」Dialog 保留。
+   =========================================== */
+class SlidePresentation{
+  constructor(){
+    this.slides=[...document.querySelectorAll('.slide')];
+    this.total=this.slides.length;
+    this.current=0;
+    this.stage=document.getElementById('deckStage');
+    this.progress=document.getElementById('progress');
+    this.counter=document.getElementById('counter');
+    this.scale();
+    addEventListener('resize',()=>this.scale());
+    this.nav();
+    this.initDiagrams();
+    this.show(0);
+  }
+  /* 固定 16:9：整個 stage 等比縮放並置中，不重排內容 */
+  scale(){
+    const f=Math.min(innerWidth/1920,innerHeight/1080),
+          x=(innerWidth-1920*f)/2,y=(innerHeight-1080*f)/2;
+    this.stage.style.transform=`translate(${x}px, ${y}px) scale(${f})`;
+  }
+  nav(){
+    document.addEventListener('keydown',e=>{
+      const open=document.querySelector('.diagram-stepper.is-dialog');
+      if(open){e.preventDefault();if(e.key==='Escape')open.classList.remove('is-dialog');return;}
+      if(e.target.closest('input,textarea,[contenteditable=true]'))return;
+      if(e.target.closest('button')&&(e.key===' '||e.key==='Enter'))return;
+      if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();this.show(this.current+1);}
+      if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();this.show(this.current-1);}
+      if(e.key==='Home')this.show(0);
+      if(e.key==='End')this.show(this.total-1);
+    });
+  }
+  show(i){
+    this.current=Math.max(0,Math.min(i,this.total-1));
+    this.slides.forEach((s,n)=>{s.classList.toggle('active',n===this.current);s.classList.toggle('visible',n===this.current);});
+    this.progress.style.width=((this.current+1)/this.total*100)+'%';
+    this.counter.textContent=(this.current+1)+' / '+this.total;
+  }
+  /* ---------- 圖解：內容一次全部呈現（無步驟動畫） ---------- */
+  initDiagrams(){
+    document.querySelectorAll('.diagram-stepper').forEach(d=>{
+      const nodes=[...d.querySelectorAll('.flow-node,.dstep')];
+      nodes.forEach(n=>{n.classList.add('is-on');n.classList.remove('is-current');});
+      d.dataset.step=String(nodes.length);
+      const bind=(sel,fn)=>{const el=d.querySelector(sel);if(el)el.addEventListener('click',e=>{e.currentTarget.blur();fn();});};
+      bind('[data-diagram-action="more"]',()=>d.classList.add('is-dialog'));
+      bind('[data-diagram-action="close"]',()=>this.closeDialog(d));
+      const dlg=d.querySelector('.dgm-dialog');
+      if(dlg)dlg.addEventListener('click',e=>{if(e.target===dlg)this.closeDialog(d);});
+    });
+  }
+  closeDialog(d){ d.classList.remove('is-dialog'); }
+  /* 保留介面：匯出／列印流程會呼叫，現已無計時器 */
+  pauseAll(){}
+}
+const deck=new SlidePresentation();
+window.__deckPauseAll=()=>deck.pauseAll();
+</script></body></html>
