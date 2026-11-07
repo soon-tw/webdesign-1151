@@ -331,6 +331,17 @@ img, video, canvas, svg { max-width: 100%; max-height: 100%; }
   position: fixed; right: 18px; bottom: 14px; z-index: 1001;
   font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
 }
+/* ---- 右下角換頁鈕（在 .deck-stage 內，以 1920×1080 座標定位） ---- */
+.nav-pair{position:absolute;right:var(--pad-outer);bottom:24px;z-index:50;display:flex;gap:16px}
+.nav-btn{width:72px;height:72px;padding:0;border:1px solid var(--rule-medium);border-radius:50%;
+  background:var(--paper);color:var(--ink-soft);cursor:pointer;opacity:.55;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:opacity .2s}
+.nav-btn:hover,.nav-btn:active{opacity:1}
+.nav-btn svg{width:40px;height:40px;fill:currentColor}
+.nav-pair .counter{position:static;align-self:center;min-width:110px;text-align:center;font-size:var(--t-min);color:var(--ink-soft)}
+.nav-pair{align-items:center}
+.pagedot,.footer .pg-dup{display:none}
+@media print{.nav-pair{display:none}}
 .edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
 .edit-toggle {
   position: fixed; top: 16px; left: 16px; z-index: 10001;
@@ -821,6 +832,32 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
   box-shadow: 0 24px 60px rgba(42,36,27,.20); background: #fff; }
 .cover-shot img { display: block; width: 100%; height: auto; }
 
+
+/* ===========================================
+   CH8 additions
+   =========================================== */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+.visual-area > .diagram-stepper.rich { align-self: center; }
+/* ===== Showcase additions (make_showcase.py) ===== */
+
+/* ===========================================
+   Showcase additions（AI 熱門週報，make_showcase.py 維護）
+   =========================================== */
+.showcase-split { align-items: start; }
+.showcase-points { gap: 18px; }
+.showcase-points li { font-size: 30px; line-height: 1.5; }
+.showcase-split .shot { max-height: 540px; }
+.showcase-split .shot-frame { padding: 16px; }
+.showcase-split .note { font-size: 27px; margin-top: 14px; }
+.showcase-split .mini-lead { margin-top: 20px; }
+.showcase-split .tbl__row { font-size: 28px; }
+/* 收尾頁：表格＋三條要點，壓縮間距避免頂到 footer */
+.showcase-outro { gap: 26px; }
+.showcase-outro .tbl__row { padding: 11px 0; }
+.showcase-outro .points { gap: 16px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.5; }
+
 </style><link rel="stylesheet" href="../assets/deck-fonts.css">
 <link rel="stylesheet" href="../assets/deck-site.css">
 </head><body><div class="deck-viewport"><main class="deck-stage" id="deckStage"><section class="slide slide--cover has-shot active visible" data-label="Angular 互動入門：下課後的宵夜地圖"><p class="cover-kicker">CH7 · Angular 互動入門</p><h1 class="cover-title">Angular 互動入門：下課後的宵夜地圖</h1><p class="cover-sub">用 signal 管資料、用 @if／@for 排畫面，做一張會動的宵夜菜單</p><figure class="cover-shot"><img src="assets/ex-counter.jpg" alt="本課成品：宵夜加點器"></figure><div class="footer"><span>互動式網頁設計</span><span>01/62</span></div></section><section class="slide" data-label="下課後，誰決定吃什麼"><p class="eyebrow">CH7 · 02</p><p class="pagedot">02/62</p><h2 class="headline">下課後，誰決定吃什麼</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：成果預覽</span></div><div class="ch5-grid ch6-grid ch7-exgrid"><div class="ch5-copy"><p class="mini-lead">下課十點半，站在騎樓下，手機裡有五家店——你先看價格，還是先看還開著沒？</p><ul class="lesson-points"><li>這張菜單會做三件事：依預算篩選、看店家開沒開、把想吃的收藏起來。</li><li>全部用本機的三筆資料，不需要後端、不需要帳號。</li><li>做完可以給同學操作，這就是本週的成果。</li></ul></div><div class="visual-area"><figure class="shot"><img src="assets/ex-favorite.jpg" alt="收藏 m1、m2：數量 2，愛心變實心" loading="lazy"><figcaption>收藏 m1、m2：數量 2，愛心變實心</figcaption></figure></div></div><div class="remember">這頁記住：先想「使用者要做什麼決定」，再決定畫面要有什麼。</div></section><section class="slide" data-label="投票：80 元能吃什麼"><p class="eyebrow">CH7 · 03</p><p class="pagedot">03/62</p><h2 class="headline">投票：80 元能吃什麼</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：條件改變結果</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">同樣三筆資料，預算換了，留下的卡片就換了。</p><ul class="lesson-points"><li>預算 50 元：三筆都超過，畫面應該顯示「吃不到」。</li><li>預算 80 元：炒飯 60、水餃 80 留下，牛肉麵 120 出局。</li><li>預算 120 元：三筆全部留下。</li><li>條件不同、結果不同——這就是「資料驅動畫面」。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="B" data-step="0"><div class="diagram-title">圖解 B｜80 元的門檻</div><svg class="dgm" viewBox="0 0 940 430" role="img" aria-label="80 元的門檻"><defs><pattern id="rg-B" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-B" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="430" fill="url(#rg-B)"/><rect class="d-panel" x="20" y="20" width="900" height="120" rx="12"/><text class="t-bold" x="44" y="66" text-anchor="start">預算 80 元</text><text class="t-note" x="44" y="112" text-anchor="start">只看「價格 ≤ 80」的餐點</text><path class="a-line" d="M 470 152 L 470 196" marker-end="url(#ra-B)"/><rect class="d-soft" x="40" y="206" width="230" height="150" rx="12"/><text class="t-bold" x="155.0" y="262" text-anchor="middle">炒飯</text><text class="t-mono" x="155.0" y="310" text-anchor="middle">60 元</text><text class="t-note" x="155.0" y="344" text-anchor="middle">留下</text><rect class="d-soft" x="355" y="206" width="230" height="150" rx="12"/><text class="t-bold" x="470.0" y="262" text-anchor="middle">水餃</text><text class="t-mono" x="470.0" y="310" text-anchor="middle">80 元</text><text class="t-note" x="470.0" y="344" text-anchor="middle">留下</text><rect class="d-slot" x="670" y="206" width="230" height="150" rx="12"/><text class="t-bold" x="785.0" y="262" text-anchor="middle">牛肉麵</text><text class="t-mono" x="785.0" y="310" text-anchor="middle">120 元</text><text class="t-note" x="785.0" y="344" text-anchor="middle">出局</text><text class="t-note" x="470" y="402" text-anchor="middle">條件寫一次，三張卡自己決定要不要留</text></svg></div></div></div><div class="remember">這頁記住：畫面不是寫死的；同樣的模板，餵不同的資料就長得不一樣。</div></section><section class="slide" data-label="今天帶走一張會動的菜單"><p class="eyebrow">CH7 · 04</p><p class="pagedot">04/62</p><h2 class="headline">今天帶走一張會動的菜單</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：成功標準</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">今晚只要求三件事，做到就有一張能展示的菜單。</p><ul class="lesson-points"><li>改得動：把店名、餐名、價格換成你自己的。</li><li>會互動：加點、重設、營業切換至少一個真的能用。</li><li>帶得走：關掉分頁再打開，修改還在。</li><li>六題是選做，不是作業；先完成主做的加點器。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="C" data-step="0"><div class="diagram-title">圖解 C｜三個里程碑</div><svg class="dgm" viewBox="0 0 940 420" role="img" aria-label="三個里程碑"><defs><pattern id="rg-C" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-C" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="420" fill="url(#rg-C)"/><rect class="d-card" x="40" y="26" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="26" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="72" text-anchor="start">改得動</text><text class="t-note" x="76" y="110" text-anchor="start">店名、餐名、價格換成自己的</text><path class="a-line-soft" d="M 470 130 L 470 150"/><rect class="d-card" x="40" y="150" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="150" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="196" text-anchor="start">會互動</text><text class="t-note" x="76" y="234" text-anchor="start">加點、重設、營業切換至少一個能用</text><path class="a-line-soft" d="M 470 254 L 470 274"/><rect class="d-card" x="40" y="274" width="860" height="104" rx="12"/><rect class="d-hot" x="40" y="274" width="12" height="104" rx="6"/><text class="t-bold" x="76" y="320" text-anchor="start">帶得走</text><text class="t-note" x="76" y="358" text-anchor="start">關掉分頁再開，修改還在</text><text class="t-note" x="470" y="410" text-anchor="middle">今晚的驗收就這三條</text></svg></div></div></div><div class="remember">這頁記住：三個里程碑：改得動、會互動、帶得走。</div></section><section class="slide" data-label="元件怎麼被 App 使用"><p class="eyebrow">CH7 · 05</p><p class="pagedot">05/62</p><h2 class="headline">元件怎麼被 App 使用</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：Standalone 元件概念</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">預設的 App 已經是根元件；新增 MealCard 後，要讓 App 認得它、再把它放進模板。</p><ul class="lesson-points"><li>App：原本就存在，bootstrapApplication(App) 保持不動。</li><li>MealCard：新增的子元件，不會因為建立完成就自己出現在畫面。</li><li>概念先記三步：import → imports 註冊 → selector 放進模板；下一頁再實際操作。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="D" data-step="0"><div class="diagram-title">圖解 D｜元件怎麼被 App 使用</div><svg class="dgm" viewBox="0 0 940 450" role="img" aria-label="元件怎麼被 App 使用"><defs><pattern id="rg-D" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-D" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="450" fill="url(#rg-D)"/><rect class="d-card" x="30" y="78" width="250" height="176" rx="12"/><text class="t-bold" x="155" y="136" text-anchor="middle">① import</text><text class="t-note" x="155" y="198" text-anchor="middle">把 MealCard 引進來</text><path class="a-line" d="M 288 166 L 337 166" marker-end="url(#ra-D)"/><rect class="d-soft" x="345" y="78" width="250" height="176" rx="12"/><text class="t-bold" x="470" y="136" text-anchor="middle">② imports</text><text class="t-note" x="470" y="198" text-anchor="middle">告訴 App「我會用它」</text><path class="a-line" d="M 603 166 L 652 166" marker-end="url(#ra-D)"/><rect class="d-hot" x="660" y="78" width="250" height="176" rx="12"/><text class="t-bold" x="785" y="136" text-anchor="middle">③ selector</text><text class="t-note" x="785" y="198" text-anchor="middle">把元件放進模板</text><rect class="d-panel" x="120" y="302" width="700" height="86" rx="12"/><text class="t-note" x="470" y="354" text-anchor="middle">App 已存在；bootstrapApplication(App) 不需要改</text><text class="t-note" x="470" y="430" text-anchor="middle">下一頁再實際輸入 CLI 指令與程式碼</text></svg></div></div></div><div class="remember">這頁記住：建立元件不等於畫面會出現；App 要先引入、註冊，再使用 selector。</div></section><section class="slide" data-label="跟著做：新增並使用 MealCard"><p class="eyebrow">CH7 · 06</p><p class="pagedot">06/62</p><h2 class="headline">跟著做：新增並使用 MealCard</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：CLI 元件操作</span></div><div class="ch5-grid ch6-grid"><div class="ch5-copy"><p class="mini-lead">現在才開始操作：用 Angular CLI 建立 MealCard，再把它接進既有 App。</p><ul class="lesson-points"><li>先做 ①②：確認 CLI 真的建立 src/app/meal-card/，而且 main.ts 找得到 MealCard。</li><li>再做 ③④：註冊後把 selector 放進模板，看到畫面才算接成功。</li><li>原本的 App 與 bootstrapApplication(App) 都不用重建、也不用搬動。</li></ul></div><div class="visual-area"><div class="diagram-stepper rich" data-diagram="E" data-step="0"><div class="diagram-title">圖解 E｜CLI 四步操作</div><svg class="dgm" viewBox="0 0 940 460" role="img" aria-label="CLI 四步操作"><defs><pattern id="rg-E" width="40" height="40" patternUnits="userSpaceOnUse"><path class="d-grid" d="M 40 0 L 0 0 0 40"/></pattern><marker id="ra-E" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><rect x="0" y="0" width="940" height="460" fill="url(#rg-E)"/><rect class="d-card" x="48" y="22" width="844" height="82" rx="12"/><text class="t-bold" x="78" y="56" text-anchor="start">① CLI 建立</text><text class="t-code" x="862" y="80" text-anchor="end">npx ng g c meal-card --skip-tests</text><path class="a-line" d="M 470 112 L 470 134" marker-end="url(#ra-E)"/><rect class="d-soft" x="48" y="122" width="844" height="82" rx="12"/><text class="t-bold" x="78" y="156" text-anchor="start">② import</text><text class="t-code" x="862" y="180" text-anchor="end">from &#x27;./app/meal-card/meal-card&#x27;</text><path class="a-line" d="M 470 212 L 470 234" marker-end="url(#ra-E)"/><rect class="d-card" x="48" y="222" width="844" height="82" rx="12"/><text class="t-bold" x="78" y="256" text-anchor="start">③ imports 註冊</text><text class="t-code" x="862" y="280" text-anchor="end">imports: [MealCard]</text><path class="a-line" d="M 470 312 L 470 334" marker-end="url(#ra-E)"/><rect class="d-hot" x="48" y="322" width="844" height="82" rx="12"/><text class="t-bold" x="78" y="356" text-anchor="start">④ template 使用</text><text class="t-code" x="862" y="380" text-anchor="end">&lt;app-meal-card /&gt;</text><text class="t-note" x="470" y="438" text-anchor="middle">建立完成後，再打開 meal-card.html 改內容</text></svg></div></div></div><div class="remember">這頁記住：操作順序：CLI 建立 → import → imports → selector；最後才改子元件模板。</div></section><section class="slide" data-label="從上週的 JS 搬過來"><p class="eyebrow">CH7 · 07</p><p class="pagedot">07/62</p><h2 class="headline">從上週的 JS 搬過來</h2><div class="lesson-tags"><span>課程進度：01 / 06 開場與工具</span><span>本頁語法／概念：JS 與框架</span></div><div class="ch5-grid ch6-grid tsjs-grid"><div class="ch5-copy"><p class="mini-lead">上週你用 textContent 改畫面；這週同一件事，換 Angular 幫你記住。</p><ul class="lesson-points"><li>上週：抓元素 → 改 textContent → 自己記得哪裡要更新。</li><li>這週：宣告資料 → 模板寫 {{ }} → 資料變了畫面自己變。</li><li>事件、資料、畫面三站沒變，變的是「誰負責更新」。</li><li>你不用再 querySelector，也不用記得同步幾個地方。</li></ul></div><div class="visual-area tsjs-area"><div class="tsjs"><div class="tsjs__col"><div class="tsjs__hd"><span class="tsjs__pill">上週 JavaScript</span></div><pre><span class="code-body">let count = 0;
@@ -1012,6 +1049,8 @@ class SlidePresentation{
     this.scale();
     addEventListener('resize',()=>this.scale());
     this.nav();
+    /* 頁碼已由右下角換頁鈕顯示：頁尾內的「NN/總頁」「CHn · NN/總頁」不再重複 */
+    document.querySelectorAll('.footer > span').forEach(s=>{if(/^(CH\d+\s*·\s*)?\d+\/\d+$/.test(s.textContent.trim()))s.classList.add('pg-dup');});
     this.initDiagrams();
     this.show(0);
   }
@@ -1040,12 +1079,27 @@ class SlidePresentation{
       const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
       if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy))this.show(this.current+(dx<0?1:-1));
     },{passive:true});
+    /* 右下角換頁鈕（放在舞台內，隨簡報縮放；有頁尾的頁面自動上移避開） */
+    const ico={prev:'M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z',next:'M8.6 5.4 10 4l8 8-8 8-1.4-1.4 6.6-6.6z'};
+    this.navPair=document.createElement('div');this.navPair.className='nav-pair';
+    [['prev','上一頁',-1],['next','下一頁',1]].forEach(([k,label,step])=>{
+      const b=document.createElement('button');
+      b.className='nav-btn';b.type='button';b.setAttribute('aria-label',label);
+      b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+ico[k]+'"/></svg>';
+      b.addEventListener('click',e=>{e.currentTarget.blur();this.show(this.current+step);});
+      this.navPair.appendChild(b);
+    });
+    this.navPair.insertBefore(this.counter,this.navPair.lastChild); /* 頁碼夾在兩鈕中間，避免舞台外的計數器蓋住按鈕 */
+    this.stage.appendChild(this.navPair);
   }
   show(i){
     this.current=Math.max(0,Math.min(i,this.total-1));
     this.slides.forEach((s,n)=>{s.classList.toggle('active',n===this.current);s.classList.toggle('visible',n===this.current);});
     this.progress.style.width=((this.current+1)/this.total*100)+'%';
     this.counter.textContent=(this.current+1)+' / '+this.total;
+    /* 有頁尾的頁面：換頁鈕移到頁尾右側文字的左邊（頁尾列中段是空的） */
+    if(this.navPair){const f=this.slides[this.current].querySelector('.footer > :last-child:not(.pg-dup)');
+      this.navPair.style.right=f?`calc(var(--pad-outer) + ${f.offsetWidth+32}px)`:'';}
   }
   /* ---------- 圖解：內容一次全部呈現（無步驟動畫） ---------- */
   initDiagrams(){

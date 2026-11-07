@@ -331,6 +331,17 @@ img, video, canvas, svg { max-width: 100%; max-height: 100%; }
   position: fixed; right: 18px; bottom: 14px; z-index: 1001;
   font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
 }
+/* ---- 右下角換頁鈕（在 .deck-stage 內，以 1920×1080 座標定位） ---- */
+.nav-pair{position:absolute;right:var(--pad-outer);bottom:24px;z-index:50;display:flex;gap:16px}
+.nav-btn{width:72px;height:72px;padding:0;border:1px solid var(--rule-medium);border-radius:50%;
+  background:var(--paper);color:var(--ink-soft);cursor:pointer;opacity:.55;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:opacity .2s}
+.nav-btn:hover,.nav-btn:active{opacity:1}
+.nav-btn svg{width:40px;height:40px;fill:currentColor}
+.nav-pair .counter{position:static;align-self:center;min-width:110px;text-align:center;font-size:var(--t-min);color:var(--ink-soft)}
+.nav-pair{align-items:center}
+.pagedot,.footer .pg-dup{display:none}
+@media print{.nav-pair{display:none}}
 .edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
 .edit-toggle {
   position: fixed; top: 16px; left: 16px; z-index: 10001;
@@ -828,6 +839,24 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 .ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
 .ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
 .visual-area > .diagram-stepper.rich { align-self: center; }
+/* ===== Showcase additions (make_showcase.py) ===== */
+
+/* ===========================================
+   Showcase additions（AI 熱門週報，make_showcase.py 維護）
+   =========================================== */
+.showcase-split { align-items: start; }
+.showcase-points { gap: 18px; }
+.showcase-points li { font-size: 30px; line-height: 1.5; }
+.showcase-split .shot { max-height: 540px; }
+.showcase-split .shot-frame { padding: 16px; }
+.showcase-split .note { font-size: 27px; margin-top: 14px; }
+.showcase-split .mini-lead { margin-top: 20px; }
+.showcase-split .tbl__row { font-size: 28px; }
+/* 收尾頁：表格＋三條要點，壓縮間距避免頂到 footer */
+.showcase-outro { gap: 26px; }
+.showcase-outro .tbl__row { padding: 11px 0; }
+.showcase-outro .points { gap: 16px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.5; }
 
 </style><link rel="stylesheet" href="../assets/deck-fonts.css">
 <link rel="stylesheet" href="../assets/deck-site.css">
@@ -975,6 +1004,8 @@ class SlidePresentation{
     this.scale();
     addEventListener('resize',()=>this.scale());
     this.nav();
+    /* 頁碼已由右下角換頁鈕顯示：頁尾內的「NN/總頁」「CHn · NN/總頁」不再重複 */
+    document.querySelectorAll('.footer > span').forEach(s=>{if(/^(CH\d+\s*·\s*)?\d+\/\d+$/.test(s.textContent.trim()))s.classList.add('pg-dup');});
     this.initDiagrams();
     this.show(0);
   }
@@ -1003,12 +1034,27 @@ class SlidePresentation{
       const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
       if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy))this.show(this.current+(dx<0?1:-1));
     },{passive:true});
+    /* 右下角換頁鈕（放在舞台內，隨簡報縮放；有頁尾的頁面自動上移避開） */
+    const ico={prev:'M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z',next:'M8.6 5.4 10 4l8 8-8 8-1.4-1.4 6.6-6.6z'};
+    this.navPair=document.createElement('div');this.navPair.className='nav-pair';
+    [['prev','上一頁',-1],['next','下一頁',1]].forEach(([k,label,step])=>{
+      const b=document.createElement('button');
+      b.className='nav-btn';b.type='button';b.setAttribute('aria-label',label);
+      b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+ico[k]+'"/></svg>';
+      b.addEventListener('click',e=>{e.currentTarget.blur();this.show(this.current+step);});
+      this.navPair.appendChild(b);
+    });
+    this.navPair.insertBefore(this.counter,this.navPair.lastChild); /* 頁碼夾在兩鈕中間，避免舞台外的計數器蓋住按鈕 */
+    this.stage.appendChild(this.navPair);
   }
   show(i){
     this.current=Math.max(0,Math.min(i,this.total-1));
     this.slides.forEach((s,n)=>{s.classList.toggle('active',n===this.current);s.classList.toggle('visible',n===this.current);});
     this.progress.style.width=((this.current+1)/this.total*100)+'%';
     this.counter.textContent=(this.current+1)+' / '+this.total;
+    /* 有頁尾的頁面：換頁鈕移到頁尾右側文字的左邊（頁尾列中段是空的） */
+    if(this.navPair){const f=this.slides[this.current].querySelector('.footer > :last-child:not(.pg-dup)');
+      this.navPair.style.right=f?`calc(var(--pad-outer) + ${f.offsetWidth+32}px)`:'';}
   }
   /* ---------- 圖解：內容一次全部呈現（無步驟動畫） ---------- */
   initDiagrams(){

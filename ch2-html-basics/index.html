@@ -683,6 +683,17 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 .showcase-split .mini-lead { margin-top: 20px; }
 .showcase-split .tbl__row { font-size: 28px; }
 
+/* ---- 右下角換頁鈕（在 .deck-stage 內，以 1920×1080 座標定位） ---- */
+.nav-pair{position:absolute;right:var(--pad-outer);bottom:24px;z-index:50;display:flex;gap:16px}
+.nav-btn{width:72px;height:72px;padding:0;border:1px solid var(--rule-medium);border-radius:50%;
+  background:var(--paper);color:var(--ink-soft);cursor:pointer;opacity:.55;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:opacity .2s}
+.nav-btn:hover,.nav-btn:active{opacity:1}
+.nav-btn svg{width:40px;height:40px;fill:currentColor}
+.nav-pair .counter{position:static;align-self:center;min-width:110px;text-align:center;font-size:var(--t-min);color:var(--ink-soft)}
+.nav-pair{align-items:center}
+.pagedot,.footer .pg-dup{display:none}
+@media print{.nav-pair{display:none}}
 </style>
 <link rel="stylesheet" href="../assets/deck-fonts.css">
 <link rel="stylesheet" href="../assets/deck-site.css">
@@ -2330,6 +2341,8 @@ class SlidePresentation {
     this.counter = document.getElementById('counter');
     this.setupStageScale();
     this.setupNav();
+    this.markDup();
+    this.setupNavPair();
     this.show(0);
   }
 
@@ -2384,6 +2397,25 @@ class SlidePresentation {
     }, { passive: true });
   }
 
+  markDup() {
+    document.querySelectorAll('.footer > span').forEach(s => { if (/^(CH\d+\s*·\s*)?\d+\/\d+$/.test(s.textContent.trim())) s.classList.add('pg-dup'); });
+  }
+
+  setupNavPair() {
+    /* 右下角換頁鈕（放在舞台內，隨簡報縮放；有頁尾的頁面自動上移避開） */
+      const ico={prev:'M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z',next:'M8.6 5.4 10 4l8 8-8 8-1.4-1.4 6.6-6.6z'};
+      this.navPair=document.createElement('div');this.navPair.className='nav-pair';
+      [['prev','上一頁',-1],['next','下一頁',1]].forEach(([k,label,step])=>{
+        const b=document.createElement('button');
+        b.className='nav-btn';b.type='button';b.setAttribute('aria-label',label);
+        b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+ico[k]+'"/></svg>';
+        b.addEventListener('click',e=>{e.currentTarget.blur();this.show(this.current+step);});
+        this.navPair.appendChild(b);
+      });
+      this.navPair.insertBefore(this.counter,this.navPair.lastChild); /* 頁碼夾在兩鈕中間，避免舞台外的計數器蓋住按鈕 */
+      this.stage.appendChild(this.navPair);
+  }
+
   next() { this.show(this.current + 1); }
   prev() { this.show(this.current - 1); }
 
@@ -2395,6 +2427,10 @@ class SlidePresentation {
     });
     if (this.progress) this.progress.style.width = ((this.current + 1) / this.total * 100) + '%';
     if (this.counter) this.counter.textContent = (this.current + 1) + ' / ' + this.total;
+    if (this.navPair) {
+      const f = this.slides[this.current].querySelector('.footer > :last-child:not(.pg-dup)');
+      this.navPair.style.right = f ? `calc(var(--pad-outer) + ${f.offsetWidth + 32}px)` : '';
+    }
   }
 }
 
@@ -2441,7 +2477,7 @@ class InlineEditor {
     if (!this.isActive) this.save();
   }
   save() {
-    try { localStorage.setItem('ch2-deck-html', document.querySelector('.deck-stage').innerHTML); } catch (err) {}
+    try { const c = document.querySelector('.deck-stage').cloneNode(true); c.querySelector('.nav-pair')?.remove(); localStorage.setItem('ch2-deck-html', c.innerHTML); } catch (err) {}
   }
   restore() {
     try {
@@ -2451,8 +2487,8 @@ class InlineEditor {
   }
 }
 
-new SlidePresentation();
 new InlineEditor();
+new SlidePresentation();
 </script>
 </body>
 </html>

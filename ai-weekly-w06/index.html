@@ -331,6 +331,17 @@ img, video, canvas, svg { max-width: 100%; max-height: 100%; }
   position: fixed; right: 18px; bottom: 14px; z-index: 1001;
   font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
 }
+/* ---- 右下角換頁鈕（在 .deck-stage 內，以 1920×1080 座標定位） ---- */
+.nav-pair{position:absolute;right:var(--pad-outer);bottom:24px;z-index:50;display:flex;gap:16px}
+.nav-btn{width:72px;height:72px;padding:0;border:1px solid var(--rule-medium);border-radius:50%;
+  background:var(--paper);color:var(--ink-soft);cursor:pointer;opacity:.55;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:opacity .2s}
+.nav-btn:hover,.nav-btn:active{opacity:1}
+.nav-btn svg{width:40px;height:40px;fill:currentColor}
+.nav-pair .counter{position:static;align-self:center;min-width:110px;text-align:center;font-size:var(--t-min);color:var(--ink-soft)}
+.nav-pair{align-items:center}
+.pagedot,.footer .pg-dup{display:none}
+@media print{.nav-pair{display:none}}
 .edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
 .edit-toggle {
   position: fixed; top: 16px; left: 16px; z-index: 10001;
@@ -578,6 +589,8 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 
 
 
+
+
 /* ===========================================
    CH6 additions
    =========================================== */
@@ -661,6 +674,171 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 .ch9-chk li{position:relative;padding-left:52px;font-family:var(--f-body);font-size:34px;line-height:1.4;color:var(--ink)}
 .ch9-chk li::before{content:"\e2e6";font-family:var(--f-icons);font-size:34px;line-height:1;
   position:absolute;left:0;top:4px;color:var(--ink-soft)}
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+/* 真實成品截圖 */
+.shot { margin: 0; border: 1.5px solid var(--rule-medium); border-radius: 18px;
+  overflow: hidden; background: #fff; box-shadow: 0 14px 34px rgba(42,36,27,.14); }
+.shot img { display: block; width: 100%; height: auto; }
+.shot figcaption { font-family: var(--f-sans); font-size: 28px; line-height: 1.35;
+  padding: 10px 18px; color: var(--ink-soft); border-top: 1px solid var(--rule-soft); }
+.shots3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-content: start; }
+.shots3 .shot { border-radius: 14px; }
+.ch7-exgrid { grid-template-columns: 50% 50%; }
+/* 圖解頁：圖解在視覺欄內垂直居中，避免下方留一大片空白 */
+.visual-area > .diagram-stepper.rich { align-self: center; }
+.ch7-exgrid .visual-area { align-self: start; }
+
+/* 封面：左文字、右成品截圖 */
+.slide--cover.has-shot .cover-title { right: auto; width: 880px; font-size: 104px; line-height: 1.16; }
+.slide--cover.has-shot .cover-sub { right: auto; width: 820px; top: 650px; font-size: 38px; }
+.cover-shot { position: absolute; right: 80px; top: 210px; width: 780px; margin: 0;
+  border-radius: 22px; overflow: hidden; border: 1.5px solid var(--rule-medium);
+  box-shadow: 0 24px 60px rgba(42,36,27,.20); background: #fff; }
+.cover-shot img { display: block; width: 100%; height: auto; }
+
+
+/* ===========================================
+   CH8 additions
+   =========================================== */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+.visual-area > .diagram-stepper.rich { align-self: center; }
 /* ===== Showcase additions (make_showcase.py) ===== */
 
 /* ===========================================
@@ -684,9 +862,11 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 <link rel="stylesheet" href="../assets/deck-site.css">
 </head><body><div class="deck-viewport"><main class="deck-stage" id="deckStage"><section class="slide slide--cover active visible" data-label="AI 熱門週報"><p class="cover-kicker">AI 熱門週報 · 10/15</p><h1 class="cover-title">本週三個 AI 熱門網頁作品</h1><p class="cover-sub">看別人用 AI 把想法變成能動的網頁，找回這週程式碼的用途</p><div class="footer"><span>互動式網頁設計</span><span>01/05</span></div></section><section class="slide" data-label="板橋站共構開發案｜基地環境分析"><p class="eyebrow">案例 1｜AI 生成的純前端 3D 資訊圖表</p><p class="pagedot">02/05</p><h2 class="headline reveal">板橋站共構開發案｜基地環境分析</h2><div class="body-split body-split--shot showcase-split"><div class="reveal"><span class="code-label">實際畫面截圖</span><div class="shot-frame"><img class="shot" src="assets/showcase-banqiao.jpg" alt="板橋站共構開發案｜基地環境分析 的網頁截圖"></div></div><div class="reveal"><ul class="points showcase-points"><li class="reveal">把真實開發案（24 層、112 公尺、環狀線 Y16）畫成等軸 3D 基地分析。</li><li class="reveal">分層剖面、退台綠化、空橋動線全用 HTML／CSS／SVG，沒有 3D 引擎。</li><li class="reveal">託管在 GitHub Pages——和我們的範例頁一樣的發佈方式。</li></ul><div class="note reveal"><a href="https://a767thycode.github.io/banqiao-station-infographic/" target="_blank" rel="noopener">開啟這個作品</a>（a767thycode.github.io/banqiao-station-infographic）</div><p class="mini-lead reveal">跟這堂課的關聯</p><ul class="points showcase-points"><li class="reveal">整頁只有 div 定位＋SVG＋分層顯示，是 CH3 排版與 CH5 圖解的進階版。</li><li class="reveal">樓層、席位、年份都寫成資料再渲染——正是本週的主題。</li></ul></div></div><div class="footer"><span>AI 熱門週報</span><span>勤益科大進修部</span></div></section><section class="slide" data-label="WeduLab 互動教學工具集"><p class="eyebrow">案例 2｜27 個瀏覽器即用的教學小工具</p><p class="pagedot">03/05</p><h2 class="headline reveal">WeduLab 互動教學工具集</h2><div class="body-split body-split--shot showcase-split"><div class="reveal"><span class="code-label">實際畫面截圖</span><div class="shot-frame"><img class="shot" src="assets/showcase-wedulab.jpg" alt="WeduLab 互動教學工具集 的網頁截圖"></div></div><div class="reveal"><ul class="points showcase-points"><li class="reveal">電路實驗、3D 等高線、大氣環流等 27 個互動工具，開網頁就能操作。</li><li class="reveal">每個工具是獨立小網頁：Canvas 繪圖＋即時參數＋數據記錄。</li><li class="reveal">已累積一萬七千多人次使用，中英介面、免安裝免登入。</li></ul><div class="note reveal"><a href="https://wedulab.com/" target="_blank" rel="noopener">開啟這個作品</a>（wedulab.com）</div><p class="mini-lead reveal">跟這堂課的關聯</p><ul class="points showcase-points"><li class="reveal">每個工具都是「資料 → 畫面」：拉桿改數、圖立刻重畫——CH5 的完整應用。</li><li class="reveal">一人＋AI 協作維護 27 個工具：小團隊做大型工具集的實例。</li></ul></div></div><div class="footer"><span>AI 熱門週報</span><span>勤益科大進修部</span></div></section><section class="slide" data-label="Ask by Jig：問什麼都給你 3D 說明"><p class="eyebrow">案例 3｜AI 生成互動 3D 說明</p><p class="pagedot">04/05</p><h2 class="headline reveal">Ask by Jig：問什麼都給你 3D 說明</h2><div class="body-split body-split--shot showcase-split"><div class="reveal"><span class="code-label">實際畫面截圖</span><div class="shot-frame"><img class="shot" src="assets/showcase-jig.jpg" alt="Ask by Jig：問什麼都給你 3D 說明 的網頁截圖"></div></div><div class="reveal"><ul class="points showcase-points"><li class="reveal">輸入一句話（「龍捲風怎麼形成？」），AI 生成可旋轉的互動 3D 說明。</li><li class="reveal">同一作品可在網頁、iPhone、Vision Pro 播放，目前完全免費。</li><li class="reveal">站上大量他人作品：風力發電、板塊碰撞，可直接拆解學習。</li></ul><div class="note reveal"><a href="https://ask.jig.com/" target="_blank" rel="noopener">開啟這個作品</a>（ask.jig.com）</div><p class="mini-lead reveal">跟這堂課的關聯</p><ul class="points showcase-points"><li class="reveal">「提問 → AI 生成 → 立即互動」：會問問題就是產出內容。</li><li class="reveal">寫 prompt 用的就是本週語言：把資料的形狀講清楚，AI 才做得對。</li></ul></div></div><div class="footer"><span>AI 熱門週報</span><span>勤益科大進修部</span></div></section><section class="slide" data-label="三個案例速覽"><p class="eyebrow">收尾</p><p class="pagedot">05/05</p><h2 class="headline reveal">三個案例速覽</h2><div class="body-full showcase-outro"><div class="tbl"><div class="tbl__row tbl__row--head"><span>作品</span><span>網址</span><span>一句話</span></div><div class="tbl__row"><span class="tbl__el">板橋站共構開發案｜基地環境分析</span><span class="tbl__use"><a href="https://a767thycode.github.io/banqiao-station-infographic/" target="_blank" rel="noopener">a767thycode.github.io/banqiao-station-infographic</a></span><span class="tbl__use">AI 生成的純前端 3D 資訊圖表</span></div><div class="tbl__row"><span class="tbl__el">WeduLab 互動教學工具集</span><span class="tbl__use"><a href="https://wedulab.com/" target="_blank" rel="noopener">wedulab.com</a></span><span class="tbl__use">27 個瀏覽器即用的教學小工具</span></div><div class="tbl__row"><span class="tbl__el">Ask by Jig：問什麼都給你 3D 說明</span><span class="tbl__use"><a href="https://ask.jig.com/" target="_blank" rel="noopener">ask.jig.com</a></span><span class="tbl__use">AI 生成互動 3D 說明</span></div></div><ul class="points showcase-points"><li class="reveal">三個作品都沒用框架、沒裝軟體——<b>一頁 HTML 就能開始</b>。</li><li class="reveal">共同點：把資料的形狀講清楚（本週的型別與 interface），AI 才生成得對。</li><li class="reveal">本週練習做完，你手上就有和它們同類的第一件作品。</li></ul></div><div class="footer"><span>AI 熱門週報</span><span>勤益科大進修部</span></div></section></main></div><a class="deck-backlink" href="../">← 回簡報總覽</a>
 <div class="progress" id="progress"></div><div class="counter" id="counter">1 / 5</div><script>/* ===========================================
-   SLIDE PRESENTATION CONTROLLER（CH5／CH6 共用）
-   由 make_ch5.py / make_ch6.py 讀入後內嵌到產出的 HTML。
+   SLIDE PRESENTATION CONTROLLER（CH5／CH6／CH9 共用）
+   由 make_ch5.py / make_ch6.py / make_ch9.py 讀入後內嵌到產出的 HTML。
    要改行為請改本檔，不要改產出的簡報 HTML。
+   2026-10-17：移除圖解步驟動畫（逐步揭示／自動播放／下一步／重播／暫停），
+               圖解內容一次全部呈現；「深入說明」Dialog 保留。
    =========================================== */
 class SlidePresentation{
   constructor(){
@@ -696,11 +876,11 @@ class SlidePresentation{
     this.stage=document.getElementById('deckStage');
     this.progress=document.getElementById('progress');
     this.counter=document.getElementById('counter');
-    this.timers=new WeakMap();
-    this.reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.scale();
     addEventListener('resize',()=>this.scale());
     this.nav();
+    /* 頁碼已由右下角換頁鈕顯示：頁尾內的「NN/總頁」「CHn · NN/總頁」不再重複 */
+    document.querySelectorAll('.footer > span').forEach(s=>{if(/^(CH\d+\s*·\s*)?\d+\/\d+$/.test(s.textContent.trim()))s.classList.add('pg-dup');});
     this.initDiagrams();
     this.show(0);
   }
@@ -729,85 +909,45 @@ class SlidePresentation{
       const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
       if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy))this.show(this.current+(dx<0?1:-1));
     },{passive:true});
+    /* 右下角換頁鈕（放在舞台內，隨簡報縮放；有頁尾的頁面自動上移避開） */
+    const ico={prev:'M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z',next:'M8.6 5.4 10 4l8 8-8 8-1.4-1.4 6.6-6.6z'};
+    this.navPair=document.createElement('div');this.navPair.className='nav-pair';
+    [['prev','上一頁',-1],['next','下一頁',1]].forEach(([k,label,step])=>{
+      const b=document.createElement('button');
+      b.className='nav-btn';b.type='button';b.setAttribute('aria-label',label);
+      b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+ico[k]+'"/></svg>';
+      b.addEventListener('click',e=>{e.currentTarget.blur();this.show(this.current+step);});
+      this.navPair.appendChild(b);
+    });
+    this.navPair.insertBefore(this.counter,this.navPair.lastChild); /* 頁碼夾在兩鈕中間，避免舞台外的計數器蓋住按鈕 */
+    this.stage.appendChild(this.navPair);
   }
   show(i){
     this.current=Math.max(0,Math.min(i,this.total-1));
     this.slides.forEach((s,n)=>{s.classList.toggle('active',n===this.current);s.classList.toggle('visible',n===this.current);});
     this.progress.style.width=((this.current+1)/this.total*100)+'%';
     this.counter.textContent=(this.current+1)+' / '+this.total;
-    this.syncAuto();
+    /* 有頁尾的頁面：換頁鈕移到頁尾右側文字的左邊（頁尾列中段是空的） */
+    if(this.navPair){const f=this.slides[this.current].querySelector('.footer > :last-child:not(.pg-dup)');
+      this.navPair.style.right=f?`calc(var(--pad-outer) + ${f.offsetWidth+32}px)`:'';}
   }
-  /* ---------- 圖解：逐步揭示 + 自動播放 ---------- */
+  /* ---------- 圖解：內容一次全部呈現（無步驟動畫） ---------- */
   initDiagrams(){
     document.querySelectorAll('.diagram-stepper').forEach(d=>{
       const nodes=[...d.querySelectorAll('.flow-node,.dstep')];
-      const paint=()=>{
-        const step=Number(d.dataset.step||0);
-        nodes.forEach((node,i)=>{node.classList.toggle('is-on',i<=step);node.classList.toggle('is-current',i===step);});
-      };
-      d._nodes=nodes; d._paint=paint;
-      const controls=d.querySelector('.diagram-controls');
-      if(nodes.length<=1){ if(controls)controls.style.display='none'; paint(); return; }
+      nodes.forEach(n=>{n.classList.add('is-on');n.classList.remove('is-current');});
+      d.dataset.step=String(nodes.length);
       const bind=(sel,fn)=>{const el=d.querySelector(sel);if(el)el.addEventListener('click',e=>{e.currentTarget.blur();fn();});};
-      bind('[data-diagram-action="next"]',()=>{this.manual(d);this.stepBy(d,1);});
-      bind('[data-diagram-action="reset"]',()=>{this.manual(d);d.dataset.step='0';paint();});
-      bind('[data-diagram-action="more"]',()=>{this.stopAuto(d);d.classList.add('is-dialog');});
-      bind('[data-diagram-action="close"]',()=>{this.closeDialog(d);});
-      bind('[data-diagram-action="toggle"]',()=>{this.toggleAuto(d);});
+      bind('[data-diagram-action="more"]',()=>d.classList.add('is-dialog'));
+      bind('[data-diagram-action="close"]',()=>this.closeDialog(d));
       const dlg=d.querySelector('.dgm-dialog');
       if(dlg)dlg.addEventListener('click',e=>{if(e.target===dlg)this.closeDialog(d);});
-      d.dataset.auto=this.reduce?'off':'on';
-      this.syncToggle(d);
-      paint();
     });
   }
-  stepBy(d,n){
-    const nodes=d._nodes||[];
-    if(!nodes.length)return;
-    d.dataset.step=String((Number(d.dataset.step||0)+n+nodes.length)%nodes.length);
-    (d._paint||function(){})();
-  }
-  closeDialog(d){
-    d.classList.remove('is-dialog');
-    if(d.dataset.auto==='on')this.startAuto(d);
-  }
-  /* 手動操作（下一步／重播）後自動暫停 */
-  manual(d){ d.dataset.auto='off'; this.stopAuto(d); this.syncToggle(d); }
-  toggleAuto(d){
-    const on=d.dataset.auto==='on';
-    d.dataset.auto=on?'off':'on';
-    if(on)this.stopAuto(d); else this.startAuto(d);
-    this.syncToggle(d);
-  }
-  syncToggle(d){
-    const t=d.querySelector('[data-diagram-action="toggle"]');
-    if(!t)return;
-    const on=d.dataset.auto==='on';
-    t.textContent=on?'暫停':'播放';
-    t.setAttribute('aria-pressed',on?'true':'false');
-    d.classList.toggle('is-paused',!on);
-  }
-  startAuto(d){
-    this.stopAuto(d);
-    const nodes=d._nodes||[];
-    if(nodes.length<=1)return;
-    if(!d.closest('.slide.active')||d.classList.contains('is-dialog'))return;
-    this.timers.set(d,setInterval(()=>{
-      if(!d.closest('.slide.active')||d.classList.contains('is-dialog')){this.stopAuto(d);this.syncToggle(d);return;}
-      this.stepBy(d,1);
-    },3000));
-  }
-  stopAuto(d){ const t=this.timers.get(d); if(t){clearInterval(t);this.timers.delete(d);} }
-  /* 只播當前頁；切頁時停掉其他頁的計時器 */
-  syncAuto(){
-    document.querySelectorAll('.diagram-stepper').forEach(d=>{
-      if(d.closest('.slide.active')&&d.dataset.auto==='on')this.startAuto(d);
-      else this.stopAuto(d);
-    });
-  }
-  pauseAll(){ document.querySelectorAll('.diagram-stepper').forEach(d=>this.stopAuto(d)); }
+  closeDialog(d){ d.classList.remove('is-dialog'); }
+  /* 保留介面：匯出／列印流程會呼叫，現已無計時器 */
+  pauseAll(){}
 }
 const deck=new SlidePresentation();
-/* 匯出／列印流程可呼叫，確保沒有計時器在跑 */
 window.__deckPauseAll=()=>deck.pauseAll();
 </script></body></html>

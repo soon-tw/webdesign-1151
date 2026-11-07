@@ -331,6 +331,17 @@ img, video, canvas, svg { max-width: 100%; max-height: 100%; }
   position: fixed; right: 18px; bottom: 14px; z-index: 1001;
   font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
 }
+/* ---- 右下角換頁鈕（在 .deck-stage 內，以 1920×1080 座標定位） ---- */
+.nav-pair{position:absolute;right:var(--pad-outer);bottom:24px;z-index:50;display:flex;gap:16px}
+.nav-btn{width:72px;height:72px;padding:0;border:1px solid var(--rule-medium);border-radius:50%;
+  background:var(--paper);color:var(--ink-soft);cursor:pointer;opacity:.55;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:opacity .2s}
+.nav-btn:hover,.nav-btn:active{opacity:1}
+.nav-btn svg{width:40px;height:40px;fill:currentColor}
+.nav-pair .counter{position:static;align-self:center;min-width:110px;text-align:center;font-size:var(--t-min);color:var(--ink-soft)}
+.nav-pair{align-items:center}
+.pagedot,.footer .pg-dup{display:none}
+@media print{.nav-pair{display:none}}
 .edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
 .edit-toggle {
   position: fixed; top: 16px; left: 16px; z-index: 10001;
@@ -617,7 +628,6 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 .ch5-grid.ch6-grid .visual-area.duo .diagram-controls{gap:8px}
 .ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 9px}
 
-
 /* ===========================================
    CH9 additions
    =========================================== */
@@ -664,6 +674,189 @@ body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); o
 .ch9-chk li{position:relative;padding-left:52px;font-family:var(--f-body);font-size:34px;line-height:1.4;color:var(--ink)}
 .ch9-chk li::before{content:"\e2e6";font-family:var(--f-icons);font-size:34px;line-height:1;
   position:absolute;left:0;top:4px;color:var(--ink-soft)}
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+/* 真實成品截圖 */
+.shot { margin: 0; border: 1.5px solid var(--rule-medium); border-radius: 18px;
+  overflow: hidden; background: #fff; box-shadow: 0 14px 34px rgba(42,36,27,.14); }
+.shot img { display: block; width: 100%; height: auto; }
+.shot figcaption { font-family: var(--f-sans); font-size: 28px; line-height: 1.35;
+  padding: 10px 18px; color: var(--ink-soft); border-top: 1px solid var(--rule-soft); }
+.shots3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-content: start; }
+.shots3 .shot { border-radius: 14px; }
+.ch7-exgrid { grid-template-columns: 50% 50%; }
+/* 圖解頁：圖解在視覺欄內垂直居中，避免下方留一大片空白 */
+.visual-area > .diagram-stepper.rich { align-self: center; }
+.ch7-exgrid .visual-area { align-self: start; }
+
+/* 封面：左文字、右成品截圖 */
+.slide--cover.has-shot .cover-title { right: auto; width: 880px; font-size: 104px; line-height: 1.16; }
+.slide--cover.has-shot .cover-sub { right: auto; width: 820px; top: 650px; font-size: 38px; }
+.cover-shot { position: absolute; right: 80px; top: 210px; width: 780px; margin: 0;
+  border-radius: 22px; overflow: hidden; border: 1.5px solid var(--rule-medium);
+  box-shadow: 0 24px 60px rgba(42,36,27,.20); background: #fff; }
+.cover-shot img { display: block; width: 100%; height: auto; }
+
+
+/* ===========================================
+   CH8 additions
+   =========================================== */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+.visual-area > .diagram-stepper.rich { align-self: center; }
+/* ===== Showcase additions (make_showcase.py) ===== */
+
+/* ===========================================
+   Showcase additions（AI 熱門週報，make_showcase.py 維護）
+   =========================================== */
+.showcase-split { align-items: start; }
+.showcase-points { gap: 18px; }
+.showcase-points li { font-size: 30px; line-height: 1.5; }
+.showcase-split .shot { max-height: 540px; }
+.showcase-split .shot-frame { padding: 16px; }
+.showcase-split .note { font-size: 27px; margin-top: 14px; }
+.showcase-split .mini-lead { margin-top: 20px; }
+.showcase-split .tbl__row { font-size: 28px; }
+/* 收尾頁：表格＋三條要點，壓縮間距避免頂到 footer */
+.showcase-outro { gap: 26px; }
+.showcase-outro .tbl__row { padding: 11px 0; }
+.showcase-outro .points { gap: 16px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.5; }
 
 </style><link rel="stylesheet" href="../assets/deck-fonts.css">
 <link rel="stylesheet" href="../assets/deck-site.css">
@@ -987,6 +1180,8 @@ class SlidePresentation{
     this.scale();
     addEventListener('resize',()=>this.scale());
     this.nav();
+    /* 頁碼已由右下角換頁鈕顯示：頁尾內的「NN/總頁」「CHn · NN/總頁」不再重複 */
+    document.querySelectorAll('.footer > span').forEach(s=>{if(/^(CH\d+\s*·\s*)?\d+\/\d+$/.test(s.textContent.trim()))s.classList.add('pg-dup');});
     this.initDiagrams();
     this.show(0);
   }
@@ -1015,12 +1210,27 @@ class SlidePresentation{
       const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
       if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy))this.show(this.current+(dx<0?1:-1));
     },{passive:true});
+    /* 右下角換頁鈕（放在舞台內，隨簡報縮放；有頁尾的頁面自動上移避開） */
+    const ico={prev:'M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z',next:'M8.6 5.4 10 4l8 8-8 8-1.4-1.4 6.6-6.6z'};
+    this.navPair=document.createElement('div');this.navPair.className='nav-pair';
+    [['prev','上一頁',-1],['next','下一頁',1]].forEach(([k,label,step])=>{
+      const b=document.createElement('button');
+      b.className='nav-btn';b.type='button';b.setAttribute('aria-label',label);
+      b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+ico[k]+'"/></svg>';
+      b.addEventListener('click',e=>{e.currentTarget.blur();this.show(this.current+step);});
+      this.navPair.appendChild(b);
+    });
+    this.navPair.insertBefore(this.counter,this.navPair.lastChild); /* 頁碼夾在兩鈕中間，避免舞台外的計數器蓋住按鈕 */
+    this.stage.appendChild(this.navPair);
   }
   show(i){
     this.current=Math.max(0,Math.min(i,this.total-1));
     this.slides.forEach((s,n)=>{s.classList.toggle('active',n===this.current);s.classList.toggle('visible',n===this.current);});
     this.progress.style.width=((this.current+1)/this.total*100)+'%';
     this.counter.textContent=(this.current+1)+' / '+this.total;
+    /* 有頁尾的頁面：換頁鈕移到頁尾右側文字的左邊（頁尾列中段是空的） */
+    if(this.navPair){const f=this.slides[this.current].querySelector('.footer > :last-child:not(.pg-dup)');
+      this.navPair.style.right=f?`calc(var(--pad-outer) + ${f.offsetWidth+32}px)`:'';}
   }
   /* ---------- 圖解：內容一次全部呈現（無步驟動畫） ---------- */
   initDiagrams(){
