@@ -1,0 +1,1255 @@
+<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UI/UX 設計腦｜設計原則、Angular Material、AI 設計工具</title><style>
+/* ===========================================================
+   CH2 簡報樣式 — soft-editorial
+   由 output/簡報建置/build.py 內嵌字型後寫入簡報檔案。
+   修改樣式請改本檔，再重跑 build.py。
+   =========================================================== */
+
+/* ===== 內嵌字型子集（離線可用；由 build.py 產生） ===== */
+
+/* ===========================================
+   1. THEME TOKENS
+   =========================================== */
+:root {
+  /* Colors */
+  --paper:        #F2EEDF;
+  --paper-2:      #ECE6D2;
+  --ink:          #2A241B;
+  --ink-soft:     #5C5345;
+  --pink:         #E1A4C2;
+  --lemon:        #D6DD63;
+  --blush:        #E8C9B6;
+  --sage:         #B7C7A8;
+  --lilac:        #C9BEDC;
+  --card:         rgba(255, 255, 255, 0.55);
+  --rule-soft:    rgba(42, 36, 27, 0.18);
+  --rule-medium:  rgba(42, 36, 27, 0.35);
+
+  /* 程式碼語法色（同一色票的加深版） */
+  --code-tag: #8C5A3C;
+  --code-attr: #6E7F45;
+  --code-str: #A64C7C;
+  --code-cmt: #8A8072;
+
+  /* Fonts — 全部內嵌，離線可用 */
+  --f-display: 'Cormorant Garamond', 'LXGW WenKai TC', 'Noto Serif TC', serif;
+  --f-body:    'Work Sans', 'Noto Serif TC', serif;
+  --f-sans:    'Work Sans', 'Noto Sans TC', sans-serif;
+  --f-code:    'JetBrains Mono', 'Noto Sans TC', monospace;
+  --f-icons:   'Material Symbols Outlined';
+
+  /* Type scale（1920×1080 stage；字級下限見 CLAUDE.md 規範） */
+  --t-display:  168px;
+  --t-chapter:  132px;
+  --t-headline: 76px;
+  --t-subhead:  48px;
+  --t-body:     38px;
+  --t-body-sm:  34px;
+  --t-code:     32px;
+  --t-min:      28px;
+  --t-eyebrow:  30px;
+
+  --pad-outer: 80px;
+  --pad-top: 60px;
+  --pad-bottom: 50px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.6s;
+
+  --stage-bg: #1a1713;
+  --slide-bg: var(--paper);
+}
+
+/* ===========================================
+   2. BASE（viewport-base.css 全文強制納入）
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html,
+body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+
+.deck-stage {
+  position: absolute; left: 0; top: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  background: var(--slide-bg, #fff);
+}
+.slide {
+  position: absolute; inset: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  display: block;
+  visibility: hidden; opacity: 0; pointer-events: none;
+  background: var(--slide-bg, #fff);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+
+@media print {
+  html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+  .deck-viewport { position: static; overflow: visible; background: #fff; }
+  .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+  .slide {
+    position: relative; display: block !important; visibility: visible !important;
+    opacity: 1 !important; pointer-events: auto !important;
+    width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   3. SLIDE CHROME
+   =========================================== */
+.eyebrow {
+  position: absolute; top: var(--pad-top); left: var(--pad-outer);
+  font-family: var(--f-sans); font-size: var(--t-eyebrow); font-weight: 400;
+  color: var(--ink);
+}
+.pagedot {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.footer {
+  position: absolute; bottom: var(--pad-bottom); left: var(--pad-outer); right: var(--pad-outer);
+  display: flex; justify-content: space-between;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+
+/* ===========================================
+   4. LAYOUT PRIMITIVES
+   =========================================== */
+.headline {
+  position: absolute; top: 128px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-headline);
+  line-height: 1.24; color: var(--ink);
+}
+.headline em { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+/* 標題下方的極細分隔線（編輯排版手法，非裝飾卡片） */
+.headline::after {
+  content: ''; display: block; width: 160px; height: 1px;
+  background: var(--rule-medium); margin-top: 26px;
+}
+
+.body-split {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; grid-template-columns: 44% minmax(0, 1fr); gap: 44px; align-items: start;
+}
+.body-split--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+/* 範例頁：截圖給 58%，投影時字才看得清楚 */
+.body-split--shot { grid-template-columns: 58% minmax(0, 1fr); }
+.body-full {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer); bottom: 112px;
+  display: grid; gap: 34px; align-content: start;
+}
+
+/* 要點條列 — 單一墨色短橫線標記，不做彩色圓點循環 */
+.points { list-style: none; display: grid; gap: 24px; }
+.points li {
+  position: relative; padding-left: 40px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.62; color: var(--ink);
+}
+.points li::before {
+  content: ''; position: absolute; left: 0; top: 0.74em;
+  width: 22px; height: 2px; background: var(--ink); opacity: 0.34;
+}
+.points b, .points strong { font-weight: 500; }
+.points code {
+  font-family: var(--f-code); font-size: 0.92em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* ===========================================
+   5. CODE PANEL
+   =========================================== */
+.code-label {
+  display: block; margin-bottom: 14px;
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-min);
+  color: var(--ink-soft);
+}
+.code {
+  font-family: var(--f-code); font-size: var(--t-code); line-height: 1.62;
+  color: var(--ink);
+  background: var(--card); border-radius: 22px;
+  padding: 38px 42px;
+  white-space: pre; overflow: hidden;
+}
+.code .tag  { color: var(--code-tag); }
+.code .attr { color: var(--code-attr); }
+.code .str  { color: var(--code-str); }
+.code .cmt  { color: var(--code-cmt); }
+.code .ok   { color: var(--code-attr); }
+.code .no   { color: var(--code-str); }
+
+/* 程式碼一律顯示原始字元：JetBrains Mono 的連字會把 <!-- 畫成箭頭、把 === 併成三條長橫線，對初學者是反效果 */
+.code, code, .keys__k, .tbl__el, .dgm .t-code, .dgm .t-mono,
+.code-pane pre, .tsjs pre {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0, "calt" 0;
+}
+
+/* ===========================================
+   6. 推薦資源 — 編輯式出處行（無外框、無彩色邊條）
+   =========================================== */
+.res {
+  margin-top: 34px; padding-top: 18px;
+  border-top: 1px dashed var(--rule-medium);
+}
+.res__kind {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.res__kind::before {
+  font-family: var(--f-icons); font-size: 30px; font-weight: normal;
+  font-style: normal; line-height: 1; color: var(--ink-soft);
+}
+.res__title {
+  display: block; margin-top: 8px;
+  font-family: var(--f-display); font-size: var(--t-body-sm); font-weight: 500; color: var(--ink);
+}
+.res__desc {
+  font-family: var(--f-body); font-size: 28px; line-height: 1.55;
+  color: var(--ink-soft); margin-top: 4px;
+}
+.res--card   .res__kind::before { content: "\e8e7"; }  /* bookmark */
+.res--video  .res__kind::before { content: "\e1c4"; }  /* play_circle */
+.res--mind   .res__kind::before { content: "\e97a"; }  /* account_tree */
+.res--chart  .res__kind::before { content: "\e26b"; }  /* bar_chart */
+.res--audio  .res__kind::before { content: "\f01f"; }  /* headphones */
+.res--slides .res__kind::before { content: "\e41b"; }  /* slideshow */
+.res--quiz   .res__kind::before { content: "\f04c"; }  /* quiz */
+.res--check  .res__kind::before { content: "\e2e6"; }  /* task_alt */
+
+/* ===========================================
+   7. 行內小圖示與狀態藥丸
+   =========================================== */
+.ic {
+  font-family: var(--f-icons); font-style: normal; font-weight: normal;
+  line-height: 1; vertical-align: -0.14em; display: inline-block;
+}
+.ic--warn::before  { content: "\f083"; }  /* warning */
+.ic--check::before { content: "\e2e6"; }  /* task_alt */
+.ic--no::before    { content: "\e888"; }  /* cancel */
+.ic--tip::before   { content: "\e90f"; }  /* lightbulb */
+.ic--info::before  { content: "\e88e"; }  /* info */
+
+.pill {
+  display: inline-block; border-radius: 999px; padding: 1px 18px 3px;
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink);
+}
+.pill--yes { background: var(--lemon); }
+.pill--no  { background: var(--pink); }
+
+/* ===========================================
+   8. 章節頁 / 封面 / 收尾
+   =========================================== */
+.chapter-num {
+  position: absolute; top: 250px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-weight: 500;
+  font-size: 120px; color: var(--blush);
+}
+.chapter-title {
+  position: absolute; top: 400px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-chapter);
+  line-height: 1.22; color: var(--ink);
+}
+.chapter-title::after {
+  content: ''; display: block; width: 240px; height: 1px;
+  background: var(--rule-medium); margin-top: 34px;
+}
+.chapter-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink-soft);
+}
+
+.cover-kicker {
+  position: absolute; top: 240px; left: var(--pad-outer);
+  font-family: var(--f-display); font-style: italic; font-size: var(--t-subhead);
+  color: var(--ink-soft);
+}
+.cover-title {
+  position: absolute; top: 300px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: var(--t-display);
+  line-height: 1.16; color: var(--ink);
+}
+.cover-sub {
+  position: absolute; top: 560px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 64px;
+  line-height: 1.3; color: var(--ink-soft);
+}
+.cover-swatches {
+  position: absolute; top: var(--pad-top); right: var(--pad-outer);
+  display: flex; gap: 20px;
+}
+.cover-swatches span { width: 56px; height: 56px; border-radius: 50%; display: block; }
+.cover-swatches span:nth-child(1) { background: var(--pink); }
+.cover-swatches span:nth-child(2) { background: var(--lemon); }
+.cover-swatches span:nth-child(3) { background: var(--sage); }
+
+.slide--accent { background: var(--pink); }
+.closer-title {
+  position: absolute; top: 380px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-display); font-weight: 500; font-size: 140px;
+  line-height: 1.2; color: var(--ink);
+}
+.closer-sub {
+  position: absolute; top: 600px; left: var(--pad-outer); right: var(--pad-outer);
+  font-family: var(--f-body); font-size: var(--t-body); color: var(--ink);
+}
+
+/* ===========================================
+   9. ANIMATION
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(28px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.slide.visible .reveal { opacity: 1; transform: none; }  /* none：避免 transform 讓 position:fixed 的對話框錯位 */
+.slide.visible .reveal:nth-child(1) { transition-delay: 0.08s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: 0.16s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: 0.24s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: 0.32s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: 0.40s; }
+
+/* ===========================================
+   10. DECK CHROME（舞台外）
+   =========================================== */
+.progress {
+  position: fixed; left: 0; bottom: 0; height: 4px; width: 0;
+  background: var(--pink); z-index: 1001; transition: width 0.3s var(--ease);
+}
+.counter {
+  position: fixed; right: 18px; bottom: 14px; z-index: 1001;
+  font-family: var(--f-sans); font-size: 14px; color: rgba(242,238,223,0.7);
+}
+/* ---- 右下角換頁鈕（在 .deck-stage 內，以 1920×1080 座標定位） ---- */
+.nav-pair{position:absolute;right:var(--pad-outer);bottom:24px;z-index:50;display:flex;gap:16px}
+.nav-btn{width:72px;height:72px;padding:0;border:1px solid var(--rule-medium);border-radius:50%;
+  background:var(--paper);color:var(--ink-soft);cursor:pointer;opacity:.55;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:opacity .2s}
+.nav-btn:hover,.nav-btn:active{opacity:1}
+.nav-btn svg{width:40px;height:40px;fill:currentColor}
+.nav-pair .counter{position:static;align-self:center;min-width:110px;text-align:center;font-size:var(--t-min);color:var(--ink-soft)}
+.nav-pair{align-items:center}
+.pagedot,.footer .pg-dup{display:none}
+@media print{.nav-pair{display:none}}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+  position: fixed; top: 16px; left: 16px; z-index: 10001;
+  font-size: 18px; line-height: 1; padding: 10px 12px; border: 0; border-radius: 12px;
+  background: var(--paper); color: var(--ink); cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+body.editing [contenteditable="true"]:hover { outline: 2px dashed var(--pink); outline-offset: 4px; }
+
+/* ===========================================
+   11. 補充元件（備注／步驟／雙平台快捷鍵表）
+   =========================================== */
+/* 頁尾備注：虛線細規 + 小字，用於補充說明 */
+.note {
+  margin-top: 28px; padding-top: 16px;
+  border-top: 1px dashed var(--rule-medium);
+  font-family: var(--f-body); font-size: var(--t-min); line-height: 1.6;
+  color: var(--ink-soft);
+}
+.note b { color: var(--ink); font-weight: 500; }
+.note code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 編號步驟：斜體羅馬數字，符合 soft-editorial 的步驟記號 */
+.steps { list-style: none; counter-reset: step; display: grid; gap: 18px; }
+.steps li {
+  position: relative; padding-left: 76px;
+  font-family: var(--f-body); font-size: var(--t-body); line-height: 1.6; color: var(--ink);
+}
+.steps li::before {
+  counter-increment: step; content: counter(step, lower-roman) ".";
+  position: absolute; left: 0; top: 0;
+  font-family: var(--f-display); font-style: italic; font-size: 32px; color: var(--ink-soft);
+}
+.steps code {
+  font-family: var(--f-code); font-size: 1em; color: var(--code-tag);
+  background: rgba(255,255,255,0.6); border-radius: 6px; padding: 0 8px;
+}
+
+/* 雙平台快速鍵表 */
+.keys { display: grid; gap: 0; }
+.keys__row {
+  display: grid; grid-template-columns: 1fr 300px 300px; gap: 18px;
+  align-items: baseline; padding: 13px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-min);
+}
+.keys__row:last-child { border-bottom: 0; }
+.keys__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.keys__fn { font-family: var(--f-body); color: var(--ink); }
+.keys__k  { font-family: var(--f-code); font-size: var(--t-min); color: var(--code-tag); }
+
+/* 行內連結（CodePen、數位學習平台等） */
+.points a, .note a, .res__desc a, .code a {
+  color: var(--code-tag);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+/* 頁尾備注：佔用固定底槽，主體區域讓出空間 */
+.body-split--note, .body-full--note { bottom: 232px; }
+.note--bottom {
+  position: absolute; left: var(--pad-outer); right: var(--pad-outer); bottom: 120px;
+  margin: 0;
+}
+
+/* ===========================================
+   12. 內容表格（常用元素速查）
+   =========================================== */
+.tbl { display: grid; }
+.tbl__row {
+  display: grid; grid-template-columns: 420px 1fr 1.3fr; gap: 28px;
+  align-items: baseline; padding: 15px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+  font-size: var(--t-body);
+}
+.tbl__row:last-child { border-bottom: 0; }
+.tbl__row--head {
+  border-bottom: 1px solid var(--rule-medium);
+  font-family: var(--f-sans); font-size: var(--t-min); color: var(--ink-soft);
+}
+.tbl__el { font-family: var(--f-code); color: var(--code-tag); }
+.tbl__use { font-family: var(--f-body); line-height: 1.45; color: var(--ink); }
+.tbl__row--head .tbl__el { color: var(--ink-soft); }
+
+/* ===========================================
+   13. 作業範例的成品截圖
+   =========================================== */
+.shot {
+  display: block; width: auto; max-width: 100%; max-height: 560px;
+  border-radius: 12px; background: #fff;
+}
+.shot-frame {
+  background: var(--card); border-radius: 22px; padding: 22px;
+  display: inline-block; max-width: 100%;
+}
+
+/* ===========================================
+   14. 內嵌圖解（語彙取自 archify：格線底、泳道標頭、
+       節點卡、語意色票、箭頭先用 marker 定義）
+       —— 只用 CSS class 上色，不寫 inline fill，
+          換主題時整組跟著變
+   =========================================== */
+.dgm { display: block; width: 100%; height: auto; }
+
+.dgm .d-grid   { fill: none; stroke: rgba(42, 36, 27, 0.07); stroke-width: 1; }
+
+/* 節點卡：一律「先遮罩、再上色」兩層，避免半透明底色讓線穿過去 */
+.dgm .d-mask   { fill: var(--paper); stroke: none; }
+.dgm .d-card   { fill: rgba(255, 255, 255, 0.72); stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-margin { fill: rgba(232, 201, 182, 0.40); stroke: var(--blush); stroke-width: 2; stroke-dasharray: 9 7; }
+.dgm .d-border { fill: none; stroke: var(--ink); stroke-width: 4; }
+.dgm .d-padding{ fill: rgba(183, 199, 168, 0.45); stroke: var(--sage); stroke-width: 2; }
+.dgm .d-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+.dgm .d-hot    { fill: rgba(225, 164, 194, 0.35); stroke: var(--pink); stroke-width: 2; }
+.dgm .d-cool   { fill: rgba(201, 190, 220, 0.35); stroke: var(--lilac); stroke-width: 2; }
+.dgm .d-soft   { fill: rgba(214, 221, 99, 0.32);  stroke: var(--lemon); stroke-width: 2; }
+
+/* 文字：字級已按「1920×1080 舞台的 28px 下限」放大，不沿用 archify 的 7–12px */
+.dgm .t-head { font-family: var(--f-display); font-style: italic; font-size: 30px; fill: var(--ink-soft); }
+.dgm .t-lab  { font-family: var(--f-sans);  font-size: 30px; fill: var(--ink); }
+.dgm .t-bold { font-family: var(--f-sans);  font-size: 30px; font-weight: 700; fill: var(--ink); }
+.dgm .t-code { font-family: var(--f-code);  font-size: 28px; fill: var(--code-tag); }
+.dgm .t-note { font-family: var(--f-body);  font-size: 28px; fill: var(--ink-soft); }
+.dgm .t-mono { font-family: var(--f-code);  font-size: 28px; fill: var(--ink-soft); }
+
+/* 色票小方塊（圖例用） */
+.dgm .sw-margin { fill: var(--blush); }
+.dgm .sw-border { fill: var(--ink); }
+.dgm .sw-padding{ fill: var(--sage); }
+.dgm .sw-content{ fill: #FFFFFF; stroke: var(--rule-medium); stroke-width: 1.5; }
+
+/* 流程線與箭頭（marker 在各圖的 <defs> 內定義） */
+.dgm .a-line     { fill: none; stroke: var(--ink-soft); stroke-width: 2.5; }
+.dgm .a-line-soft{ fill: none; stroke: var(--rule-medium); stroke-width: 2; }
+.dgm .d-arrowhead{ fill: var(--ink-soft); }
+
+/* 原位／預設位置的虛線殘影 */
+.dgm .d-ghost { fill: none; stroke: var(--rule-medium); stroke-width: 2; stroke-dasharray: 7 7; }
+
+/* 小標籤（狀態、勝出、標記用） */
+.dgm .d-pill   { fill: rgba(214, 221, 99, 0.55); stroke: var(--lemon); stroke-width: 1.5; }
+.dgm .d-pill-w { fill: rgba(225, 164, 194, 0.45); stroke: var(--pink); stroke-width: 1.5; }
+
+/* 面板底色（比較用的分格） */
+.dgm .d-panel  { fill: rgba(255, 255, 255, 0.55); stroke: var(--rule-soft); stroke-width: 1.5; }
+.dgm .d-slot   { fill: rgba(42, 36, 27, 0.06); stroke: var(--rule-medium); stroke-width: 1.5; }
+
+
+/* ===========================================
+   CH5 70-page JavaScript deck additions
+   =========================================== */
+.lesson-tags{position:absolute;top:60px;left:250px;right:250px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.lesson-tags span{border:1px solid var(--rule-soft);border-radius:999px;padding:8px 18px;background:rgba(255,255,255,.48)}.ch5-grid{position:absolute;top:265px;left:80px;right:80px;bottom:118px;display:grid;grid-template-columns:43% 57%;gap:34px;align-items:start}.visual-area{display:grid;gap:14px;align-content:start}.ch5-grid.no-visual{grid-template-columns:1fr}.ch5-copy{display:grid;gap:22px}.mini-lead{font-family:var(--f-display);font-size:42px;line-height:1.35;color:var(--ink)}.lesson-points{list-style:none;display:grid;gap:16px}.lesson-points li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:34px;line-height:1.48;color:var(--ink)}.lesson-points li:before{content:'';position:absolute;left:0;top:.72em;width:18px;height:2px;background:var(--ink);opacity:.32}.lesson-links{list-style:none;display:grid;grid-template-columns:1fr;gap:12px;margin:22px 0 0;padding:0}.lesson-links--multi{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-links a{display:flex;align-items:center;gap:14px;font-family:var(--f-sans);font-size:28px;line-height:1.32;color:var(--ink);text-decoration:none;border:1.5px solid var(--rule-medium);border-radius:14px;padding:12px 20px;background:rgba(255,255,255,.62);transition:background .2s var(--ease),border-color .2s var(--ease)}.lesson-links a::before{content:'開啟';flex:0 0 auto;font-size:26px;font-weight:700;letter-spacing:1px;color:var(--paper);background:var(--ink);border-radius:999px;padding:2px 13px}.lesson-links a:hover{background:rgba(214,221,99,.4);border-color:var(--ink)}.remember{position:absolute;left:80px;right:80px;bottom:50px;border-top:1px solid var(--rule-soft);padding-top:12px;font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}.codepen-card{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:14px}.codepen-card--js{grid-template-columns:1fr}.code-pane{background:rgba(255,255,255,.72);border:1.5px solid var(--rule-medium);border-radius:18px;overflow:hidden}.code-pane.js{grid-column:1 / -1}.code-pane__hd{font-family:var(--f-display);font-style:italic;font-size:30px;line-height:1.3;padding:8px 16px;border-bottom:1px solid var(--rule-soft);display:flex;align-items:center;justify-content:space-between;gap:14px;color:var(--ink-soft)}.code-pane__tag{font-family:var(--f-sans);font-style:normal;font-size:28px;line-height:1.15;border:1.5px solid var(--rule-medium);border-radius:999px;padding:0 14px;background:rgba(214,221,99,.42);color:var(--ink)}.code-pane pre{font-family:var(--f-code);font-size:30px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px 16px;max-height:270px;overflow:hidden}.code-pane.js pre{font-size:31px;max-height:470px}.code-pane .todo,.code-pane .code-key{background:rgba(214,221,99,.5);border-radius:4px;box-shadow:0 0 0 3px rgba(214,221,99,.5);box-decoration-break:clone;-webkit-box-decoration-break:clone}.diagram-stepper{background:rgba(255,255,255,.52);border:1px solid var(--rule-soft);border-radius:26px;padding:28px;min-height:520px;display:grid;grid-template-rows:auto 1fr auto;gap:24px}.diagram-title{font-family:var(--f-display);font-size:42px;color:var(--ink)}.diagram-flow{display:flex;align-items:center;gap:20px;justify-content:center;flex-wrap:wrap}.flow-node{min-width:185px;min-height:110px;border:1px solid var(--rule-medium);border-radius:22px;display:grid;place-items:center;text-align:center;padding:18px;font-family:var(--f-sans);font-size:30px;line-height:1.25;background:rgba(255,255,255,.44);opacity:.44;transition:transform .35s var(--ease),opacity .35s var(--ease),background .35s var(--ease)}.flow-node.is-on{opacity:1;background:rgba(214,221,99,.38)}.flow-node.is-current{transform:translateY(-8px);outline:4px solid rgba(166,76,124,.35)}.flow-arrow{font-family:var(--f-display);font-size:42px;color:var(--ink-soft)}.diagram-controls{display:flex;gap:12px;justify-content:flex-end}.diagram-controls button{font-family:var(--f-sans);font-size:24px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.52);border-radius:999px;padding:8px 18px;color:var(--ink)}.visual-area.duo .diagram-stepper{min-height:0;padding:10px 18px;gap:10px;display:flex;flex-wrap:wrap;align-items:center}.visual-area.duo .diagram-title{flex:1 1 auto;font-size:32px}.visual-area.duo .diagram-controls{flex:0 0 auto}.visual-area.duo .diagram-controls button{font-size:20px;padding:5px 12px}.visual-area.duo .diagram-flow{flex:1 1 100%;gap:12px}.visual-area.duo .flow-node{min-width:145px;min-height:84px;font-size:25px;padding:10px}.visual-area.duo .flow-arrow{font-size:34px}.visual-area.has-code:not(.ex){align-self:stretch;display:flex;flex-direction:column;gap:14px}.visual-area.has-code:not(.ex) .codepen-card{flex:1 1 auto;min-height:0}.visual-area.has-code:not(.ex) .code-pane{display:flex;flex-direction:column;min-height:0}.visual-area.has-code:not(.ex) .code-pane pre{flex:1 1 auto;min-height:0;max-height:none}.visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:34px}.code-pane pre .code-body{display:block;width:100%}.visual-area.has-code:not(.ex) .diagram-stepper{flex:0 0 auto}.visual-area.duo .code-pane pre{font-size:34px}.visual-area.ex .code-pane pre{font-size:30px;line-height:1.45;max-height:250px}.visual-area.ex .code-pane.js pre{font-size:32px;max-height:320px}.slide--cover .cover-title{font-family:var(--f-display);font-size:134px;line-height:1.02;position:absolute;left:90px;right:90px;top:270px}.slide--cover .cover-sub{font-family:var(--f-body);font-size:46px;position:absolute;left:90px;right:90px;top:575px}.cover-kicker{position:absolute;left:90px;top:150px;font-family:var(--f-sans);font-size:32px;color:var(--ink-soft)}@media (prefers-reduced-motion: reduce){.flow-node{transition:none}.flow-node.is-current{transform:none}}
+
+
+/* ===========================================
+   CH5 rich diagram additions
+   =========================================== */
+.diagram-stepper.rich{min-height:0;padding:18px 20px;gap:12px}
+.diagram-stepper.rich .diagram-title{font-size:36px}
+.diagram-stepper.rich .dgm{width:100%;height:auto;max-height:529px}
+.dgm .dstep{opacity:0;transform:translateY(14px);transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.dgm .dstep.is-on{opacity:1;transform:translateY(0)}
+.dgm .d-ring{opacity:0;fill:none;stroke:var(--pink);stroke-width:3;transition:opacity .3s var(--ease)}
+.dgm .dstep.is-current .d-ring{opacity:1;animation:dgmPulse 1.6s ease-in-out infinite}
+.dgm .dstep.is-on .a-line{stroke-dasharray:10 8;animation:dgmFlow 1.1s linear infinite}
+.dgm .d-cursor{fill:var(--ink);stroke:#fff;stroke-width:1.5}
+.dgm .d-dim{opacity:.42}
+.dgm .d-x{fill:none;stroke:var(--pink);stroke-width:6;stroke-linecap:round}
+.dgm .d-ripple{fill:none;stroke:var(--pink);stroke-width:2;opacity:.55;transform-box:fill-box;transform-origin:center;animation:dgmRipple 1.8s ease-out infinite}
+.dgm .d-ripple2{animation-delay:.4s;opacity:.3}
+/* duo 頁：圖解只佔一條窄帶，需與上方 code 卡共用 697px 預算，故收緊留白與標題行高 */
+.visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:6px}
+.visual-area.duo .diagram-stepper.rich .diagram-title{font-size:32px;line-height:1.2}
+.visual-area.duo .diagram-stepper.rich .dgm{max-height:122px}
+.dgm-dialog{position:fixed;inset:0;display:none;place-items:center;background:rgba(42,36,27,.34);z-index:30}
+.diagram-stepper.rich.is-dialog .dgm-dialog{display:grid}
+.dgm-dialog__card{width:1280px;max-height:820px;overflow:auto;background:var(--paper);border:1px solid var(--rule-medium);border-radius:28px;padding:38px 46px;box-shadow:0 26px 64px rgba(42,36,27,.3)}
+.dgm-dialog__hd{display:flex;justify-content:space-between;align-items:center;gap:24px;border-bottom:1px solid var(--rule-soft);padding-bottom:18px;margin-bottom:24px;font-family:var(--f-display);font-size:46px;color:var(--ink)}
+.dgm-dialog__hd button{font-family:var(--f-sans);font-size:26px;border:1px solid var(--rule-medium);background:rgba(255,255,255,.6);border-radius:999px;padding:8px 22px;color:var(--ink);cursor:pointer}
+.dgm-dialog__body{display:grid;grid-template-columns:1fr 1fr;gap:28px 44px}
+.dgm-dialog__sec{display:grid;gap:10px;align-content:start}
+.dgm-dialog__h{margin:0;font-family:var(--f-sans);font-size:32px;font-weight:700;color:var(--ink)}
+.dgm-dialog__sec ul{list-style:none;display:grid;gap:8px;margin:0;padding:0}
+.dgm-dialog__sec li{position:relative;padding-left:28px;font-family:var(--f-body);font-size:28px;line-height:1.42;color:var(--ink-soft)}
+.dgm-dialog__sec li:before{content:'';position:absolute;left:0;top:.72em;width:14px;height:2px;background:var(--ink);opacity:.35}
+@keyframes dgmPulse{0%,100%{opacity:.9}50%{opacity:.3}}
+@keyframes dgmFlow{to{stroke-dashoffset:-36}}
+@keyframes dgmRipple{0%{transform:scale(.6);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dgm .dstep{transition:none;transform:none}.dgm .dstep.is-on{opacity:1}.dgm .dstep.is-current .d-ring,.dgm .dstep.is-on .a-line,.dgm .d-ripple{animation:none}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===========================================
+   CH6 additions
+   =========================================== */
+/* 固定單列高度，避免視覺欄隨內容長高而溢出 697px 預算 */
+.ch5-grid.ch6-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch6-grid>.visual-area{min-height:0;align-self:stretch}
+.ch5-grid.ch6-grid.tsjs-grid{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:16px}
+
+/* 程式碼卡：CH6 統一 32px（符合字級下限），收緊留白以容納較長片段 */
+.ch5-grid.ch6-grid .code-pane__hd{font-size:28px;padding:6px 16px}
+.ch5-grid.ch6-grid .code-pane pre{font-size:32px;line-height:1.4;padding:12px 16px}
+.ch5-grid.ch6-grid .visual-area.has-code:not(.ex):not(.duo) .code-pane pre{display:flex;align-items:center;font-size:32px;line-height:1.35}
+.ch5-grid.ch6-grid .visual-area.duo .code-pane pre{font-size:32px;line-height:1.35}
+
+/* duo 圖解窄帶再收緊，讓程式碼卡有更多高度 */
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich{padding:6px 18px;gap:4px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .diagram-title{font-size:28px;line-height:1.15}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-stepper.rich .dgm{max-height:100px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 10px}
+
+/* TS / JS 並排對照 */
+.tsjs{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-content:start}
+.tsjs__col{border:1.5px solid var(--rule-medium);border-radius:14px;background:rgba(255,255,255,.72);overflow:hidden}
+.tsjs__hd{padding:6px 16px;border-bottom:1px solid var(--rule-soft)}
+.tsjs__pill{font-family:var(--f-sans);font-size:30px;font-weight:700;color:var(--ink)}
+.tsjs__col--js .tsjs__pill{color:var(--ink-soft)}
+.tsjs pre{margin:0;padding:12px 18px;font-family:var(--f-code);font-size:32px;line-height:1.42;white-space:pre-wrap;color:var(--ink)}
+.tsjs__note{grid-column:1/-1;font-size:30px;line-height:1.4;color:var(--ink-soft);border-left:4px solid var(--pink);padding-left:16px;margin:4px 0 0}
+.visual-area.tsjs-area{align-content:start;align-self:start}
+
+/* --- diagram autoplay（CH5／CH6 共用；deck.css 由 build.py 注入每一份簡報） --- */
+.diagram-controls [data-diagram-action="toggle"]{min-width:104px}
+.diagram-stepper.is-paused .diagram-controls [data-diagram-action="toggle"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.diagram-stepper.is-paused .dgm{opacity:.82}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls{gap:8px}
+.ch5-grid.ch6-grid .visual-area.duo .diagram-controls button{font-size:20px;padding:4px 9px}
+
+/* ===========================================
+   CH9 additions
+   =========================================== */
+/* 與 CH6 同型的固定列高，避免視覺欄把 grid 撐高 */
+.ch5-grid.ch9-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ch9-grid>.visual-area{min-height:0;align-self:stretch}
+/* 圖解不 letterbox：viewBox 高 ≤470，容器寬約 984 → 縮放 1.05，字級不低於 30px */
+.ch5-grid.ch9-grid .diagram-stepper.rich .dgm{max-height:500px}
+
+/* 說明卡（句型、範例骨架、可以／不可以） */
+.panel{background:rgba(255,255,255,.62);border:1.5px solid var(--rule-soft);border-radius:22px;padding:24px 28px}
+.panel__hd{margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--rule-soft);
+  font-family:var(--f-display);font-size:34px;color:var(--ink-soft)}
+.panel p{margin:0 0 12px;font-family:var(--f-body);font-size:30px;line-height:1.5;color:var(--ink)}
+.panel p:last-child{margin-bottom:0}
+.panel b{font-weight:500}
+.panel ul{list-style:none;display:grid;gap:10px;margin:0;padding:0}
+.panel li{position:relative;padding-left:34px;font-family:var(--f-body);font-size:30px;line-height:1.45;color:var(--ink)}
+.panel li::before{content:'';position:absolute;left:0;top:.72em;width:16px;height:2px;background:var(--ink);opacity:.32}
+
+/* 兩欄對照卡 */
+.ch9-two{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+
+/* 窄欄用的小鍵值表（範例骨架） */
+.ktbl{display:grid;margin-top:6px}
+.ktbl__row{display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;
+  padding:11px 0;border-bottom:1px dashed var(--rule-soft)}
+.ktbl__row:last-child{border-bottom:0}
+.ktbl__k{font-family:var(--f-sans);font-size:28px;line-height:1.4;color:var(--ink-soft)}
+.ktbl__v{font-family:var(--f-body);font-size:30px;line-height:1.4;color:var(--ink)}
+
+/* 全寬表格（規格表、技術選型、評分規準） */
+.ch9-tbl{display:grid}
+.ch9-tbl__row{display:grid;grid-template-columns:var(--cols);gap:26px;align-items:baseline;
+  padding:13px 0;border-bottom:1px dashed var(--rule-soft);
+  font-family:var(--f-body);font-size:38px;line-height:1.42;color:var(--ink)}
+.ch9-tbl__row:last-child{border-bottom:0}
+.ch9-tbl__row>span:first-child{font-family:var(--f-sans);font-size:30px;color:var(--ink-soft)}
+.ch9-tbl__row--head{border-bottom:1px solid var(--rule-medium);font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}
+.ch9-tbl__row--head>span:first-child{font-size:28px}
+
+/* 兩欄檢查清單 */
+.ch9-chk{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 44px;margin:0;padding:0}
+.ch9-chk li{position:relative;padding-left:52px;font-family:var(--f-body);font-size:34px;line-height:1.4;color:var(--ink)}
+.ch9-chk li::before{content:"\e2e6";font-family:var(--f-icons);font-size:34px;line-height:1;
+  position:absolute;left:0;top:4px;color:var(--ink-soft)}
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+
+/* ===========================================
+   CH7 additions
+   =========================================== */
+/* 圖解頁：viewBox 最高 460，容器寬約 984 → 縮放 1.047，不 letterbox */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+
+/* 程式碼頁：片段較短，讓卡片撐滿視覺欄並垂直居中 */
+.ch5-grid.ch6-grid .visual-area.has-code .code-pane pre { font-size: 32px; line-height: 1.45; }
+
+/* p38 Demo：HTML 與 TypeScript 並排，左看操作、右看資料來源與 computed */
+.codepen-card--demo { grid-template-columns: 1.15fr .85fr; grid-template-rows: minmax(0,1fr); gap: 18px; }
+.codepen-card--demo .code-pane { min-width: 0; }
+.codepen-card--demo .code-pane.js { grid-column: auto; }
+.codepen-card--demo .code-pane pre { display: block !important; align-items: initial !important; overflow-y: auto; }
+
+/* p32：Meal 型別＋三筆資料較長，固定可視高度並允許垂直捲動查看全文 */
+.codepen-card--scroll .code-pane pre {
+  display: block !important;
+  max-height: 330px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  align-items: initial !important;
+}
+
+/* 練習頁：驗收卡 + 開啟連結 */
+.ch7-ex { display: grid; gap: 22px; align-content: start; }
+.ch7-ex .panel { background: rgba(255,255,255,.62); border: 1.5px solid var(--rule-soft);
+  border-radius: 22px; padding: 22px 26px; }
+.ch7-ex .panel__hd { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--f-display); font-size: 34px; color: var(--ink-soft); }
+.ch7-ex .ch9-chk { grid-template-columns: 1fr; gap: 10px; }
+.ch7-ex .ch9-chk li { font-size: 32px; padding-left: 46px; }
+.ch7-ex .lesson-links { margin: 0; }
+
+/* 每週精選｜AI × 前端：沿用 W06 熱門週報的「截圖＋分析」語彙 */
+.showcase-split { align-items: start; }
+.showcase-split .shot-frame { background: var(--card); border-radius: 22px; padding: 16px; display: block; }
+.showcase-split .shot { width: 100%; max-height: 525px; object-fit: contain; border-radius: 12px; }
+.showcase-points { gap: 12px; }
+.showcase-points li { font-size: 29px; line-height: 1.42; }
+.showcase-points--rel li { font-size: 27px; }
+.showcase-split .mini-lead { font-size: 34px; margin-top: 14px; }
+.showcase-split .note { font-family: var(--f-body); font-size: 25px; line-height: 1.35; margin-top: 12px; }
+.showcase-split .note a { color: var(--ink); font-weight: 600; }
+.showcase-tech { margin-top: 14px; padding: 14px 18px; border: 1.5px solid var(--rule-medium); border-radius: 16px; background: rgba(214,221,99,.18); }
+.showcase-tech__hd { margin: 0 0 8px; font-family: var(--f-sans); font-size: 25px; font-weight: 700; color: var(--ink); }
+.showcase-tech ul { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; }
+.showcase-tech li { position: relative; padding-left: 22px; font-family: var(--f-body); font-size: 25px; line-height: 1.35; color: var(--ink-soft); }
+.showcase-tech li::before { content: ''; position: absolute; left: 0; top: .72em; width: 12px; height: 2px; background: var(--ink); opacity: .34; }
+
+/* 仿作頁：Prompt 與工時各佔一欄，避免整段文字塞進案例頁 */
+.showcase-build-grid { position: absolute; top: 300px; left: 80px; right: 80px; bottom: 116px; display: grid; grid-template-columns: 1.22fr .78fr; gap: 32px; align-items: stretch; }
+.showcase-prompt { height: 610px; margin: 0; padding: 24px 28px; overflow-y: auto; white-space: pre-wrap; font-family: var(--f-code); font-size: 27px; line-height: 1.48; color: var(--ink); background: rgba(255,255,255,.72); border: 1.5px solid var(--rule-medium); border-radius: 20px; }
+.showcase-build-grid .mini-lead { margin: 0 0 18px; font-size: 38px; }
+.showcase-hours { display: grid; border-top: 1px solid var(--rule-medium); }
+.showcase-hours__row { display: grid; grid-template-columns: 1.05fr .65fr 1.2fr; gap: 14px; align-items: baseline; padding: 18px 0; border-bottom: 1px dashed var(--rule-soft); font-family: var(--f-body); font-size: 27px; line-height: 1.38; }
+.showcase-hours__row b { font-family: var(--f-sans); font-size: 30px; white-space: nowrap; }
+.showcase-hours__row span:last-child { color: var(--ink-soft); }
+.showcase-hours__note { margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--pink); font-family: var(--f-body); font-size: 26px; line-height: 1.45; color: var(--ink-soft); background: rgba(255,255,255,.46); }
+.showcase-outro { gap: 22px; }
+.showcase-outro .tbl__row { padding: 12px 0; font-size: 31px; }
+.showcase-outro .tbl__row--head { font-size: 26px; }
+.showcase-outro .points { gap: 12px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.42; }
+
+/* 真實成品截圖 */
+.shot { margin: 0; border: 1.5px solid var(--rule-medium); border-radius: 18px;
+  overflow: hidden; background: #fff; box-shadow: 0 14px 34px rgba(42,36,27,.14); }
+.shot img { display: block; width: 100%; height: auto; }
+.shot figcaption { font-family: var(--f-sans); font-size: 28px; line-height: 1.35;
+  padding: 10px 18px; color: var(--ink-soft); border-top: 1px solid var(--rule-soft); }
+.shots3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-content: start; }
+.shots3 .shot { border-radius: 14px; }
+.ch7-exgrid { grid-template-columns: 50% 50%; }
+/* 圖解頁：圖解在視覺欄內垂直居中，避免下方留一大片空白 */
+.visual-area > .diagram-stepper.rich { align-self: center; }
+.ch7-exgrid .visual-area { align-self: start; }
+
+/* 封面：左文字、右成品截圖 */
+.slide--cover.has-shot .cover-title { right: auto; width: 880px; font-size: 104px; line-height: 1.16; }
+.slide--cover.has-shot .cover-sub { right: auto; width: 820px; top: 650px; font-size: 38px; }
+.cover-shot { position: absolute; right: 80px; top: 210px; width: 780px; margin: 0;
+  border-radius: 22px; overflow: hidden; border: 1.5px solid var(--rule-medium);
+  box-shadow: 0 24px 60px rgba(42,36,27,.20); background: #fff; }
+.cover-shot img { display: block; width: 100%; height: auto; }
+
+
+/* ===========================================
+   CH8 additions
+   =========================================== */
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich .dgm { max-height: 500px; }
+.ch5-grid.ch6-grid .visual-area > .diagram-stepper.rich { padding: 20px 24px; }
+.visual-area > .diagram-stepper.rich { align-self: center; }
+/* ===== Showcase additions (make_showcase.py) ===== */
+
+/* ===========================================
+   Showcase additions（AI 熱門週報，make_showcase.py 維護）
+   =========================================== */
+.showcase-split { align-items: start; }
+.showcase-points { gap: 18px; }
+.showcase-points li { font-size: 30px; line-height: 1.5; }
+.showcase-split .shot { max-height: 540px; }
+.showcase-split .shot-frame { padding: 16px; }
+.showcase-split .note { font-size: 27px; margin-top: 14px; }
+.showcase-split .mini-lead { margin-top: 20px; }
+.showcase-split .tbl__row { font-size: 28px; }
+/* 收尾頁：表格＋三條要點，壓縮間距避免頂到 footer */
+.showcase-outro { gap: 26px; }
+.showcase-outro .tbl__row { padding: 11px 0; }
+.showcase-outro .points { gap: 16px; }
+.showcase-outro .points li { font-size: 30px; line-height: 1.5; }
+
+/* ===========================================
+   UX additions
+   =========================================== */
+.ch5-grid.ux-grid{grid-template-rows:minmax(0,1fr)}
+.ch5-grid.ux-grid>.visual-area{min-height:0;align-self:stretch;align-content:start}
+.ux-grid .ch5-copy{align-content:start;min-height:0}
+@media print{.progress,.counter{display:none!important}}
+.ux-grid .mini-lead{font-size:42px;line-height:1.35}
+.ux-grid .lesson-points{gap:12px}
+.ux-grid .lesson-points li{font-size:36px;line-height:1.42}
+
+.panel{background:rgba(255,255,255,.62);border:1.5px solid var(--rule-soft);border-radius:22px;padding:20px 26px}
+.panel__hd{margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--rule-soft);
+  font-family:var(--f-display);font-size:36px;color:var(--ink-soft)}
+.panel p{margin:0 0 10px;font-family:var(--f-body);font-size:32px;line-height:1.45;color:var(--ink)}
+.panel p:last-child{margin-bottom:0}
+.panel b{font-weight:500}
+.panel ul{list-style:none;display:grid;gap:8px;margin:0;padding:0}
+.panel li{position:relative;padding-left:30px;font-family:var(--f-body);font-size:32px;line-height:1.4;color:var(--ink)}
+.panel li::before{content:'';position:absolute;left:0;top:.72em;width:16px;height:2px;background:var(--ink);opacity:.32}
+.panel code,.ux-tbl code,.lesson-points code,.ktbl code{font-family:var(--f-code);font-size:1em;background:rgba(42,36,27,.07);border-radius:6px;padding:0 6px}
+
+.ux-two{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.ux-three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+.ux-three .panel{padding:18px 20px}
+.ux-three .panel li,.ux-three .panel p{font-size:31px}
+.ux-three .panel__hd{font-size:32px}
+
+.ktbl{display:grid;margin-top:4px}
+.ktbl__row{display:grid;grid-template-columns:190px minmax(0,1fr);gap:18px;padding:10px 0;border-bottom:1px dashed var(--rule-soft)}
+.ktbl__row:last-child{border-bottom:0}
+.ktbl__k{font-family:var(--f-sans);font-size:28px;line-height:1.4;color:var(--ink-soft)}
+.ktbl__v{font-family:var(--f-body);font-size:32px;line-height:1.4;color:var(--ink)}
+
+.ux-tbl{display:grid}
+.ux-tbl__row{display:grid;grid-template-columns:var(--cols);gap:22px;align-items:baseline;padding:11px 0;
+  border-bottom:1px dashed var(--rule-soft);font-family:var(--f-body);font-size:34px;line-height:1.38;color:var(--ink)}
+.ux-tbl__row:last-child{border-bottom:0}
+.ux-tbl__row>span:first-child{font-family:var(--f-sans);font-size:30px;color:var(--ink-soft)}
+.ux-tbl__row--head{border-bottom:1px solid var(--rule-medium);font-family:var(--f-sans);font-size:28px;color:var(--ink-soft)}
+.ux-tbl__row--head>span:first-child{font-size:28px}
+.ux-tbl--s .ux-tbl__row{font-size:32px;padding:9px 0}
+.ux-tbl--s .ux-tbl__row>span:first-child{font-size:29px}
+
+.ux-chk{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 40px;margin:0;padding:0}
+.ux-chk li{position:relative;padding-left:48px;font-family:var(--f-body);font-size:34px;line-height:1.4;color:var(--ink)}
+.ux-chk li::before{content:"\e2e6";font-family:var(--f-icons);font-size:32px;line-height:1;position:absolute;left:0;top:4px;color:var(--ink-soft)}
+
+.ux-steps{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:16px}
+.ux-step{display:grid;gap:8px;align-content:start;background:rgba(255,255,255,.62);border:1.5px solid var(--rule-soft);border-radius:20px;padding:18px 20px;font-family:var(--f-body);font-size:31px;line-height:1.38}
+.ux-step b{font-family:var(--f-sans);font-size:33px;font-weight:700}
+.ux-step__n{font-family:var(--f-display);font-style:italic;font-size:40px;color:var(--ink-soft)}
+
+.ux-cmp{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.ux-cmp__side{background:rgba(255,255,255,.55);border:1.5px solid var(--rule-soft);border-radius:22px;padding:16px 20px;display:grid;gap:12px;align-content:start}
+.ux-cmp__side--bad{border-color:rgba(225,164,194,.9)}
+.ux-cmp__side--good{border-color:rgba(160,172,40,.85)}
+.ux-cmp__hd{margin:0;font-family:var(--f-display);font-size:34px;color:var(--ink);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ux-tag{font-family:var(--f-sans);font-size:28px;border-radius:999px;padding:0 16px;color:var(--ink)}
+.ux-tag--bad{background:var(--pink)}.ux-tag--good{background:var(--lemon)}
+.ux-cmp ul{list-style:none;display:grid;gap:6px;margin:0;padding:0}
+.ux-cmp li{position:relative;padding-left:26px;font-family:var(--f-body);font-size:31px;line-height:1.38;color:var(--ink)}
+.ux-cmp li::before{content:'';position:absolute;left:0;top:.72em;width:14px;height:2px;background:var(--ink);opacity:.35}
+
+/* 示意畫面 mock：純 CSS 還原介面，字級仍守 28px 下限 */
+.mk{background:#fff;border:1.5px solid var(--rule-medium);border-radius:18px;padding:16px 18px;display:grid;gap:12px;
+  font-family:var(--f-sans);font-size:28px;line-height:1.3;color:var(--ink)}
+.mk-line{margin:0;font-family:var(--f-sans);font-size:28px;line-height:1.35}
+.mk-line.dim{color:var(--ink-soft)}.mk-line.big{font-size:34px;font-weight:700}.mk-line.tiny{font-size:28px;color:#9a9185}
+.mk-line.red{color:#A64C7C}.mk-line.grn{color:#6E7F45}
+.mk-btn{display:inline-block;border-radius:999px;padding:4px 22px;font-family:var(--f-sans);font-size:28px;line-height:1.3;border:1.5px solid var(--ink)}
+.mk-btn--fill{background:var(--ink);color:var(--paper)}
+.mk-btn--tonal{background:var(--lilac);border-color:var(--lilac)}
+.mk-btn.mk-btn--danger{background:#B5453A;border-color:#B5453A;color:#fff}
+.mk-btn--out{background:transparent}
+.mk-btn--text{border-color:transparent;text-decoration:underline}
+.mk-btn--ghost{background:#e8e4d8;border-color:#e8e4d8;color:#8a8478}
+.mk-btn--ico{display:inline-flex;gap:8px;align-items:center}
+.mk-btn--sq{border-radius:6px}
+.mk-btn--flat{background:#efeadb;border-color:#efeadb;color:var(--ink)}
+.mk-fieldw{display:grid;gap:4px;margin-top:14px}
+.mk-row .mk-fieldw{flex:1;min-width:0}
+.mk>.mk-fieldw:first-child{margin-top:14px}
+.mk-field{position:relative;border:2px solid var(--ink-soft);border-radius:8px;padding:20px 14px 6px;min-height:68px}
+.mk-field__l{position:absolute;left:10px;top:-17px;background:#fff;padding:0 6px;font-size:28px;color:var(--ink-soft)}
+.mk-field__v{font-size:28px}
+.mk-field--err{border-color:#A64C7C}.mk-field--err .mk-field__l{color:#A64C7C}
+.mk-field--ok{border-color:#6E7F45}
+.mk-field--ph .mk-field__v{color:#a9a193}
+.mk-field__h{font-size:28px;color:var(--ink-soft);padding-left:6px}
+.mk-field--err+.mk-field__h{color:#A64C7C}
+.mk-nav{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1.5px solid var(--rule-soft);padding-bottom:6px}
+.mk-nav span{padding:4px 14px;border-radius:999px;font-size:28px}
+.mk-nav .is-on{background:var(--ink);color:var(--paper)}
+.mk-card{border:1.5px solid var(--rule-soft);border-radius:16px;padding:14px 16px;display:grid;gap:8px;justify-items:start;background:#fbf9f1}
+.mk-card b{font-size:30px}.mk-card span{font-size:28px;color:var(--ink-soft)}
+.mk-chips{display:flex;gap:10px;flex-wrap:wrap}
+.mk-chips span{border:1.5px solid var(--rule-medium);border-radius:10px;padding:2px 14px;font-size:28px}
+.mk-chips .is-on{background:var(--lilac);border-color:var(--lilac)}
+.mk-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.mk-btn--ico{display:inline-flex;gap:8px;align-items:center}
+.mk-ico{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.mk-tabs{display:flex;justify-content:space-around;border-top:1.5px solid var(--rule-soft);padding-top:8px}
+.mk-tabs span{display:grid;justify-items:center;gap:2px;color:var(--ink-soft)}
+.mk-tabs i{font-style:normal;font-family:var(--f-sans);font-size:28px;line-height:1.1}
+.mk-tabs .is-on{color:var(--ink)}
+.mk-a{color:#1a5fb4;text-decoration:underline}.mk-a--v{color:#5b3d8f}
+.ux-svg{width:100%;height:auto;max-height:560px}
+.ux-note{margin:14px 0 0;font-family:var(--f-sans);font-size:30px;color:var(--ink-soft)}
+.ux-grid .code-pane pre{font-size:32px;line-height:1.4;max-height:none;overflow:hidden}
+.ux-grid .code-pane{margin:0}
+
+.mk-field--sel{display:flex;align-items:center;justify-content:space-between}
+.mk-row--end{justify-content:flex-end}
+.mk-ctl{display:inline-flex;align-items:center;gap:10px;font-size:28px}
+.mk-toggle{width:56px;height:32px;border-radius:16px;background:#d9d3c2;position:relative;flex:0 0 auto}
+.mk-toggle::after{content:'';position:absolute;left:4px;top:4px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.mk-toggle.is-on{background:var(--ink)}.mk-toggle.is-on::after{left:28px}
+.mk-check{width:28px;height:28px;border-radius:5px;border:2.5px solid var(--ink-soft);flex:0 0 auto;position:relative}
+.mk-check.is-on{background:var(--ink);border-color:var(--ink)}
+.mk-check.is-on::after{content:'';position:absolute;left:7px;top:2px;width:8px;height:15px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg)}
+.mk-radio{width:28px;height:28px;border-radius:50%;border:2.5px solid var(--ink-soft);flex:0 0 auto;position:relative}
+.mk-radio.is-on{border-color:var(--ink)}.mk-radio.is-on::after{content:'';position:absolute;inset:5px;border-radius:50%;background:var(--ink)}
+.mk-prog{height:10px;border-radius:5px;background:#e4dfcf;overflow:hidden}
+.mk-prog i{display:block;height:100%;width:60%;background:var(--ink)}
+.mk-prog--ind i{width:35%;margin-left:20%}
+.mk-spin{display:inline-block;width:34px;height:34px;border-radius:50%;border:4px solid #e4dfcf;border-top-color:var(--ink)}
+.mk-skel{display:grid;gap:10px}.mk-skel i{display:block;height:20px;border-radius:6px;background:#e4dfcf}
+.mk-skel i:nth-child(2){width:80%}.mk-skel i:nth-child(3){width:55%}
+.mk-snack{display:flex;justify-content:space-between;align-items:center;gap:20px;background:var(--ink);color:var(--paper);border-radius:8px;padding:10px 18px;font-size:28px}
+.mk-snack b{color:var(--lemon);font-weight:700}
+.mk-dialog{display:grid;gap:10px;background:#fbf9f1;border-radius:22px;padding:18px 22px;box-shadow:0 6px 18px rgba(42,36,27,.22);font-size:28px}
+.mk-dialog b{font-size:32px}.mk-dialog>span{color:var(--ink-soft)}
+.mk-tablist{display:flex;border-bottom:1.5px solid var(--rule-soft)}
+.mk-tablist span{padding:6px 22px;font-size:28px;color:var(--ink-soft)}
+.mk-tablist .is-on{color:var(--ink);border-bottom:4px solid var(--ink);font-weight:700}
+.mk-stepper{display:flex;gap:18px;align-items:center;font-size:28px}
+.mk-stepper span{display:inline-flex;align-items:center;gap:8px;color:var(--ink-soft)}
+.mk-stepper i{font-style:normal;width:40px;height:40px;border-radius:50%;background:#d9d3c2;display:inline-grid;place-items:center;font-size:28px}
+.mk-stepper .is-on{color:var(--ink)}.mk-stepper .is-on i{background:var(--ink);color:var(--paper)}
+.mk-table{display:grid;border:1.5px solid var(--rule-soft);border-radius:12px;overflow:hidden}
+.mk-trow{display:grid;grid-template-columns:repeat(var(--n),1fr);padding:6px 14px;font-size:28px;border-top:1px solid var(--rule-soft)}
+.mk-trow--h{background:#efeadb;border-top:0;font-weight:700}
+.mk-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:28px}
+.mk-cal span{border-radius:50%;padding:2px 0}.mk-cal__h{color:var(--ink-soft)}
+.mk-cal .is-on{background:var(--ink);color:var(--paper)}
+.mk-toolbar{display:flex;align-items:center;gap:14px;background:#ece6d2;border-radius:12px;padding:10px 16px;font-size:30px}
+.mk-sp{flex:1}
+.mk-expw{display:grid;border:1.5px solid var(--rule-soft);border-radius:12px;overflow:hidden}
+.mk-exp{padding:8px 16px;border-top:1px solid var(--rule-soft);font-size:28px}.mk-exp:first-child{border-top:0}
+.mk-exp p{margin:0;display:flex;justify-content:space-between;align-items:center}
+.mk-exp span{display:block;color:var(--ink-soft);padding:4px 0 6px}
+.mk-badgew{position:relative;display:inline-flex}
+.mk-badgew b{position:absolute;right:-12px;top:-10px;background:#A64C7C;color:#fff;border-radius:14px;min-width:26px;height:26px;display:grid;place-items:center;font-size:28px}
+.mk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+</style><link rel="stylesheet" href="../assets/deck-fonts.css">
+<link rel="stylesheet" href="../assets/deck-site.css">
+</head><body><div class="deck-viewport"><main class="deck-stage" id="deckStage"><section class="slide slide--cover active visible" data-label="UI/UX 設計腦"><div class="cover-swatches reveal"><span></span><span></span><span></span></div><p class="cover-kicker reveal">UI/UX · 11/12</p><h1 class="cover-title reveal">UI/UX 設計腦</h1><p class="cover-sub reveal">讓人一看就懂、一用就順｜設計原則、Angular Material、AI 設計工具</p><div class="footer"><span>互動式網頁設計</span><span>01/71</span></div></section><section class="slide" data-label="同一個功能，兩種做法"><p class="eyebrow">UI/UX · 02</p><p class="pagedot">02/71</p><h2 class="headline reveal">同一個功能，兩種做法</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：好用與難用</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">先別看說明：哪一個你敢用？</p><div class="reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>每個欄位都擠在一起</p><div class="mk"><p class="mk-line big">訂位資料（全部必填）</p><div class="mk-fieldw"><div class="mk-field mk-field--ph"><span class="mk-field__l">姓名</span><span class="mk-field__v">請輸入</span></div></div><div class="mk-fieldw"><div class="mk-field mk-field--ph"><span class="mk-field__l">電話</span><span class="mk-field__v">請輸入</span></div></div><div class="mk-row"><span class="mk-btn mk-btn--fill">確定</span><span class="mk-btn mk-btn--fill">取消</span></div></div><ul><li>兩顆按鈕一樣重，看不出哪顆是主要動作</li><li>只靠灰色 placeholder 當標籤，打字後就消失</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>只問必要資訊、動作分主次</p><div class="mk"><p class="mk-line big">訂位</p><div class="mk-row"><div class="mk-fieldw"><div class="mk-field mk-field--ok"><span class="mk-field__l">日期</span><span class="mk-field__v">11/20 四</span></div></div><div class="mk-fieldw"><div class="mk-field mk-field--ok"><span class="mk-field__l">人數</span><span class="mk-field__v">2 位</span></div></div></div><div class="mk-fieldw"><div class="mk-field mk-field--"><span class="mk-field__l">手機</span><span class="mk-field__v">09xx-xxx-xxx</span></div><span class="mk-field__h">只用來通知座位</span></div><div class="mk-row"><span class="mk-btn mk-btn--fill">確認訂位</span><span class="mk-btn mk-btn--text">返回</span></div></div><ul><li>主要按鈕只有一顆，返回降為文字按鈕</li><li>欄位有固定標籤，旁邊說明為什麼要手機</li></ul></div></div></div></div></div><div class="remember">這頁記住：功能一樣，差別在「使用者要多花多少力氣」。</div></section><section class="slide" data-label="UI 與 UX 差在哪"><p class="eyebrow">UI/UX · 03</p><p class="pagedot">03/71</p><h2 class="headline reveal">UI 與 UX 差在哪</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：UI／UX 定義</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">用「去餐廳吃飯」來想：菜單長相是 UI，從訂位到買單的整段經驗是 UX。</p><div class="reveal"><div class="ux-two"><div class="panel"><p class="panel__hd">UI：看得到、摸得到的</p><ul><li>畫面上的按鈕、字型、顏色、間距、圖示</li><li>像菜單的排版、餐具的樣子</li><li>可以截圖、可以交給工程師切版</li><li>好壞多半一眼能看出</li></ul></div><div class="panel"><p class="panel__hd">UX：使用的過程與感受</p><ul><li>找得到、看得懂、做得完、不出錯、想再來</li><li>像訂位順不順、等多久、上菜錯了怎麼辦</li><li>要觀察真人使用才知道</li><li>由「使用的人」說了算，不是設計師</li></ul></div></div><p class="ux-note">常見誤解：UI 漂亮不等於 UX 好；UX 不是多加動畫，而是少讓使用者卡住。</p></div></div></div><div class="remember">這頁記住：UI 是看得到的，UX 是用起來的感覺。</div></section><section class="slide" data-label="今日地圖：71 頁、兩堂課"><p class="eyebrow">UI/UX · 04</p><p class="pagedot">04/71</p><h2 class="headline reveal">今日地圖：71 頁、兩堂課</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：課程地圖</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">上半堂講原則，下半堂講工具，全部圍繞 UI/UX。</p><div class="reveal"><div class="ux-tbl" style="--cols:2.2fr .8fr 3.6fr"><div class="ux-tbl__row ux-tbl__row--head"><span>段落</span><span>頁數</span><span>你會帶走什麼</span></div><div class="ux-tbl__row"><span>Part 1 設計是溝通</span><span>01–14</span><span>一眼看懂、資訊排序、格式塔理論 Gestalt Theory、動態設計</span></div><div class="ux-tbl__row"><span>Part 2 視覺實踐</span><span>15–27</span><span>導覽列、字型、連結、圖示、色彩對比</span></div><div class="ux-tbl__row"><span>Part 3 表單手機等待</span><span>28–39</span><span>表單設計、手機限制、Loading／Error／Empty</span></div><div class="ux-tbl__row"><span>Part 4 Angular Material</span><span>40–55</span><span>常用元件的用途與使用場景</span></div><div class="ux-tbl__row"><span>Part 5 AI 做 UI</span><span>56–65</span><span>Agent、Skills、DESIGN.md、Stitch</span></div><div class="ux-tbl__row"><span>Part 6 工具與作業</span><span>66–71</span><span>Figma、OpenDesign、Claude Design、作業</span></div></div></div></div></div><div class="remember">這頁記住：上半堂 01–39 是原則；下半堂 40–71 是落實與工具。</div></section><section class="slide" data-label="設計師的職責"><p class="eyebrow">UI/UX · 05</p><p class="pagedot">05/71</p><h2 class="headline reveal">設計師的職責</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：角色與目標</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">做出來的東西，要幫客戶達成目標。</p><ul class="lesson-points"><li class="reveal">客戶有「想透過網站完成的事」；看不懂需求，再帥的網站也沒意義。</li><li class="reveal">設計＝與使用者對話：網站用文字、圖像傳達，使用者看懂才會行動。</li><li class="reveal">設計不是照稿畫圖，要主動問「為什麼要這樣排」，和企劃、工程師平等討論。</li><li class="reveal">設計的根本是解決問題，包含使用者說不出口的不便。</li></ul></div><div class="visual-area reveal"><svg class="dgm ux-svg" viewBox="0 0 940 170" role="img" aria-label="流程"><rect class="d-cool" x="20" y="30" width="192" height="110" rx="16"/><text class="t-bold" x="116" y="78" text-anchor="middle">企劃</text><text class="t-note" x="116" y="112" text-anchor="middle">目標與內容</text><defs><marker id="ua-p50" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><path class="a-line" d="M 216 85 L 252 85" marker-end="url(#ua-p50)"/><rect class="d-soft" x="256" y="30" width="192" height="110" rx="16"/><text class="t-bold" x="352" y="78" text-anchor="middle">設計</text><text class="t-note" x="352" y="112" text-anchor="middle">怎麼排、怎麼說</text><defs><marker id="ua-p51" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><path class="a-line" d="M 452 85 L 488 85" marker-end="url(#ua-p51)"/><rect class="d-card" x="492" y="30" width="192" height="110" rx="16"/><text class="t-bold" x="588" y="78" text-anchor="middle">工程</text><text class="t-note" x="588" y="112" text-anchor="middle">實作與限制</text><defs><marker id="ua-p52" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><path class="a-line" d="M 688 85 L 724 85" marker-end="url(#ua-p52)"/><rect class="d-hot" x="728" y="30" width="192" height="110" rx="16"/><text class="t-bold" x="824" y="78" text-anchor="middle">使用者</text><text class="t-note" x="824" y="112" text-anchor="middle">看懂、行動</text></svg><div class="panel"><p class="panel__hd">討論時的三個動作</p><p><b>問</b>　「為什麼會做成這樣？」（不要問「為什麼這麼難用」）</p><p><b>說</b>　「如果目的是 X，這樣排會更好。」</p><p><b>驗</b>　先畫粗稿當場確認，再細修。</p></div></div></div><div class="remember">這頁記住：設計師不是美工，是和團隊一起解決問題的人。</div></section><section class="slide" data-label="一眼就看懂"><p class="eyebrow">UI/UX · 06</p><p class="pagedot">06/71</p><h2 class="headline reveal">一眼就看懂</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：一眼看懂</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">設計最重要的事：不用想就懂。</p><ul class="lesson-points"><li class="reveal">再炫的視覺，看不懂就沒有意義；設計是在整理與傳遞資訊。</li><li class="reveal">越是要動手操作的畫面越重要：輸入錯一個日期，可能就錯過會議。</li><li class="reveal">自我測試：視線移開再看回來，第一眼看到的就是設計傳達的重點。</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>最大的字是價格</p><div class="mk"><p class="mk-line big">NT$ 1,490</p><p class="mk-line dim">09:12 → 11:05　轉乘 1 次　113 分</p></div><ul><li>趕車的人要看的是「幾點走、幾點到」</li><li>第一眼被價格搶走</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>時間最大，價格縮小變灰</p><div class="mk"><p class="mk-line big">09:12 → 11:05</p><p class="mk-line dim">113 分｜轉乘 1 次｜NT$ 1,490</p></div><ul><li>出發與抵達時間一眼看出</li><li>次要資訊還在，但不搶戲</li></ul></div></div></div></div><div class="remember">這頁記住：第一眼看到的，要是使用者此刻最需要的。</div></section><section class="slide" data-label="減輕動腦負擔"><p class="eyebrow">UI/UX · 07</p><p class="pagedot">07/71</p><h2 class="headline reveal">減輕動腦負擔</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：認知負荷</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">資料庫的值，不等於使用者要的意思。</p><ul class="lesson-points"><li class="reveal">使用者在操作時，一直在「讀文字→理解→判斷」，每一步都在耗腦力。</li><li class="reveal">把資料原樣丟上畫面，等於叫使用者自己換算。</li><li class="reveal">設計與前端可以代勞：顯示前先轉成人話。</li><li class="reveal">按鈕用簡單詞彙；圖示輔助文字，不取代文字。</li></ul></div><div class="visual-area reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1fr 1.4fr"><div class="ux-tbl__row ux-tbl__row--head"><span>資料庫給的值</span><span>使用者要的意思</span></div><div class="ux-tbl__row"><span>stock: 0</span><span>已額滿</span></div><div class="ux-tbl__row"><span>2025-05-09</span><span>7 天前</span></div><div class="ux-tbl__row"><span>status: 2</span><span>配送中</span></div><div class="ux-tbl__row"><span>14:00 / 14:30</span><span>相差 30 分鐘</span></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板：顯示前先轉成人話</span><span class="code-pane__tag">HTML</span></div><pre>&lt;span&gt;
+  {{ slot.left === 0
+     ? &#x27;已額滿&#x27; : &#x27;剩 &#x27; + slot.left + &#x27; 位&#x27; }}
+&lt;/span&gt;</pre></div></div></div><div class="remember">這頁記住：把「值」翻成「意思」，使用者就少算一次。</div></section><section class="slide" data-label="使用者現在最需要什麼"><p class="eyebrow">UI/UX · 08</p><p class="pagedot">08/71</p><h2 class="headline reveal">使用者現在最需要什麼</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：資訊優先順序</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">先問情境：什麼時候、什麼狀況下用？</p><ul class="lesson-points"><li class="reveal">答案在使用情境裡：櫃台人員講電話中、趕車的人邊跑邊看。</li><li class="reveal">同一份資料，服務重點不同，最佳設計就不同；沒有唯一解。</li><li class="reveal">設計前先掌握服務全貌（情境、規格），只靠線框稿很難做對。</li></ul></div><div class="visual-area reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.1fr 2fr"><div class="ux-tbl__row ux-tbl__row--head"><span>服務重點</span><span>畫面該放什麼</span></div><div class="ux-tbl__row"><span>看診頻率</span><span>「7 天前」，不用完整日期</span></div><div class="ux-tbl__row"><span>建議下次預約</span><span>治療內容、日期＋星期幾、常來的時段</span></div><div class="ux-tbl__row"><span>趕車</span><span>出發與抵達時間放最大</span></div><div class="ux-tbl__row"><span>借 YouBike</span><span>可借車數放最大，站名其次</span></div></div></div></div><div class="remember">這頁記住：先決定「此刻最重要的一件事」，再決定怎麼排。</div></section><section class="slide" data-label="設計法則：格式塔理論 Gestalt Theory｜距離"><p class="eyebrow">UI/UX · 09</p><p class="pagedot">09/71</p><h2 class="headline reveal">設計法則：格式塔理論 Gestalt Theory｜距離</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：近接性（Proximity）</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">靠得近，就被看成同一群。</p><ul class="lesson-points"><li class="reveal">人眼會自動把靠近的東西歸成一組，這是格式塔理論 Gestalt Theory 的近接性（Proximity）原則。</li><li class="reveal">間距一致 → 一整片；多一個間距不同 → 被當成「例外」。</li><li class="reveal">互動時更重要：✕ 放在哪個框的角落，決定使用者預期「關的是誰」。</li><li class="reveal">圖與說明要靠在一起，別讓人猜「這張圖在說哪一段」。</li></ul></div><div class="visual-area reveal"><svg class="dgm ux-svg" viewBox="0 0 940 430" role="img" aria-label="格式塔：距離"><text class="t-head" x="20" y="36" text-anchor="start">距離近 → 看成一群</text><circle class="d-pill" cx="60" cy="80" r="14"/><circle class="d-pill" cx="60" cy="124" r="14"/><circle class="d-pill" cx="104" cy="80" r="14"/><circle class="d-pill" cx="104" cy="124" r="14"/><circle class="d-pill" cx="260" cy="80" r="14"/><circle class="d-pill" cx="260" cy="124" r="14"/><circle class="d-pill" cx="304" cy="80" r="14"/><circle class="d-pill" cx="304" cy="124" r="14"/><circle class="d-pill" cx="60" cy="250" r="14"/><circle class="d-pill" cx="60" cy="294" r="14"/><circle class="d-pill" cx="104" cy="250" r="14"/><circle class="d-pill" cx="104" cy="294" r="14"/><circle class="d-pill" cx="260" cy="250" r="14"/><circle class="d-pill" cx="260" cy="294" r="14"/><circle class="d-pill" cx="304" cy="250" r="14"/><circle class="d-pill" cx="304" cy="294" r="14"/><text class="t-note" x="20" y="400" text-anchor="start">4 個點群：看到的是「4 群」</text><text class="t-head" x="520" y="36" text-anchor="start">間距一致 → 看成一整片</text><circle class="d-pill-w" cx="560" cy="80" r="14"/><circle class="d-pill-w" cx="616" cy="80" r="14"/><circle class="d-pill-w" cx="672" cy="80" r="14"/><circle class="d-pill-w" cx="728" cy="80" r="14"/><circle class="d-pill-w" cx="784" cy="80" r="14"/><circle class="d-pill-w" cx="560" cy="136" r="14"/><circle class="d-pill-w" cx="616" cy="136" r="14"/><circle class="d-pill-w" cx="672" cy="136" r="14"/><circle class="d-pill-w" cx="728" cy="136" r="14"/><circle class="d-pill-w" cx="784" cy="136" r="14"/><circle class="d-pill-w" cx="560" cy="192" r="14"/><circle class="d-pill-w" cx="616" cy="192" r="14"/><circle class="d-pill-w" cx="672" cy="192" r="14"/><circle class="d-pill-w" cx="728" cy="192" r="14"/><circle class="d-pill-w" cx="784" cy="192" r="14"/><circle class="d-pill-w" cx="560" cy="248" r="14"/><circle class="d-pill-w" cx="616" cy="248" r="14"/><circle class="d-pill-w" cx="672" cy="248" r="14"/><circle class="d-pill-w" cx="728" cy="248" r="14"/><circle class="d-pill-w" cx="784" cy="248" r="14"/><circle class="d-pill-w" cx="560" cy="304" r="14"/><circle class="d-pill-w" cx="616" cy="304" r="14"/><circle class="d-pill-w" cx="672" cy="304" r="14"/><circle class="d-pill-w" cx="728" cy="304" r="14"/><circle class="d-pill-w" cx="784" cy="304" r="14"/><text class="t-note" x="520" y="400" text-anchor="start">25 個點：看到的是「1 片」</text></svg><p class="ux-note">想強調列表中的某一項，不要只改它的圖示或留白規則。</p></div></div><div class="remember">這頁記住：距離就是關係：近的屬於同一組。</div></section><section class="slide" data-label="設計法則：格式塔理論 Gestalt Theory｜相似"><p class="eyebrow">UI/UX · 10</p><p class="pagedot">10/71</p><h2 class="headline reveal">設計法則：格式塔理論 Gestalt Theory｜相似</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：相似性（Similarity）</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">長得一樣，就被看成同一類。</p><ul class="lesson-points"><li class="reveal">同色、同形、同樣裝飾的元素，會被當成「同樣可以這樣操作」。</li><li class="reveal">同層級標題只因裝飾不同，就會被讀成不同層級。</li><li class="reveal">決定好引用、重點、警示的樣式，之後一律照用。</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>同層級卻長得不一樣</p><div class="mk"><p class="mk-line big">功能一</p><p class="mk-line big">功能二</p><p class="mk-line big red">功能三（加了顏色與符號）</p><p class="mk-line big">功能四</p></div><ul><li>第三個標題多了裝飾</li><li>使用者以為它比較重要或不同類</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>同層級就同樣式</p><div class="mk"><p class="mk-line big">功能一</p><p class="mk-line big">功能二</p><div class="mk-row"><p class="mk-line big">功能三</p><div class="mk-chips"><span class="is-on">新</span></div></div><p class="mk-line big">功能四</p></div><ul><li>要強調，改用統一的「新」標籤</li><li>全站同一種強調方式</li></ul></div></div></div></div><div class="remember">這頁記住：規則一旦訂下，就一路貫徹。</div></section><section class="slide" data-label="設計法則：格式塔理論 Gestalt Theory｜封閉與連續"><p class="eyebrow">UI/UX · 11</p><p class="pagedot">11/71</p><h2 class="headline reveal">設計法則：格式塔理論 Gestalt Theory｜封閉與連續</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：封閉（Closure）與連續（Continuity）</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">可以點的東西，要圈出來。</p><ul class="lesson-points"><li class="reveal">網頁內容不只可看，還可操作；可點選的元素最好用封閉（Closure）形狀（框、底色、按鈕）標示。</li><li class="reveal">用線劃區塊很有效，但線兩側要留白，內容區會變窄。</li><li class="reveal">手機的標籤列、導覽列要明確圈出主要內容，避免點錯。</li><li class="reveal">對齊讓視線連續（Continuity），不規則排列會讓人疲於找下一個。</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>只有文字連著排</p><div class="mk"><p class="mk-line dim">熱門：拿鐵 美式 抹茶 更多</p></div><ul><li>看不出哪些能點</li><li>「更多」像普通文字</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>用形狀標示可點</p><div class="mk"><div class="mk-chips"><span class="is-on">拿鐵</span><span class="">美式</span><span class="">抹茶</span></div><span class="mk-btn mk-btn--out">更多</span></div><ul><li>標籤與按鈕有明確邊界</li><li>點擊範圍一目了然</li></ul></div></div></div></div><div class="remember">這頁記住：看起來能點，使用者才敢點。</div></section><section class="slide" data-label="版面要說得出理由"><p class="eyebrow">UI/UX · 12</p><p class="pagedot">12/71</p><h2 class="headline reveal">版面要說得出理由</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：設計依據</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">被問「為什麼這樣排？」，不能只說「我覺得」。</p><div class="reveal"><div class="ux-steps"><div class="ux-step"><span class="ux-step__n">1</span><b>目的</b><span>這一頁要讓人做什麼？</span></div><div class="ux-step"><span class="ux-step__n">2</span><b>使用者</b><span>誰、在什麼情境？第一眼要看什麼？</span></div><div class="ux-step"><span class="ux-step__n">3</span><b>原則</b><span>用了距離（Proximity）、相似（Similarity）、封閉（Closure）、對比（Contrast）的哪一條？</span></div><div class="ux-step"><span class="ux-step__n">4</span><b>驗證</b><span>移開視線再看，第一眼對不對？</span></div></div><div class="ux-two"><div class="panel"><p class="panel__hd">有根據的回答</p><ul><li>「出發時間放最大，因為使用者在趕車，第一眼要先看時間。」</li><li>「價格縮小變灰，因為它是次要資訊。」</li></ul></div><div class="panel"><p class="panel__hd">沒根據的回答</p><ul><li>「我覺得這樣比較好看。」</li><li>「別的網站也這樣。」</li></ul></div></div></div></div></div><div class="remember">這頁記住：原則不是用來說服老闆，是讓討論有共同標準。</div></section><section class="slide" data-label="紙本與網頁的差異"><p class="eyebrow">UI/UX · 13</p><p class="pagedot">13/71</p><h2 class="headline reveal">紙本與網頁的差異</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：媒介差異</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">紙本的好版面，搬到網頁常常就完蛋。</p><div class="reveal"><div class="ux-tbl" style="--cols:1fr 2fr 2fr"><div class="ux-tbl__row ux-tbl__row--head"><span>面向</span><span>紙本</span><span>網頁</span></div><div class="ux-tbl__row"><span>範圍</span><span>尺寸固定，看得到頭尾</span><span>長度不定，看不到終點</span></div><div class="ux-tbl__row"><span>閱讀</span><span>整頁掃視、循序閱讀</span><span>跳讀，只挑自己要的</span></div><div class="ux-tbl__row"><span>互動</span><span>想知道更多要打電話查</span><span>點一下就能放大、展開</span></div><div class="ux-tbl__row"><span>版面變化</span><span>不規則編排製造新鮮感</span><span>規則一致才好跳讀、好操作</span></div><div class="ux-tbl__row"><span>裝置</span><span>尺寸固定</span><span>手機、平板、桌機各不同</span></div></div><p class="ux-note">比喻：接力賽看得到終點會衝刺；看不到終點的馬拉松，人會放慢、跳著看。</p></div></div></div><div class="remember">這頁記住：設計要跟著媒介走，不是把紙本搬上來。</div></section><section class="slide" data-label="動態設計：預測下一步"><p class="eyebrow">UI/UX · 14</p><p class="pagedot">14/71</p><h2 class="headline reveal">動態設計：預測下一步</h2><div class="lesson-tags"><span>課程進度：Part 1｜設計是一種溝通</span><span>本頁主題：動態設計與使用者行為</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">網頁可以「對話」，先回答使用者的下一個問題。</p><ul class="lesson-points"><li class="reveal">點圖放大、輸入時即時提示，都是網頁獨有的互動。</li><li class="reveal">租屋搜尋：還沒按搜尋就先顯示符合筆數；太多就提示立刻縮小條件。</li><li class="reveal">設計要預測使用者的行動，把結果放在看得到的位置。</li><li class="reveal">把使用者行為畫成草圖，與工程師討論非同步（fetch）怎麼做。</li></ul></div><div class="visual-area reveal"><div class="mk"><p class="mk-line big">搜尋租屋</p><div class="mk-chips"><span class="is-on">台中</span><span class="">2 房</span><span class="">5–8 千</span></div><p class="mk-line red">符合 <b>1,284</b> 筆　建議再縮小條件</p><div class="mk-row"><span class="mk-btn mk-btn--out">電梯大樓</span><span class="mk-btn mk-btn--out">有車位</span><span class="mk-btn mk-btn--out">可養寵物</span></div></div><p class="ux-note">對應課程：即時篩選就是 CH10 的「搜尋＋有車篩選」。</p></div></div><div class="remember">這頁記住：先給回饋，再讓使用者決定下一步。</div></section><section class="slide" data-label="使用者不一定知道自己要什麼"><p class="eyebrow">UI/UX · 15</p><p class="pagedot">15/71</p><h2 class="headline reveal">使用者不一定知道自己要什麼</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：潛在需求</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">用具體的情境，把模糊的目的變成想做的事。</p><ul class="lesson-points"><li class="reveal">很多人進網站時只有模糊的念頭，要看了內容才知道自己想要什麼。</li><li class="reveal">好的頁面會示範「可以這樣用」：圍裙不只在廚房，園藝、咖啡館也能穿。</li><li class="reveal">文案要具體：「12/3 出發，墾丁 3 天 2 夜」比「滿意度 120% 的旅行」好想像。</li><li class="reveal">想像店員怎麼說：問用途、推薦、回應疑慮；網頁要用內容代替店員。</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>抽象口號</p><div class="mk"><p class="mk-line big">讓您享受滿意度 120% 的旅行</p><p class="mk-line dim">立即了解更多</p></div><ul><li>看不出是什麼服務、怎麼申請</li><li>使用者無法想像自己用了會怎樣</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>具體畫面與條件</p><div class="mk"><p class="mk-line big">12/3 出發｜墾丁 3 天 2 夜</p><div class="mk-chips"><span class="is-on">含早餐</span><span class="">可改期</span><span class="">NT$ 6,800 起</span></div><span class="mk-btn mk-btn--fill">看行程</span></div><ul><li>日期、地點、價格一眼可見</li><li>用「含早餐、可改期」回應疑慮</li></ul></div></div></div></div><div class="remember">這頁記住：具體，才會讓人想像、想行動。</div></section><section class="slide" data-label="跳讀與集中注意力"><p class="eyebrow">UI/UX · 16</p><p class="pagedot">16/71</p><h2 class="headline reveal">跳讀與集中注意力</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：閱讀行為</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">網頁看不到終點，使用者會先掃一遍再挑著看。</p><ul class="lesson-points"><li class="reveal">紙本有固定範圍，網頁長度不定；使用者習慣跳讀。</li><li class="reveal">單調、規則一致的版型最適合長文章；不規則編排會讓人找不到段落。</li><li class="reveal">內容精簡到一眼讀完時，才適合大膽變化版型。</li><li class="reveal">先看內容的「量」與「質」，再決定版型。</li></ul></div><div class="visual-area reveal"><div class="panel"><p class="panel__hd">讓跳讀好用的長文結構</p><p><b>標題</b>　每段一個小標，說明這段講什麼</p><p><b>段首</b>　先給結論，再給細節</p><p><b>重點</b>　粗體標關鍵詞，每段不超過一處</p><p><b>間距</b>　圖與文字的距離、位置統一</p><p><b>摘要</b>　列表先給簡述，有興趣再點「閱讀全文」</p></div></div></div><div class="remember">這頁記住：長文要規則，短文才有餘裕玩變化。</div></section><section class="slide" data-label="扁平化設計的原則"><p class="eyebrow">UI/UX · 17</p><p class="pagedot">17/71</p><h2 class="headline reveal">扁平化設計的原則</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：扁平化</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">扁平不是「看起來平」，是簡化人與機器的關係。</p><ul class="lesson-points"><li class="reveal">主角是內容，介面是配角；按鈕不要比內容更搶眼。</li><li class="reveal">但「可以按」的線索不能丟：觸控世代不期待按下去會凹，習慣電腦的族群仍需要提示。</li><li class="reveal">連結不需要做成按鈕，底線就是最好的提示。</li><li class="reveal">是否扁平，視使用者而定：目標族群熟不熟悉觸控介面？</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>扁平到看不出可點</p><div class="mk"><p class="mk-line big">歡迎回來</p><p class="mk-line dim">登入</p><p class="mk-line dim">忘記密碼</p></div><ul><li>「登入」只是一行灰字</li><li>使用者不確定能不能按</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>扁平但保留線索</p><div class="mk"><p class="mk-line big">歡迎回來</p><span class="mk-btn mk-btn--fill">登入</span><p class="mk-line"><span class="mk-a">忘記密碼？</span></p></div><ul><li>有底色的主要按鈕</li><li>次要動作用底線文字連結</li></ul></div></div></div></div><div class="remember">這頁記住：內容是主角，但「能按」必須看得出來。</div></section><section class="slide" data-label="導覽列：沒有主張的按鈕"><p class="eyebrow">UI/UX · 18</p><p class="pagedot">18/71</p><h2 class="headline reveal">導覽列：沒有主張的按鈕</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：導覽列設計</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">裝飾有兩條底線：不損及「可以按」，不損及「易讀」。</p><ul class="lesson-points"><li class="reveal">「讓人想按的按鈕」其實是「沒有主張的按鈕」：簡單、清楚。</li><li class="reveal">漸層色差太大，文字不知道該用深色還是淺色。</li><li class="reveal">文字陰影會讓筆畫多的中文糊掉。</li><li class="reveal">只有圖示的導覽，只適合熟悉的進階使用者。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-nav"><span class="">最新消息</span><span class="is-on">服務內容</span><span class="">關於我們</span><span class="">聯絡我們</span></div></div><div class="ux-tbl ux-tbl--s" style="--cols:.8fr 1.2fr 1.6fr"><div class="ux-tbl__row ux-tbl__row--head"><span>裝飾</span><span>優點</span><span>缺點</span></div><div class="ux-tbl__row"><span>漸層</span><span>立體、搶眼</span><span>底色深淺不一，字難讀</span></div><div class="ux-tbl__row"><span>陰影</span><span>一眼看出可按</span><span>佔空間，太濃會髒</span></div><div class="ux-tbl__row"><span>圓角</span><span>親切</span><span>狹窄區塊會顯擁擠</span></div><div class="ux-tbl__row"><span>純圖示</span><span>省空間</span><span>新手看不懂</span></div></div></div></div><div class="remember">這頁記住：簡單、清楚，比好看重要。</div></section><section class="slide" data-label="網頁字型"><p class="eyebrow">UI/UX · 19</p><p class="pagedot">19/71</p><h2 class="headline reveal">網頁字型</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：字型選擇</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">字型先要好讀，再談好看。</p><ul class="lesson-points"><li class="reveal">網頁字型（Web Font）讓每個人看到同一種字；Google Fonts 免費、開源、可商用。</li><li class="reveal">Noto Sans TC、Noto Serif TC 含繁體中文，且有多種字重。</li><li class="reveal">內文別用太有個性的字型，使用者會不習慣、難閱讀。</li><li class="reveal">中文字型檔很大，要做字型子集（本課簡報就是這樣離線的）。</li></ul></div><div class="visual-area reveal"><div class="code-pane"><div class="code-pane__hd"><span>CSS：寫出候補字型清單</span><span class="code-pane__tag">CSS</span></div><pre>body {
+  font-family: &#x27;Noto Sans TC&#x27;,
+    &#x27;PingFang TC&#x27;, &#x27;Microsoft JhengHei&#x27;,
+    sans-serif;   <span class="cmt">// 前面載不到就換下一個</span>
+}</pre></div><div class="ktbl"><div class="ktbl__row"><span class="ktbl__k">標題</span><span class="ktbl__v">LXGW WenKai TC／Noto Serif TC</span></div><div class="ktbl__row"><span class="ktbl__k">內文</span><span class="ktbl__v">Noto Sans TC</span></div><div class="ktbl__row"><span class="ktbl__k">程式碼</span><span class="ktbl__v">JetBrains Mono</span></div></div></div></div><div class="remember">這頁記住：字型是「給人讀的」，不是「給人看的」。</div></section><section class="slide" data-label="字級、行距與圖片文字"><p class="eyebrow">UI/UX · 20</p><p class="pagedot">20/71</p><h2 class="headline reveal">字級、行距與圖片文字</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：可讀性</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">字要夠大、行要夠鬆，而且不要把字做成圖。</p><ul class="lesson-points"><li class="reveal">內文至少 16px；手機輸入框小於 16px，iOS 會自動放大畫面。</li><li class="reveal">行高 1.5–1.8，中文比英文需要更鬆；每行約 25–35 字最舒服。</li><li class="reveal">單位用 rem／em，使用者調大字級時，行距會跟著變。</li><li class="reveal">文字做成圖片：Retina 會糊、手機縮小後看不清、改字要開設計軟體。</li></ul></div><div class="visual-area reveal"><div class="code-pane"><div class="code-pane__hd"><span>CSS 與 Tailwind 的對照</span><span class="code-pane__tag">CSS</span></div><pre>.article {
+  font-size: 1rem;      <span class="cmt">// 16px</span>
+  line-height: 1.75;
+  max-width: 35em;      <span class="cmt">// 約 35 字</span>
+}
+
+&lt;p class=&quot;text-base leading-7 max-w-[35em]&quot;&gt;</pre></div></div></div><div class="remember">這頁記住：可讀性是數字，不是感覺。</div></section><section class="slide" data-label="前端常用單位對照"><p class="eyebrow">UI/UX · 21</p><p class="pagedot">21/71</p><h2 class="headline reveal">前端常用單位對照</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：px／rem／em／%／vw／ch</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">單位選錯，字級與版面就不會跟著使用者設定走。</p><div class="reveal"><div class="ux-tbl ux-tbl--s" style="--cols:.9fr 1.7fr 1.7fr 1.6fr 1.9fr"><div class="ux-tbl__row ux-tbl__row--head"><span>單位</span><span>相對於</span><span>常用於</span><span>優點</span><span>缺點</span></div><div class="ux-tbl__row"><span><code>px</code></span><span>螢幕像素（固定）</span><span>邊框、陰影、細線</span><span>精準、好預期</span><span>不隨使用者字級縮放</span></div><div class="ux-tbl__row"><span><code>rem</code></span><span>根元素字級（預設 16px）</span><span>字級、間距、元件尺寸</span><span>全站一致、可縮放</span><span>要換算（1rem＝16px）</span></div><div class="ux-tbl__row"><span><code>em</code></span><span>目前元素的字級</span><span>行距、按鈕內距、圖示</span><span>跟著該元件放大縮小</span><span>巢狀會連乘，易失控</span></div><div class="ux-tbl__row"><span><code>%</code></span><span>父元素的尺寸</span><span>寬度、欄位比例</span><span>自動適應容器</span><span>父層沒設高度就無效</span></div><div class="ux-tbl__row"><span><code>vw／vh</code></span><span>視窗寬／高</span><span>滿版區塊、流體字級</span><span>隨視窗等比縮放</span><span>手機網址列使 vh 失準</span></div><div class="ux-tbl__row"><span><code>ch</code></span><span>數字「0」的寬度</span><span>文章行寬（如 65ch）</span><span>依字數控制行長</span><span>中文字寬不同，只能估</span></div></div><p class="ux-note">口訣：字與間距用 rem，細線用 px，元件內部比例用 em，版面寬度用 % 或 vw。Tailwind 的 <code>text-base</code>、<code>p-4</code> 底層就是 rem。</p></div></div></div><div class="remember">這頁記住：字與間距用 rem，細線用 px。</div></section><section class="slide" data-label="文字連結"><p class="eyebrow">UI/UX · 22</p><p class="pagedot">22/71</p><h2 class="headline reveal">文字連結</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：連結呈現</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">連結要像連結，看過的要看得出來。</p><ul class="lesson-points"><li class="reveal">連結預設就有底線，使用者早已習慣；不要隨便拿掉。</li><li class="reveal">不是連結的文字不要加底線，會讓人以為連結壞了。</li><li class="reveal">看過的連結用較暗沉的色（:visited），不要用更亮的色。</li><li class="reveal">不只靠顏色區分：色盲、弱視使用者需要底線或其他線索。</li></ul></div><div class="visual-area reveal"><div class="mk"><p class="mk-line"><span class="mk-a">未看過的連結</span>　<span class="mk-a mk-a--v">已看過的連結</span></p></div><div class="code-pane"><div class="code-pane__hd"><span>CSS：連結三態</span><span class="code-pane__tag">CSS</span></div><pre>a { color: #1a5fb4; text-decoration: underline; }
+a:visited { color: #5b3d8f; }
+a:focus-visible { outline: 3px solid #f5c211; }</pre></div></div></div><div class="remember">這頁記住：底線就是「這可以點」的共同語言。</div></section><section class="slide" data-label="圖示與圖像文字"><p class="eyebrow">UI/UX · 23</p><p class="pagedot">23/71</p><h2 class="headline reveal">圖示與圖像文字</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：圖示</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">圖示是用圖案傳遞訊息，不只是裝飾。</p><ul class="lesson-points"><li class="reveal">放大鏡、購物車大多數人看得懂；「選取＋複製」這類操作則看不懂。</li><li class="reveal">基本原則：圖示＋文字，新手與進階使用者都能快速判斷。</li><li class="reveal">目標使用者能一眼看出意義時，才可以只放圖示（如放大鏡）。</li><li class="reveal">用圖示吸引視線：新手最該按的按鈕，可以加上有記憶點的小圖示。</li></ul></div><div class="visual-area reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.5fr 1.5fr"><div class="ux-tbl__row ux-tbl__row--head"><span>情況</span><span>建議</span></div><div class="ux-tbl__row"><span>通用符號（搜尋、首頁）</span><span>可只放圖示，仍加 aria-label</span></div><div class="ux-tbl__row"><span>一般功能（購物車、設定）</span><span>圖示＋文字</span></div><div class="ux-tbl__row"><span>少見或抽象的功能</span><span>一定要有文字</span></div><div class="ux-tbl__row"><span>手機底部導覽</span><span>圖示在上、小字在下</span></div></div><div class="mk"><div class="mk-row"><span class="mk-btn mk-btn--out mk-btn--ico"><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16 16 L22 22"/></svg>搜尋</span><span class="mk-btn mk-btn--out mk-btn--ico"><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4 H6 L9 15 H19 L22 7 H7"/><circle cx="10" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>購物車</span></div></div></div></div><div class="remember">這頁記住：圖示旁邊放文字，是最安全的做法。</div></section><section class="slide" data-label="圖示的配置"><p class="eyebrow">UI/UX · 24</p><p class="pagedot">24/71</p><h2 class="headline reveal">圖示的配置</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：圖示與文字的主從</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">先決定誰是主角：圖示，還是文字？</p><ul class="lesson-points"><li class="reveal">兩邊都很強，畫面就亂；先決定主體，再做出明確的設計。</li><li class="reveal">導覽列不一定要圖示；標籤太抽象時，先改文字。</li><li class="reveal">手機底部導覽：文字用小字即可，太大會和圖示互搶。</li><li class="reveal">同一套圖示要同風格、同線寬、同大小。</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>只有圖示</p><div class="mk"><div class="mk-tabs"><span class="is-on"><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L12 3 L21 11 V21 H15 V14 H9 V21 H3 Z"/></svg></span><span class=""><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16 16 L22 22"/></svg></span><span class=""><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 C4 14 2 10 2 7 C2 4 4 2 7 2 C9 2 11 3 12 5 C13 3 15 2 17 2 C20 2 22 4 22 7 C22 10 20 14 12 21 Z"/></svg></span><span class=""><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 8 14 12 14 C16 14 20 16 20 21"/></svg></span></div></div><ul><li>看不出每個圖示代表什麼</li><li>新手要靠猜</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>圖示在上、小字在下</p><div class="mk"><div class="mk-tabs"><span class="is-on"><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L12 3 L21 11 V21 H15 V14 H9 V21 H3 Z"/></svg><i>首頁</i></span><span class=""><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16 16 L22 22"/></svg><i>搜尋</i></span><span class=""><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 C4 14 2 10 2 7 C2 4 4 2 7 2 C9 2 11 3 12 5 C13 3 15 2 17 2 C20 2 22 4 22 7 C22 10 20 14 12 21 Z"/></svg><i>收藏</i></span><span class=""><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 8 14 12 14 C16 14 20 16 20 21"/></svg><i>我的</i></span></div></div><ul><li>一眼知道四個入口</li><li>圖示是主體，文字只是補充</li></ul></div></div></div></div><div class="remember">這頁記住：主體明確，畫面才清爽。</div></section><section class="slide" data-label="主視覺：不要只是漂亮"><p class="eyebrow">UI/UX · 25</p><p class="pagedot">25/71</p><h2 class="headline reveal">主視覺：不要只是漂亮</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：主視覺改善</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">首頁大圖要回答「這裡有什麼、對我有什麼用」。</p><ul class="lesson-points"><li class="reveal">常見失敗：與內容無關的模特兒與風景，加上沒有賣點的文案。</li><li class="reveal">先列出造訪者的心情，再決定視覺（想出遊、怕不會外語、不知道行情價）。</li><li class="reveal">照片要有在地特徵；價格這類賣點，要和說明文字框成一組。</li><li class="reveal">客戶指定的視覺，設計師也要有自己的主張。</li></ul></div><div class="visual-area reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.2fr 1.4fr"><div class="ux-tbl__row ux-tbl__row--head"><span>使用者的心情</span><span>主視覺該回答</span></div><div class="ux-tbl__row"><span>想和朋友出國，但有點不安</span><span>有人接待、行程已經排好</span></div><div class="ux-tbl__row"><span>不知道行情價</span><span>「NT$ 12,000 起」寫清楚</span></div><div class="ux-tbl__row"><span>想像不出去了會怎樣</span><span>有在地特徵的照片與行程表</span></div></div><div class="panel"><p class="panel__hd">做完自我檢查</p><p>拿掉照片只剩文字，訊息還成立嗎？</p><p>第一眼，看得到價格或最重要的賣點嗎？</p></div></div></div><div class="remember">這頁記住：大圖是版面，不是壁紙。</div></section><section class="slide" data-label="色彩與對比"><p class="eyebrow">UI/UX · 26</p><p class="pagedot">26/71</p><h2 class="headline reveal">色彩與對比</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：色彩</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">60-30-10：把最亮的色，留給最重要的動作。</p><ul class="lesson-points"><li class="reveal">60％ 中性底色、30％ 主色、10％ 強調色（主要按鈕）。</li><li class="reveal">文字對比至少 4.5:1（WCAG AA）；大字至少 3:1。</li><li class="reveal">不只靠顏色傳達狀態：錯誤除了紅色，還要有文字或圖示。</li><li class="reveal">一個畫面只讓「一個」東西最亮。</li></ul></div><div class="visual-area reveal"><svg class="dgm ux-svg" viewBox="0 0 940 280" role="img" aria-label="60-30-10 色彩比例"><text class="t-head" x="20" y="34" text-anchor="start">一頁的色彩比例（60-30-10）</text><rect class="d-card" x="20" y="60" width="564" height="120" rx="14"/><text class="t-bold" x="40" y="112" text-anchor="start">60％ 背景與中性色</text><text class="t-note" x="40" y="156" text-anchor="start">紙色、白、淺灰：讓內容呼吸</text><rect class="d-cool" x="592" y="60" width="282" height="120" rx="14"/><text class="t-bold" x="612" y="112" text-anchor="start">30％ 主色</text><text class="t-note" x="612" y="156" text-anchor="start">導覽、卡片、標題</text><rect class="d-hot" x="882" y="60" width="38" height="120" rx="10"/><text class="t-bold" x="900" y="214" text-anchor="end">10％ 強調色</text><text class="t-note" x="900" y="250" text-anchor="end">主要按鈕、重點</text></svg><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>淺灰小字</p><div class="mk"><p class="mk-line tiny">淺灰色的說明文字（不及格）</p></div><ul><li>對比只有約 3:1，投影與戶外看不清</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>深色字</p><div class="mk"><p class="mk-line ">深色的說明文字（及格）</p></div><ul><li>對比足夠，小字也清楚</li></ul></div></div></div></div><div class="remember">這頁記住：顏色要有分工，對比要夠用。</div></section><section class="slide" data-label="視覺檢查表"><p class="eyebrow">UI/UX · 27</p><p class="pagedot">27/71</p><h2 class="headline reveal">視覺檢查表</h2><div class="lesson-tags"><span>課程進度：Part 2｜視覺實踐</span><span>本頁主題：自評清單</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">改版前先自評，每一題都要答得出理由。</p><div class="reveal"><ul class="ux-chk"><li>第一眼看到的，是此刻最重要的資訊</li><li>距離相近的元素屬於同一組</li><li>同層級元素樣式一致</li><li>可以點的東西，看得出可以點</li><li>導覽列沒有多餘裝飾</li><li>連結有底線，看過會變色</li><li>內文至少 16px、行高 1.5 以上</li><li>圖示旁有文字（通用符號除外）</li><li>文字沒有做成圖片</li><li>文字對比至少 4.5:1</li><li>主視覺回答了使用者的問題</li><li>全站強調方式一致</li></ul></div></div></div><div class="remember">這頁記住：檢查表不是形式，是講得出理由的練習。</div></section><section class="slide" data-label="表單三問"><p class="eyebrow">UI/UX · 28</p><p class="pagedot">28/71</p><h2 class="headline reveal">表單三問</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：表單設計</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">表單是達成目標的關鍵，也是最容易讓人放棄的地方。</p><div class="reveal"><div class="ux-three"><div class="panel"><p class="panel__hd">一　要不要填這欄？</p><ul><li>從「顧客」而不是「業主」的角度檢查</li><li>只想問商品資訊，就不需要地址、電話</li><li>「如何得知本站」是業主想知道，不是顧客要的</li></ul></div><div class="panel"><p class="panel__hd">二　錯了怎麼說？</p><ul><li>輸入完就即時驗證，不要等送出才報錯</li><li>標出位置，並說明怎麼改</li><li>錯誤畫面一定要設計，常被忘記</li></ul></div><div class="panel"><p class="panel__hd">三　怎麼選最順？</p><ul><li>選項少：單選、核取方塊攤開</li><li>年齡用「20 幾歲」，不用 1 歲刻度的選單</li><li>手機避免滾輪式選單</li></ul></div></div><p class="ux-note">沒有人喜歡填表單：欄位越多，越有可能趕走使用者。</p></div></div></div><div class="remember">這頁記住：每一欄都要有「對使用者有什麼好處」的理由。</div></section><section class="slide" data-label="欄位減量與標籤"><p class="eyebrow">UI/UX · 29</p><p class="pagedot">29/71</p><h2 class="headline reveal">欄位減量與標籤</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：必填欄位</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">需求不同，必要的欄位就不同。</p><ul class="lesson-points"><li class="reveal">只想詢問：Email 就夠；要電話回覆才需要電話；要寄送才需要地址。</li><li class="reveal">用暱稱取代本名；性別、年齡沒有用途就不問。</li><li class="reveal">一定要問敏感資料（如電話）時，寫清楚為什麼、用在哪。</li><li class="reveal">地址全形或半形，讓程式幫忙轉換，不要用錯誤訊息逼使用者重打。</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>業主角度</p><div class="mk"><div class="mk-fieldw"><div class="mk-field mk-field--ph"><span class="mk-field__l">姓名</span><span class="mk-field__v"></span></div></div><div class="mk-fieldw"><div class="mk-field mk-field--ph"><span class="mk-field__l">電話</span><span class="mk-field__v"></span></div></div><div class="mk-fieldw"><div class="mk-field mk-field--ph"><span class="mk-field__l">地址</span><span class="mk-field__v"></span></div></div><div class="mk-fieldw"><div class="mk-field mk-field--ph"><span class="mk-field__l">如何得知本站</span><span class="mk-field__v"></span></div></div></div><ul><li>姓名、電話、地址、「如何得知本站」全必填</li><li>只想問商品，卻被要求留一堆個資</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>顧客角度</p><div class="mk"><div class="mk-fieldw"><div class="mk-field mk-field--ok"><span class="mk-field__l">稱呼</span><span class="mk-field__v">王小姐</span></div></div><div class="mk-fieldw"><div class="mk-field mk-field--"><span class="mk-field__l">Email</span><span class="mk-field__v">name@example.com</span></div><span class="mk-field__h">回覆只會寄到這個信箱</span></div><span class="mk-btn mk-btn--fill">送出詢問</span></div><ul><li>只留稱呼與 Email</li><li>旁邊說明回覆會寄到哪裡</li></ul></div></div></div></div><div class="remember">這頁記住：少一個欄位，就少一個放棄的理由。</div></section><section class="slide" data-label="錯誤訊息的設計"><p class="eyebrow">UI/UX · 30</p><p class="pagedot">30/71</p><h2 class="headline reveal">錯誤訊息的設計</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：表單錯誤顯示</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">錯誤訊息要說清楚「哪裡錯、怎麼改」。</p><ul class="lesson-points"><li class="reveal">錯誤畫面要在設計階段就一起畫，不是補丁。</li><li class="reveal">訊息放在出錯的欄位旁，距離越近越好懂。</li><li class="reveal">不只用紅色：加文字、圖示，色盲與弱視也看得到。</li><li class="reveal">「未填」和「格式錯」是兩種訊息，要分開寫。</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>只說「錯誤」</p><div class="mk"><div class="mk-fieldw"><div class="mk-field mk-field--err"><span class="mk-field__l">Email</span><span class="mk-field__v">abc</span></div><span class="mk-field__h">輸入有誤</span></div></div><ul><li>不知道哪一欄、為什麼錯</li><li>整頁變紅，眼花撩亂</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>指出位置與做法</p><div class="mk"><div class="mk-fieldw"><div class="mk-field mk-field--err"><span class="mk-field__l">Email</span><span class="mk-field__v">abc</span></div><span class="mk-field__h">缺少 @，請輸入像 name@example.com 的格式</span></div></div><ul><li>停在出錯欄位，說明缺少什麼</li><li>一次只強調一個問題</li></ul></div></div></div></div><div class="remember">這頁記住：好的錯誤訊息，是在幫使用者修正。</div></section><section class="slide" data-label="選取介面怎麼選"><p class="eyebrow">UI/UX · 31</p><p class="pagedot">31/71</p><h2 class="headline reveal">選取介面怎麼選</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：單選、複選、下拉</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">選項的多寡與操作方式，決定用哪種介面。</p><div class="reveal"><div class="ux-tbl" style="--cols:1.3fr 1.6fr 2fr"><div class="ux-tbl__row ux-tbl__row--head"><span>元件</span><span>什麼時候用</span><span>注意</span></div><div class="ux-tbl__row"><span>單選 Radio</span><span>2–5 個互斥選項</span><span>全部攤開，一眼比較</span></div><div class="ux-tbl__row"><span>核取方塊 Checkbox</span><span>可以複選</span><span>文字也要能點（label）</span></div><div class="ux-tbl__row"><span>下拉選單 Select</span><span>選項 6 個以上</span><span>手機滾輪式，不熟的人會卡住</span></div><div class="ux-tbl__row"><span>開關 Toggle</span><span>立刻生效的開／關</span><span>不要拿來當「送出」</span></div><div class="ux-tbl__row"><span>自動完成</span><span>選項很多又能打字</span><span>縣市、站名、店名</span></div></div><p class="ux-note">書中使用者測試：5 位使用者有 3 位不知道滾輪式選單怎麼操作。把整個 label 做成可點的大按鈕，手機更好選。</p></div></div></div><div class="remember">這頁記住：選項少就攤開，選項多才收進選單。</div></section><section class="slide" data-label="手機：單欄還是雙欄？"><p class="eyebrow">UI/UX · 32</p><p class="pagedot">32/71</p><h2 class="headline reveal">手機：單欄還是雙欄？</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：手機版型</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">先問：使用者要「讀」還是要「比」？</p><ul class="lesson-points"><li class="reveal">手機螢幕窄，雙欄後每欄只有拇指寬；單手操作時，左右欄各有一邊難點。</li><li class="reveal">大量文字、連結：單欄。</li><li class="reveal">照片牆、商品縮圖：雙欄，但文字要減到圖說程度。</li><li class="reveal">需要比較的資料：不要橫向長表，改成「篩選＋排序」。</li></ul></div><div class="visual-area reveal"><div class="mk"><p class="mk-line dim">雙欄縮圖：圖大、字少</p><div class="mk-grid"><div class="mk-card"><b>拿鐵</b><span>NT$ 85</span></div><div class="mk-card"><b>美式</b><span>NT$ 70</span></div><div class="mk-card"><b>抹茶</b><span>NT$ 95</span></div><div class="mk-card"><b>可可</b><span>NT$ 90</span></div></div></div><div class="ux-tbl ux-tbl--s" style="--cols:1fr 1.4fr"><div class="ux-tbl__row ux-tbl__row--head"><span>內容型態</span><span>建議</span></div><div class="ux-tbl__row"><span>文章、連結列表</span><span>單欄</span></div><div class="ux-tbl__row"><span>縮圖、相片牆</span><span>雙欄，文字精簡</span></div><div class="ux-tbl__row"><span>規格比較</span><span>篩選＋排序卡片</span></div></div></div></div><div class="remember">這頁記住：版型跟著「使用者要做什麼」走。</div></section><section class="slide" data-label="手機沒有 hover"><p class="eyebrow">UI/UX · 33</p><p class="pagedot">33/71</p><h2 class="headline reveal">手機沒有 hover</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：互動限制</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">滑鼠移上去才出現的東西，手機永遠看不到。</p><ul class="lesson-points"><li class="reveal">hover 隱藏的內容，連桌機使用者都未必發現。</li><li class="reveal">能直接放在版面上，就直接放；圖說放在圖片下方也很好。</li><li class="reveal">一定要藏，就留線索：箭頭、加號、「更多」。</li><li class="reveal">觸控裝置沒有「滑過」這個動作，只能點一下。</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>hover 才出現</p><div class="mk"><div class="mk-card"><b>山景房</b><span>含早餐　NT$ 2,800</span></div><p class="mk-line tiny">（滑鼠移上去才會出現收藏鈕）</p></div><ul><li>「加入收藏」要滑過卡片才看到</li><li>手機上完全無法使用</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>常駐、看得見</p><div class="mk"><div class="mk-card"><b>山景房</b><span>含早餐　NT$ 2,800</span></div><div class="mk-row"><span class="mk-btn mk-btn--out mk-btn--ico"><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 C4 14 2 10 2 7 C2 4 4 2 7 2 C9 2 11 3 12 5 C13 3 15 2 17 2 C20 2 22 4 22 7 C22 10 20 14 12 21 Z"/></svg>收藏</span></div></div><ul><li>按鈕一直在卡片上</li><li>觸控與滑鼠都能用</li></ul></div></div></div></div><div class="remember">這頁記住：不要把重要的功能藏在 hover 後面。</div></section><section class="slide" data-label="折疊選單：該不該藏？"><p class="eyebrow">UI/UX · 34</p><p class="pagedot">34/71</p><h2 class="headline reveal">折疊選單：該不該藏？</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：折疊與展開</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">先問：真的需要藏嗎？</p><div class="reveal"><div class="ux-two"><div class="panel"><p class="panel__hd">適合折疊</p><ul><li>次要的第二層細分類（廚房用品、寢具）</li><li>進階篩選條件</li><li>短短一兩句的常見問答</li><li>手機的網站導覽（漢堡選單）</li></ul></div><div class="panel"><p class="panel__hd">不適合折疊</p><ul><li>主要商品分類：藏起來等於失去曝光</li><li>很長的回答：展開後塞滿整個手機畫面</li><li>必看的條款或唯一的主要動作</li><li>一眼看不出能展開的標題</li></ul></div></div><div class="mk"><div class="mk-expw"><div class="mk-exp is-open"><p><b>廚房用品</b><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9 L12 15 L18 9"/></svg></p><span>鍋具、刀具、餐具</span></div><div class="mk-exp"><p><b>寢具</b><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9 L12 15 L18 9"/></svg></p></div></div></div><p class="ux-note">要折疊就加箭頭或加號提示，讓人知道可展開。Part 4 的 Angular Material Expansion panel 就是這個元件。</p></div></div></div><div class="remember">這頁記住：折疊是為了降低干擾，不是為了藏東西。</div></section><section class="slide" data-label="一行程式，就能撥號與導航"><p class="eyebrow">UI/UX · 35</p><p class="pagedot">35/71</p><h2 class="headline reveal">一行程式，就能撥號與導航</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：手機連結</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">手機本來就是電話：讓使用者點一下就能行動。</p><ul class="lesson-points"><li class="reveal">電話號碼要用 a 標籤的 tel:，不要做成圖片，也不要只放純文字。</li><li class="reveal">電腦版點了可能沒反應，所以要把它做成明顯的按鈕。</li><li class="reveal">不要在手機整頁嵌地圖，捲動會卡住；改放「用地圖 App 開啟」連結。</li><li class="reveal">告訴使用者「點一下就能打」。</li></ul></div><div class="visual-area reveal"><div class="code-pane"><div class="code-pane__hd"><span>HTML：撥號、導航、寄信</span><span class="code-pane__tag">HTML</span></div><pre>&lt;a href=&quot;tel:+886412345678&quot;&gt;
+  撥打 04-1234-5678&lt;/a&gt;
+
+&lt;a href=&quot;https://www.google.com/maps/dir/
+  ?api=1&amp;destination=台中市北區&quot;&gt;
+  導航到這裡&lt;/a&gt;
+
+&lt;a href=&quot;mailto:hi@example.com&quot;&gt;寄信&lt;/a&gt;</pre></div><div class="mk"><div class="mk-row"><span class="mk-btn mk-btn--fill">撥打 04-1234-5678</span><span class="mk-btn mk-btn--out">導航到這裡</span></div></div></div></div><div class="remember">這頁記住：讓「想做的事」只差一次點擊。</div></section><section class="slide" data-label="窄螢幕：空間與觸控"><p class="eyebrow">UI/UX · 36</p><p class="pagedot">36/71</p><h2 class="headline reveal">窄螢幕：空間與觸控</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：手機空間與觸控</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">手指比滑鼠粗，螢幕比桌機窄。</p><ul class="lesson-points"><li class="reveal">框線兩側都要留白，窄螢幕等於損失兩倍空間，能不框就不框。</li><li class="reveal">全站父元素套 padding，之後圖片想滿版會很麻煩。</li><li class="reveal">擠在一起的連結要拉開間距；重要度低的移進網站地圖。</li><li class="reveal">觸控目標至少 44–48px，按鈕之間留空隙。</li></ul></div><div class="visual-area reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.4fr 1.6fr"><div class="ux-tbl__row ux-tbl__row--head"><span>規範</span><span>最小觸控目標</span></div><div class="ux-tbl__row"><span>Apple（iOS）</span><span>44 × 44 pt</span></div><div class="ux-tbl__row"><span>Material Design</span><span>48 × 48 dp</span></div><div class="ux-tbl__row"><span>WCAG 2.2（AA）</span><span>至少 24 × 24 CSS px</span></div><div class="ux-tbl__row"><span>本課建議</span><span>手機按鈕高度 ≥ 48px</span></div></div><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>連結擠在一起</p><div class="mk"><p class="mk-line dim">關於　隱私　條款　客服</p></div><ul><li>誤觸率高</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>拉開間距</p><div class="mk"><div class="mk-row"><span class="mk-btn mk-btn--out">關於</span><span class="mk-btn mk-btn--out">隱私</span><span class="mk-btn mk-btn--out">客服</span></div></div><ul><li>點得準</li></ul></div></div></div></div><div class="remember">這頁記住：觸控目標要夠大，也要夠遠。</div></section><section class="slide" data-label="等待時間的設計"><p class="eyebrow">UI/UX · 37</p><p class="pagedot">37/71</p><h2 class="headline reveal">等待時間的設計</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：Loading／Error／Empty</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">資料載入一定要等，畫面不能空白。</p><ul class="lesson-points"><li class="reveal">空白畫面讓人以為壞了，甚至以為「這是沒內容的網站」。</li><li class="reveal">轉圈、骨架屏、進度條讓人知道「系統有在動」。</li><li class="reveal">設計師要一起畫四種狀態，不是等工程師補。</li><li class="reveal">錯誤要能重試；沒有資料要說明下一步。</li></ul></div><div class="visual-area reveal"><div class="ux-tbl ux-tbl--s" style="--cols:.9fr 1.3fr 2fr"><div class="ux-tbl__row ux-tbl__row--head"><span>狀態</span><span>畫面要有</span><span>範例文字</span></div><div class="ux-tbl__row"><span>Loading</span><span>骨架屏或轉圈</span><span>「載入站點中…」</span></div><div class="ux-tbl__row"><span>Error</span><span>原因＋重試鈕</span><span>「連線失敗，請再試一次」</span></div><div class="ux-tbl__row"><span>Empty</span><span>說明＋下一步</span><span>「沒有符合的站點，放寬條件看看」</span></div><div class="ux-tbl__row"><span>Success</span><span>資料＋更新時間</span><span>「資料更新於 19:05」</span></div></div><p class="ux-note">回扣 CH10：HttpClient 取回資料前後，這四種狀態都要有畫面。</p></div></div><div class="remember">這頁記住：沒有 Loading、Error、Empty，就不算做完。</div></section><section class="slide" data-label="記住使用者的偏好"><p class="eyebrow">UI/UX · 38</p><p class="pagedot">38/71</p><h2 class="headline reveal">記住使用者的偏好</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：本機儲存</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">貼心的小功能：下次回來，設定還在。</p><ul class="lesson-points"><li class="reveal">把設定存在瀏覽器（localStorage），下次自動套用：語言、字級、深色模式、音量、上次的篩選。</li><li class="reveal">只存「被刪掉也沒關係」的資料；換瀏覽器不會帶著走。</li><li class="reveal">為銀髮族設計：放大字級按鈕，並記住選擇。</li><li class="reveal">用 em／rem，字放大後行距才會跟著變。</li></ul></div><div class="visual-area reveal"><div class="code-pane"><div class="code-pane__hd"><span>JavaScript：存與讀</span><span class="code-pane__tag">JS</span></div><pre><span class="cmt">// 存：使用者按下「大字」</span>
+localStorage.setItem(&#x27;fontScale&#x27;, &#x27;1.2&#x27;);
+
+<span class="cmt">// 讀：頁面載入時套用</span>
+const s = Number(
+  localStorage.getItem(&#x27;fontScale&#x27;) ?? 1);
+document.documentElement.style.fontSize =
+  s * 100 + &#x27;%&#x27;;</pre></div><div class="ux-two"><div class="panel"><p class="panel__hd">適合存</p><ul><li>字級、語言、音量</li><li>上次的搜尋與篩選</li></ul></div><div class="panel"><p class="panel__hd">不要存</p><ul><li>密碼、個資</li><li>重要交易資料</li></ul></div></div></div></div><div class="remember">這頁記住：記住偏好，是最便宜的貼心。</div></section><section class="slide" data-label="上半堂小結：原則總表"><p class="eyebrow">UI/UX · 39</p><p class="pagedot">39/71</p><h2 class="headline reveal">上半堂小結：原則總表</h2><div class="lesson-tags"><span>課程進度：Part 3｜表單、手機與等待</span><span>本頁主題：原則回顧</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">把 38 頁收成一張表，下半堂開始落實。</p><div class="reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.2fr 3fr .9fr"><div class="ux-tbl__row ux-tbl__row--head"><span>原則</span><span>一句話</span><span>頁</span></div><div class="ux-tbl__row"><span>一眼看懂</span><span>第一眼要是此刻最重要的資訊</span><span>06–08</span></div><div class="ux-tbl__row"><span>格式塔理論 Gestalt Theory</span><span>近的同組、像的同類、封閉的可點</span><span>09–11</span></div><div class="ux-tbl__row"><span>具體溝通</span><span>用情境與細節代替抽象口號</span><span>15</span></div><div class="ux-tbl__row"><span>可操作</span><span>看得出可按；連結有底線</span><span>17–22</span></div><div class="ux-tbl__row"><span>可讀</span><span>字級、行距、對比夠用</span><span>19–21、26</span></div><div class="ux-tbl__row"><span>表單</span><span>少填、即時驗證、好選</span><span>28–31</span></div><div class="ux-tbl__row"><span>手機</span><span>單手可用、觸控夠大、不靠 hover</span><span>32–36</span></div><div class="ux-tbl__row"><span>等待與記憶</span><span>四種狀態；記住偏好</span><span>37–38</span></div></div></div></div></div><div class="remember">這頁記住：原則是為了讓團隊討論有共同的標準。</div></section><section class="slide" data-label="為什麼用 Angular Material"><p class="eyebrow">UI/UX · 40</p><p class="pagedot">40/71</p><h2 class="headline reveal">為什麼用 Angular Material</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：元件庫</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">不用從零刻按鈕：用官方做好的，再調成自己的樣子。</p><ul class="lesson-points"><li class="reveal">Angular 團隊維護的元件庫，實作 Google 的 Material Design。</li><li class="reveal">現成的輸入、導覽、彈窗、表格等元件，約 30 組。</li><li class="reveal">內建鍵盤操作與 ARIA，無障礙不用從頭做。</li><li class="reveal">搭配 CDK（Component Dev Kit）可自訂行為。</li></ul></div><div class="visual-area reveal"><div class="ux-tbl ux-tbl--s" style="--cols:.8fr 1.7fr 1.7fr"><div class="ux-tbl__row ux-tbl__row--head"><span></span><span>自己刻</span><span>用 Material</span></div><div class="ux-tbl__row"><span>時間</span><span>每個元件從 HTML／CSS 開始</span><span>import 後貼標籤</span></div><div class="ux-tbl__row"><span>無障礙</span><span>要自己處理鍵盤與 ARIA</span><span>內建</span></div><div class="ux-tbl__row"><span>一致性</span><span>各頁容易風格不同</span><span>同一套主題</span></div><div class="ux-tbl__row"><span>彈性</span><span>完全自由</span><span>可調主題，但有 Material 風格</span></div></div><div class="panel"><p class="panel__hd">版本要對齊</p><p>Material 版本必須與 Angular 主版本相同。</p><p>本課基線是 Angular 20.3：<code>ng add @angular/material@20</code>。</p><p>npm 最新版已是 22，需要 Angular 22 以上。</p></div></div></div><div class="remember">這頁記住：元件庫省的是時間，不是設計思考。</div></section><section class="slide" data-label="安裝與主題"><p class="eyebrow">UI/UX · 41</p><p class="pagedot">41/71</p><h2 class="headline reveal">安裝與主題</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：安裝與主題設定</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">兩步：ng add，然後 import 用到的元件。</p><ul class="lesson-points"><li class="reveal"><code>ng add</code> 會裝好 Material 與 CDK，並加入 Roboto 與圖示字型、全域樣式。</li><li class="reveal">主題可選預建，或用 Sass 的 <code>mat.theme</code> 自訂色彩、字型、密度。</li><li class="reveal">採 standalone：用到哪個元件，就在 imports 加哪一個。</li><li class="reveal">圖示與字型預設走網路；離線教室要先下載內嵌。</li></ul></div><div class="visual-area reveal"><div class="code-pane"><div class="code-pane__hd"><span>終端機與元件</span><span class="code-pane__tag">TS</span></div><pre>ng add @angular/material@20
+<span class="cmt">// 問：預建主題或 custom？要不要全域 typography？</span>
+
+import {MatButton} from
+  &#x27;@angular/material/button&#x27;;
+
+@Component({
+  imports: [MatButton],
+  template: `&lt;button matButton=&quot;filled&quot;&gt;
+    儲存&lt;/button&gt;`,
+})</pre></div></div></div><div class="remember">這頁記住：先裝好、再按需 import，不要一次全載。</div></section><section class="slide" data-label="元件地圖"><p class="eyebrow">UI/UX · 42</p><p class="pagedot">42/71</p><h2 class="headline reveal">元件地圖</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：元件分類</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">依「要做什麼」找元件，而不是背名字。</p><div class="reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.1fr 3.4fr 1.4fr"><div class="ux-tbl__row ux-tbl__row--head"><span>類別</span><span>元件</span><span>用在</span></div><div class="ux-tbl__row"><span>輸入與表單</span><span>Form field、Input、Select、Autocomplete、Checkbox、Radio、Slide toggle、Slider、Datepicker、Timepicker</span><span>註冊、預約、篩選</span></div><div class="ux-tbl__row"><span>按鈕與標記</span><span>Button、Button toggle、Icon、Badge、Chips、Divider</span><span>動作、標籤、狀態</span></div><div class="ux-tbl__row"><span>導覽</span><span>Toolbar、Sidenav、Menu、Tabs、Stepper、Tree</span><span>切換頁面與內容</span></div><div class="ux-tbl__row"><span>版面與內容</span><span>Card、List、Grid list、Expansion panel</span><span>商品、清單、折疊</span></div><div class="ux-tbl__row"><span>資料</span><span>Table、Sort、Paginator</span><span>大量資料比較</span></div><div class="ux-tbl__row"><span>回饋與彈出層</span><span>Dialog、Bottom sheet、Snackbar、Tooltip、Progress bar／spinner</span><span>確認、提示、等待</span></div></div></div></div></div><div class="remember">這頁記住：先想「使用者要做什麼」，再選元件。</div></section><section class="slide" data-label="按鈕與圖示"><p class="eyebrow">UI/UX · 43</p><p class="pagedot">43/71</p><h2 class="headline reveal">按鈕與圖示</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Button、Icon</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">一個畫面，一顆最重要的按鈕。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　觸發動作。matButton 有 filled、tonal、outlined、text 等層級；圖示按鈕用 mat-icon-button。</li><li class="reveal"><b>使用場景</b>　送出訂單用 filled；返回、取消降為 outlined 或 text；工具列用圖示按鈕。</li><li class="reveal"><b>別用在</b>　同一區塊放多顆 filled；拿按鈕當單純連結（該用 a）；圖示按鈕沒有 aria-label。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-row"><span class="mk-btn mk-btn--fill">確認訂位</span><span class="mk-btn mk-btn--tonal">次要</span><span class="mk-btn mk-btn--out">返回</span><span class="mk-btn mk-btn--text">取消</span></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre>&lt;button matButton=&quot;filled&quot;&gt;確認訂位&lt;/button&gt;
+&lt;button matButton=&quot;outlined&quot;&gt;返回&lt;/button&gt;
+&lt;button mat-icon-button aria-label=&quot;搜尋&quot;&gt;
+  &lt;mat-icon&gt;search&lt;/mat-icon&gt;
+&lt;/button&gt;</pre></div></div></div><div class="remember">這頁記住：層級就是主次：越重要越實心。</div></section><section class="slide" data-label="表單欄位與輸入"><p class="eyebrow">UI/UX · 44</p><p class="pagedot">44/71</p><h2 class="headline reveal">表單欄位與輸入</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Form field、Input</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">把標籤、提示、錯誤包成一組。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　把標籤、輸入框、提示與錯誤訊息組合；外觀有 fill 與 outline 兩種。</li><li class="reveal"><b>使用場景</b>　註冊、聯絡我們、預約；搭配 Reactive Forms，欄位無效時顯示 mat-error（呼應 28–30 頁）。</li><li class="reveal"><b>別用在</b>　只用 placeholder 當標籤；一頁塞太多欄位。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-fieldw"><div class="mk-field mk-field--err"><span class="mk-field__l">Email</span><span class="mk-field__v">abc</span></div><span class="mk-field__h">請輸入 name@example.com 格式</span></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre>&lt;mat-form-field appearance=&quot;outline&quot;&gt;
+  &lt;mat-label&gt;Email&lt;/mat-label&gt;
+  &lt;input matInput [formControl]=&quot;email&quot;&gt;
+  &lt;mat-hint&gt;回覆會寄到這裡&lt;/mat-hint&gt;
+  &lt;mat-error&gt;請輸入 name@example.com 格式&lt;/mat-error&gt;
+&lt;/mat-form-field&gt;</pre></div></div></div><div class="remember">這頁記住：標籤、提示、錯誤，一次到位。</div></section><section class="slide" data-label="選單與自動完成"><p class="eyebrow">UI/UX · 45</p><p class="pagedot">45/71</p><h2 class="headline reveal">選單與自動完成</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Select、Autocomplete</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">選項多寡，決定下拉或自動完成。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　Select 從固定清單挑一個或多個；Autocomplete 邊打字邊篩選建議。</li><li class="reveal"><b>使用場景</b>　Select：行政區、付款方式（約 6–15 項）；Autocomplete：站名、學校、縣市（數十項以上）。</li><li class="reveal"><b>別用在</b>　2–5 個互斥選項（攤開用 Radio）；選項極少又很重要時。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-fieldw"><div class="mk-field mk-field--sel"><span class="mk-field__l">行政區</span><span class="mk-field__v">北區</span><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9 L12 15 L18 9"/></svg></div></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre>&lt;mat-form-field&gt;
+  &lt;mat-label&gt;行政區&lt;/mat-label&gt;
+  &lt;mat-select [(value)]=&quot;district&quot;&gt;
+    @for (d of districts; track d) {
+      &lt;mat-option [value]=&quot;d&quot;&gt;{{ d }}&lt;/mat-option&gt;
+    }
+  &lt;/mat-select&gt;
+&lt;/mat-form-field&gt;</pre></div></div></div><div class="remember">這頁記住：選項多才收進選單。</div></section><section class="slide" data-label="核取、單選與開關"><p class="eyebrow">UI/UX · 46</p><p class="pagedot">46/71</p><h2 class="headline reveal">核取、單選與開關</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Checkbox、Radio、Slide toggle</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">三種控制，語意完全不同。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　Checkbox 可複選或同意；Radio 互斥單選；Slide toggle 是立即生效的開關。</li><li class="reveal"><b>使用場景</b>　Checkbox：篩選條件、同意條款；Radio：付款方式、尺寸；Toggle：通知、深色模式。</li><li class="reveal"><b>別用在</b>　Toggle 當「送出」；用 Checkbox 做互斥；選項很多還全部攤開。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-row"><span class="mk-ctl"><i class="mk-check is-on"></i>同意條款</span><span class="mk-ctl"><i class="mk-radio is-on"></i>信用卡</span><span class="mk-ctl"><i class="mk-radio"></i>貨到</span></div><div class="mk-row"><span class="mk-ctl"><i class="mk-toggle is-on"></i>接收通知</span></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre>&lt;mat-checkbox&gt;我同意隱私政策&lt;/mat-checkbox&gt;
+
+&lt;mat-radio-group [(ngModel)]=&quot;pay&quot;&gt;
+  &lt;mat-radio-button value=&quot;card&quot;&gt;信用卡&lt;/mat-radio-button&gt;
+  &lt;mat-radio-button value=&quot;cod&quot;&gt;貨到付款&lt;/mat-radio-button&gt;
+&lt;/mat-radio-group&gt;
+
+&lt;mat-slide-toggle&gt;接收通知&lt;/mat-slide-toggle&gt;</pre></div></div></div><div class="remember">這頁記住：選對控制，使用者才不會誤會。</div></section><section class="slide" data-label="日期選擇"><p class="eyebrow">UI/UX · 47</p><p class="pagedot">47/71</p><h2 class="headline reveal">日期選擇</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Datepicker</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">用日曆挑日期，還能限定範圍。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　以日曆挑日期，可設最小、最大值；需要 DateAdapter（provideNativeDateAdapter）。</li><li class="reveal"><b>使用場景</b>　訂位、住宿入住與退房、報表查詢區間。</li><li class="reveal"><b>別用在</b>　選很久以前的日期（生日，翻年份太慢）；只有幾個固定日期可選（改用 Chips）。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-cal"><span class="mk-cal__h">日</span><span class="mk-cal__h">一</span><span class="mk-cal__h">二</span><span class="mk-cal__h">三</span><span class="mk-cal__h">四</span><span class="mk-cal__h">五</span><span class="mk-cal__h">六</span><span class="">17</span><span class="">18</span><span class="">19</span><span class="is-on">20</span><span class="">21</span><span class="">22</span><span class="">23</span></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre><span class="cmt">// app.config.ts → provideNativeDateAdapter()</span>
+&lt;mat-form-field&gt;
+  &lt;mat-label&gt;入住日期&lt;/mat-label&gt;
+  &lt;input matInput [matDatepicker]=&quot;dp&quot;
+         [min]=&quot;today&quot;&gt;
+  &lt;mat-datepicker-toggle matIconSuffix
+         [for]=&quot;dp&quot;/&gt;
+  &lt;mat-datepicker #dp/&gt;
+&lt;/mat-form-field&gt;</pre></div></div></div><div class="remember">這頁記住：日期有範圍，就用日曆限制。</div></section><section class="slide" data-label="卡片與清單"><p class="eyebrow">UI/UX · 48</p><p class="pagedot">48/71</p><h2 class="headline reveal">卡片與清單</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Card、List</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">一個主題一張卡；同類項目一行一列。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　Card 把一個主題的圖、標題、內文與動作放進一個容器；List 垂直列出同類項目。</li><li class="reveal"><b>使用場景</b>　Card：商品、課程、站點資訊卡；List：訊息、設定、搜尋結果。</li><li class="reveal"><b>別用在</b>　Card 套 Card；資料多又要比較欄位時（改用 Table）。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-card"><b>北區站</b><span>可借 12 輛</span><span class="mk-btn mk-btn--tonal">導航</span></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre>&lt;mat-card appearance=&quot;outlined&quot;&gt;
+  &lt;mat-card-title&gt;北區站&lt;/mat-card-title&gt;
+  &lt;mat-card-content&gt;可借 12 輛&lt;/mat-card-content&gt;
+  &lt;mat-card-actions&gt;
+    &lt;button matButton&gt;導航&lt;/button&gt;
+  &lt;/mat-card-actions&gt;
+&lt;/mat-card&gt;</pre></div></div></div><div class="remember">這頁記住：卡片是「一個決定」的容器。</div></section><section class="slide" data-label="資料表格"><p class="eyebrow">UI/UX · 49</p><p class="pagedot">49/71</p><h2 class="headline reveal">資料表格</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Table、Sort、Paginator</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">要比較、要排序，就用表格。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　以欄位列出大量資料；Sort 點表頭排序，Paginator 分頁。</li><li class="reveal"><b>使用場景</b>　後台訂單、成績、站點清單：需要比較與排序。</li><li class="reveal"><b>別用在</b>　手機直接放 8 欄；資料少於 5 筆（用 List）。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-table" style="--n:2"><div class="mk-trow mk-trow--h"><span>站名</span><span>可借</span></div><div class="mk-trow"><span>北區站</span><span>12</span></div><div class="mk-trow"><span>西區站</span><span>3</span></div></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre>&lt;table mat-table [dataSource]=&quot;rows&quot; matSort&gt;
+  &lt;ng-container matColumnDef=&quot;name&quot;&gt;
+    &lt;th mat-header-cell *matHeaderCellDef
+        mat-sort-header&gt;站名&lt;/th&gt;
+    &lt;td mat-cell *matCellDef=&quot;let r&quot;&gt;{{ r.name }}&lt;/td&gt;
+  &lt;/ng-container&gt;
+&lt;/table&gt;
+&lt;mat-paginator [pageSize]=&quot;10&quot;/&gt;</pre></div></div></div><div class="remember">這頁記住：手機上，表格常要改成卡片。</div></section><section class="slide" data-label="分頁、步驟與折疊"><p class="eyebrow">UI/UX · 50</p><p class="pagedot">50/71</p><h2 class="headline reveal">分頁、步驟與折疊</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Tabs、Stepper、Expansion panel</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">切內容、走流程、藏次要資訊。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　Tabs 切換同層級內容；Stepper 引導多步驟；Expansion panel 折疊展開。</li><li class="reveal"><b>使用場景</b>　Tabs：介紹／規格／評價；Stepper：結帳、報名；Expansion：FAQ、進階設定。</li><li class="reveal"><b>別用在</b>　Tabs 超過 5–6 個；少於 3 步的流程；用折疊藏必看內容。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-tablist"><span class="is-on">介紹</span><span class="">規格</span><span class="">評價</span></div><div class="mk-stepper"><span class="is-on"><i>1</i>資料</span><span class="is-on"><i>2</i>確認</span><span class=""><i>3</i>完成</span></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre>&lt;mat-tab-group&gt;
+  &lt;mat-tab label=&quot;介紹&quot;&gt;…&lt;/mat-tab&gt;
+  &lt;mat-tab label=&quot;規格&quot;&gt;…&lt;/mat-tab&gt;
+&lt;/mat-tab-group&gt;
+
+&lt;mat-stepper linear&gt;
+  &lt;mat-step label=&quot;資料&quot;&gt;…&lt;/mat-step&gt;
+  &lt;mat-step label=&quot;確認&quot;&gt;…&lt;/mat-step&gt;
+&lt;/mat-stepper&gt;</pre></div></div></div><div class="remember">這頁記住：三者都是「資訊的組織方式」。</div></section><section class="slide" data-label="頂欄、側欄與選單"><p class="eyebrow">UI/UX · 51</p><p class="pagedot">51/71</p><h2 class="headline reveal">頂欄、側欄與選單</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Toolbar、Sidenav、Menu</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">導覽的骨架：頂欄、側欄、選單。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　Toolbar 是頂部標題列；Sidenav 是可收合的側邊導覽；Menu 點按鈕展開選項。</li><li class="reveal"><b>使用場景</b>　Toolbar：標題＋搜尋；Sidenav：後台分類；Menu：「更多」、帳號。</li><li class="reveal"><b>別用在</b>　手機常駐側欄（用 over 模式）；用 Menu 藏主要導覽。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-toolbar"><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6 H21 M3 12 H21 M3 18 H21"/></svg><b>借車助手</b><span class="mk-sp"></span><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16 16 L22 22"/></svg><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M5 5 L7 7 M17 17 L19 19 M19 5 L17 7 M7 17 L5 19"/></svg></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre>&lt;mat-toolbar&gt;
+  &lt;button mat-icon-button (click)=&quot;nav.toggle()&quot;&gt;
+    &lt;mat-icon&gt;menu&lt;/mat-icon&gt;
+  &lt;/button&gt;
+  &lt;span&gt;借車助手&lt;/span&gt;
+&lt;/mat-toolbar&gt;
+&lt;mat-sidenav-container&gt;
+  &lt;mat-sidenav #nav mode=&quot;over&quot;&gt;…&lt;/mat-sidenav&gt;
+  &lt;mat-sidenav-content&gt;…&lt;/mat-sidenav-content&gt;
+&lt;/mat-sidenav-container&gt;</pre></div></div></div><div class="remember">這頁記住：導覽放對位置，比好看重要。</div></section><section class="slide" data-label="對話框與底部面板"><p class="eyebrow">UI/UX · 52</p><p class="pagedot">52/71</p><h2 class="headline reveal">對話框與底部面板</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Dialog、Bottom sheet</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">打斷流程之前，先想值不值得。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　Dialog 打斷流程要求決定；Bottom sheet 從手機底部彈出選項。</li><li class="reveal"><b>使用場景</b>　Dialog：刪除確認、編輯一筆資料；Bottom sheet：分享方式、手機篩選。</li><li class="reveal"><b>別用在</b>　輕量提示（用 Snackbar）；連續彈出多層；可復原的操作也強迫確認。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-dialog"><b>刪除這筆資料？</b><span>刪除後無法復原。</span><div class="mk-row mk-row--end"><span class="mk-btn mk-btn--text">取消</span><span class="mk-btn mk-btn--danger">刪除</span></div></div></div><div class="code-pane"><div class="code-pane__hd"><span>TypeScript</span><span class="code-pane__tag">TS</span></div><pre>private dialog = inject(MatDialog);
+
+confirmDelete() {
+  this.dialog.open(ConfirmDialog, {
+    data: { name: &#x27;北區站&#x27; },
+  });
+}</pre></div></div></div><div class="remember">這頁記住：能復原，就不必彈確認。</div></section><section class="slide" data-label="輕量回饋"><p class="eyebrow">UI/UX · 53</p><p class="pagedot">53/71</p><h2 class="headline reveal">輕量回饋</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Snackbar、Tooltip、Badge、Chips</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">不打斷人的回饋與標記。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　Snackbar 短暫回饋；Tooltip 補充說明；Badge 顯示數字或紅點；Chips 做標籤與篩選。</li><li class="reveal"><b>使用場景</b>　Snackbar：「已加入收藏」＋復原；Tooltip：圖示名稱；Badge：未讀 3；Chips：有車、近捷運。</li><li class="reveal"><b>別用在</b>　用 Snackbar 放必讀錯誤；Tooltip 放重要資訊（手機沒有 hover）；Badge 數字過大。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-snack"><span>已加入收藏</span><b>復原</b></div><div class="mk-row"><div class="mk-chips"><span class="is-on">有車</span><span class="">近捷運</span></div><span class="mk-badgew"><svg class="mk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17 V11 C6 7 8 5 12 5 C16 5 18 7 18 11 V17 L20 19 H4 Z M10 21 H14"/></svg><b>3</b></span></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular</span><span class="code-pane__tag">TS</span></div><pre>this.snack.open(&#x27;已加入收藏&#x27;, &#x27;復原&#x27;,
+  { duration: 4000 });
+
+&lt;button matTooltip=&quot;搜尋&quot; matBadge=&quot;3&quot;&gt;…&lt;/button&gt;
+&lt;mat-chip-set&gt;
+  &lt;mat-chip&gt;有車&lt;/mat-chip&gt;
+&lt;/mat-chip-set&gt;</pre></div></div></div><div class="remember">這頁記住：回饋要輕，不能擋路。</div></section><section class="slide" data-label="進度與等待"><p class="eyebrow">UI/UX · 54</p><p class="pagedot">54/71</p><h2 class="headline reveal">進度與等待</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：Progress bar、Spinner</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:44% 56%"><div class="ch5-copy"><p class="mini-lead reveal">讓使用者知道「系統有在動」。</p><ul class="lesson-points"><li class="reveal"><b>用途</b>　顯示等待與進度：bar 條狀、spinner 圓形；可有百分比，或不確定長度。</li><li class="reveal"><b>使用場景</b>　載入站點（不確定）；上傳檔案（有百分比）；按鈕送出中（小型 spinner）。</li><li class="reveal"><b>別用在</b>　時間極短也閃一下；取代錯誤狀態；Material 沒有骨架屏，要自己用 CSS 做。</li></ul></div><div class="visual-area reveal"><div class="mk"><div class="mk-prog mk-prog--ind"><i></i></div><div class="mk-row"><span class="mk-spin"></span><p class="mk-line ">載入中…</p></div><div class="mk-skel"><i></i><i></i><i></i></div></div><div class="code-pane"><div class="code-pane__hd"><span>Angular 模板</span><span class="code-pane__tag">HTML</span></div><pre>@if (loading()) {
+  &lt;mat-progress-bar mode=&quot;indeterminate&quot;/&gt;
+}
+&lt;mat-spinner diameter=&quot;32&quot;/&gt;
+
+<span class="cmt">&lt;!-- 回扣 CH10：Loading 是四種狀態之一 --&gt;</span></pre></div></div></div><div class="remember">這頁記住：等待也是介面的一部分。</div></section><section class="slide" data-label="依使用情境選元件：我要…，該用哪個？"><p class="eyebrow">UI/UX · 55</p><p class="pagedot">55/71</p><h2 class="headline reveal">依使用情境選元件：我要…，該用哪個？</h2><div class="lesson-tags"><span>課程進度：Part 4｜Angular Material</span><span>本頁主題：場景對元件總表</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">用元件，不等於有設計：版面仍要靠距離、對比與主次。</p><div class="reveal"><div class="ux-tbl ux-tbl--s" style="--cols:2fr 2.6fr .6fr"><div class="ux-tbl__row ux-tbl__row--head"><span>我要做…</span><span>用這個元件</span><span>頁</span></div><div class="ux-tbl__row"><span>主要動作、次要動作</span><span>Button（filled／outlined／text）</span><span>43</span></div><div class="ux-tbl__row"><span>填 Email、姓名</span><span>Form field＋Input</span><span>44</span></div><div class="ux-tbl__row"><span>選行政區、站名、日期</span><span>Select／Autocomplete／Datepicker</span><span>45、47</span></div><div class="ux-tbl__row"><span>同意、單選、開關</span><span>Checkbox／Radio／Toggle</span><span>46</span></div><div class="ux-tbl__row"><span>商品、站點一覽</span><span>Card／List</span><span>48</span></div><div class="ux-tbl__row"><span>比較與排序大量資料</span><span>Table＋Sort＋Paginator</span><span>49</span></div><div class="ux-tbl__row"><span>分類、多步驟、折疊</span><span>Tabs／Stepper／Expansion</span><span>50</span></div><div class="ux-tbl__row"><span>刪除確認、輕量回饋</span><span>Dialog／Snackbar</span><span>52–53</span></div><div class="ux-tbl__row"><span>等待與載入</span><span>Progress bar／spinner</span><span>54</span></div></div></div></div></div><div class="remember">這頁記住：先選對場景，再選元件，最後才調樣式。</div></section><section class="slide" data-label="AI Agent：會動手的 AI"><p class="eyebrow">UI/UX · 56</p><p class="pagedot">56/71</p><h2 class="headline reveal">AI Agent：會動手的 AI</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：AI Agent</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">聊天機器人只回答；Agent 會讀專案、改檔案、跑指令。</p><ul class="lesson-points"><li class="reveal">Chat：你問、它答，不會動你的檔案。</li><li class="reveal">Agent：給目標後，自己讀專案、改檔、執行指令、看結果再修。</li><li class="reveal">它的依據就是「看得到的東西」：專案檔案與你寫的規則。</li><li class="reveal">所以要給對的上下文，它才不會亂猜（回扣 CH10 的 AI 提示詞）。</li></ul></div><div class="visual-area reveal"><svg class="dgm ux-svg" viewBox="0 0 940 170" role="img" aria-label="流程"><rect class="d-cool" x="20" y="30" width="192" height="110" rx="16"/><text class="t-bold" x="116" y="78" text-anchor="middle">目標</text><text class="t-note" x="116" y="112" text-anchor="middle">你的一句話</text><defs><marker id="ua-ag0" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><path class="a-line" d="M 216 85 L 252 85" marker-end="url(#ua-ag0)"/><rect class="d-card" x="256" y="30" width="192" height="110" rx="16"/><text class="t-bold" x="352" y="78" text-anchor="middle">讀專案</text><text class="t-note" x="352" y="112" text-anchor="middle">檔案與規則</text><defs><marker id="ua-ag1" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><path class="a-line" d="M 452 85 L 488 85" marker-end="url(#ua-ag1)"/><rect class="d-soft" x="492" y="30" width="192" height="110" rx="16"/><text class="t-bold" x="588" y="78" text-anchor="middle">動手</text><text class="t-note" x="588" y="112" text-anchor="middle">改檔、跑指令</text><defs><marker id="ua-ag2" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path class="d-arrowhead" d="M0 0 L10 4 L0 8 z"/></marker></defs><path class="a-line" d="M 688 85 L 724 85" marker-end="url(#ua-ag2)"/><rect class="d-hot" x="728" y="30" width="192" height="110" rx="16"/><text class="t-bold" x="824" y="78" text-anchor="middle">檢查</text><text class="t-note" x="824" y="112" text-anchor="middle">看結果再修</text></svg><div class="ux-tbl ux-tbl--s" style="--cols:.8fr 1.4fr 1.6fr"><div class="ux-tbl__row ux-tbl__row--head"><span></span><span>Chat</span><span>Agent</span></div><div class="ux-tbl__row"><span>能做什麼</span><span>回答、產生文字</span><span>讀寫檔案、執行指令</span></div><div class="ux-tbl__row"><span>依據</span><span>你貼的內容</span><span>專案與規則檔</span></div><div class="ux-tbl__row"><span>風險</span><span>要自己貼進專案</span><span>會直接改檔，要看 diff</span></div></div></div></div><div class="remember">這頁記住：Agent 的品質取決於你給它的上下文。</div></section><section class="slide" data-label="Skills：教 AI 做一類事"><p class="eyebrow">UI/UX · 57</p><p class="pagedot">57/71</p><h2 class="headline reveal">Skills：教 AI 做一類事</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：Agent Skills</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">Skill 是一份「某類任務該怎麼做」的說明包。</p><ul class="lesson-points"><li class="reveal">一個資料夾：SKILL.md（名稱、何時使用、步驟）加上腳本與範本。</li><li class="reveal">平常只載入名稱與描述；用到時才讀全文，不佔上下文。</li><li class="reveal">Agent Skills 是開放格式，Claude Code、Gemini CLI、Cursor 等工具都能用。</li><li class="reveal">適合固定步驟、反覆出現的工作：改版、審查、產生簡報。</li></ul></div><div class="visual-area reveal"><div class="code-pane"><div class="code-pane__hd"><span>Skill 的資料夾與 SKILL.md</span><span class="code-pane__tag">MD</span></div><pre>design-review/
+  SKILL.md        <span class="cmt">// 名稱、何時使用、步驟</span>
+  scripts/        <span class="cmt">// 可執行的腳本</span>
+  assets/         <span class="cmt">// 範本、字型</span>
+
+---
+name: design-review
+description: 檢查頁面是否符合設計規範時使用
+---
+1. 先讀 DESIGN.md
+2. 逐項比對顏色、字型、間距</pre></div></div></div><div class="remember">這頁記住：把做過的好流程寫下來，AI 才能照著做。</div></section><section class="slide" data-label="DESIGN.md 是什麼"><p class="eyebrow">UI/UX · 58</p><p class="pagedot">58/71</p><h2 class="headline reveal">DESIGN.md 是什麼</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：DESIGN.md：用途</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">一份寫給 AI（也寫給人）讀的視覺規範。</p><ul class="lesson-points"><li class="reveal">用純文字 Markdown，描述專案的顏色、字型、元件與版面。</li><li class="reveal">放進專案；AI 每次產生介面前先讀它，風格就一致。</li><li class="reveal">解決「同一專案多次生成，風格各自為政」。</li><li class="reveal">與 README 不同：README 說專案怎麼跑，DESIGN.md 說畫面長什麼樣。</li></ul></div><div class="visual-area reveal"><div class="ux-cmp"><div class="ux-cmp__side ux-cmp__side--bad"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--bad">不好</span>沒有 DESIGN.md</p><div class="mk"><div class="mk-row"><span class="mk-btn mk-btn--fill">送出</span><span class="mk-btn mk-btn--flat">送出</span><span class="mk-btn mk-btn--tonal">送出</span></div></div><ul><li>三次生成，三種按鈕：圓角、方角、顏色都不同</li><li>每次都要口頭重講一遍</li></ul></div><div class="ux-cmp__side ux-cmp__side--good"><p class="ux-cmp__hd"><span class="ux-tag ux-tag--good">好</span>有 DESIGN.md</p><div class="mk"><div class="mk-row"><span class="mk-btn mk-btn--fill">送出</span><span class="mk-btn mk-btn--fill">送出</span><span class="mk-btn mk-btn--fill">送出</span></div></div><ul><li>三次生成，按鈕一致</li><li>新同學、不同 AI 都看同一份</li></ul></div></div></div></div><div class="remember">這頁記住：DESIGN.md 是設計的「單一事實來源」。</div></section><section class="slide" data-label="DESIGN.md 的結構"><p class="eyebrow">UI/UX · 59</p><p class="pagedot">59/71</p><h2 class="headline reveal">DESIGN.md 的結構</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：DESIGN.md：結構</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">沒有唯一標準，常見寫法是五個區塊。</p><div class="reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.1fr 2fr 3fr"><div class="ux-tbl__row ux-tbl__row--head"><span>區塊</span><span>寫什麼</span><span>範例</span></div><div class="ux-tbl__row"><span>視覺氛圍</span><span>風格關鍵字與感受</span><span>「安靜、紙本質感、留白多」</span></div><div class="ux-tbl__row"><span>色票與角色</span><span>名稱＋色碼＋用途</span><span>「墨色 #2A241B：文字與主按鈕」</span></div><div class="ux-tbl__row"><span>字型規則</span><span>標題、內文、程式碼的字型與字級</span><span>「內文 Noto Sans TC 16px，行高 1.75」</span></div><div class="ux-tbl__row"><span>元件樣式</span><span>按鈕、卡片、輸入框的外觀</span><span>「主按鈕：墨色底、全圓角、無陰影」</span></div><div class="ux-tbl__row"><span>版面原則</span><span>間距、格線、留白</span><span>「間距用 8 的倍數；內容寬 ≤ 1080px」</span></div></div></div></div></div><div class="remember">這頁記住：每一條都要能被檢查：有名字、有數值、有用途。</div></section><section class="slide" data-label="DESIGN.md 範本"><p class="eyebrow">UI/UX · 60</p><p class="pagedot">60/71</p><h2 class="headline reveal">DESIGN.md 範本</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：DESIGN.md：範本</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:38% 62%"><div class="ch5-copy"><p class="mini-lead reveal">一頁就夠，越具體越好。</p><ul class="lesson-points"><li class="reveal">用「名稱＋數值＋用途」，AI 才知道哪裡該用哪個顏色。</li><li class="reveal">寫下為什麼，AI 才能舉一反三。</li><li class="reveal">禁止事項也要寫：不用漸層、不用 emoji。</li><li class="reveal">控制在一頁；太長，AI 反而抓不到重點。</li></ul></div><div class="visual-area reveal"><div class="code-pane"><div class="code-pane__hd"><span>DESIGN.md（精簡範本）</span><span class="code-pane__tag">MD</span></div><pre># DESIGN.md｜借車助手
+## 視覺氛圍
+安靜、紙本質感；不用漸層與陰影。
+## 色票
+- 紙色 #F2EEDF：頁面背景
+- 墨色 #2A241B：文字、主按鈕
+- 萊姆 #D6DD63：成功、重點
+## 字型
+- 標題 WenKai TC；內文 Noto Sans TC 16px
+## 元件
+- 主按鈕：墨色底、全圓角
+## 版面
+- 間距用 8 的倍數；內容寬 ≤ 1080px</pre></div></div></div><div class="remember">這頁記住：範本不是標準答案，是起點。</div></section><section class="slide" data-label="DESIGN.md 怎麼用"><p class="eyebrow">UI/UX · 61</p><p class="pagedot">61/71</p><h2 class="headline reveal">DESIGN.md 怎麼用</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：DESIGN.md：用法</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">放進專案，並在提示詞裡指名它。</p><ul class="lesson-points"><li class="reveal">放在專案根目錄，檔名 DESIGN.md。</li><li class="reveal">提示詞明說：「先讀 DESIGN.md 再做」，並限制只能用裡面的顏色。</li><li class="reveal">產出後對照檢查：顏色、字型、圓角有沒有跑掉。</li><li class="reveal">要換風格，改這份檔，再重新生成；不要一頁一頁手改。</li></ul></div><div class="visual-area reveal"><div class="code-pane"><div class="code-pane__hd"><span>提示詞範例</span><span class="code-pane__tag">PROMPT</span></div><pre>請先閱讀專案根目錄的 DESIGN.md，
+再依它的色票、字型與元件規則，
+為「借車助手」新增站點詳情頁。
+只能使用 DESIGN.md 內的顏色。</pre></div><div class="panel"><p class="panel__hd">也可以寫進規則檔</p><p>Agent 通常會讀專案規則檔（如 AGENTS.md、CLAUDE.md）。</p><p>在裡面加一行：「UI 規範見 DESIGN.md」，每次都會被帶入。</p></div></div></div><div class="remember">這頁記住：規範要放在 AI 看得到的地方。</div></section><section class="slide" data-label="Google Stitch"><p class="eyebrow">UI/UX · 62</p><p class="pagedot">62/71</p><h2 class="headline reveal">Google Stitch</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：AI 介面設計工具</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">用文字、草圖或截圖，生成多畫面的介面。</p><ul class="lesson-points"><li class="reveal">Google Labs 的 AI 介面設計工具（stitch.withgoogle.com），免費使用。</li><li class="reveal">2.0 起有無限畫布、語音輸入、可點擊原型。</li><li class="reveal">可匯出 HTML／CSS、Tailwind、React，或 Copy to Figma（單向，不同步）。</li><li class="reveal">資訊依 2026 年中；功能與額度常更新，上課前用瀏覽器再確認。</li></ul></div><div class="visual-area reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.2fr 2fr"><div class="ux-tbl__row ux-tbl__row--head"><span>你給它</span><span>它產出</span></div><div class="ux-tbl__row"><span>文字描述</span><span>多畫面的介面</span></div><div class="ux-tbl__row"><span>手繪草圖、截圖</span><span>對應的 UI 畫面</span></div><div class="ux-tbl__row"><span>網址</span><span>擷取配色與字型，整理成規範</span></div><div class="ux-tbl__row"><span>畫面</span><span>HTML／Tailwind／React 程式碼；Copy to Figma</span></div></div><div class="panel"><p class="panel__hd">適合與不適合</p><p>適合：快速出第一版、探索方向、拿到可改的程式碼。</p><p>不適合：正式設計系統與多人協作（改用 Figma）。</p></div></div></div><div class="remember">這頁記住：AI 出第一版，人負責判斷好不好用。</div></section><section class="slide" data-label="Stitch 使用流程"><p class="eyebrow">UI/UX · 63</p><p class="pagedot">63/71</p><h2 class="headline reveal">Stitch 使用流程</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：提示詞與迭代</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">五步：描述、生成、迭代、匯出、交給 Agent。</p><div class="reveal"><div class="ux-steps"><div class="ux-step"><span class="ux-step__n">1</span><b>描述</b><span>用途、使用者、頁面清單</span></div><div class="ux-step"><span class="ux-step__n">2</span><b>生成</b><span>先出第一版多畫面</span></div><div class="ux-step"><span class="ux-step__n">3</span><b>迭代</b><span>對話調整配色、版面</span></div><div class="ux-step"><span class="ux-step__n">4</span><b>匯出</b><span>程式碼或 Figma</span></div><div class="ux-step"><span class="ux-step__n">5</span><b>交給 Agent</b><span>貼上規範與畫面，轉成 Angular</span></div></div><div class="code-pane"><div class="code-pane__hd"><span>提示詞公式與範例</span><span class="code-pane__tag">PROMPT</span></div><pre>[產品] 給 [誰] 用，在 [情境] 要完成 [任務]；風格：[3 個關鍵字]；頁面：[清單]
+
+借車助手：給下班族用，要在 30 秒內找到有車的站；
+風格：安靜、紙本質感、留白多；
+頁面：站點清單、站點詳情。</pre></div></div></div></div><div class="remember">這頁記住：提示詞越具體，第一版越接近你要的。</div></section><section class="slide" data-label="推薦技能：官方設計類"><p class="eyebrow">UI/UX · 64</p><p class="pagedot">64/71</p><h2 class="headline reveal">推薦技能：官方設計類</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：推薦 Skills（一）</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">Anthropic 官方 skills 裡，和 UI 最相關的幾個。</p><div class="reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.8fr 3fr 1.6fr"><div class="ux-tbl__row ux-tbl__row--head"><span>技能</span><span>用途</span><span>什麼時候用</span></div><div class="ux-tbl__row"><span>frontend-design</span><span>決定設計方向：字型、色票、版面，避免千篇一律</span><span>開新頁面之前</span></div><div class="ux-tbl__row"><span>theme-factory</span><span>把現成主題（色票＋字型）套用到成品</span><span>想快速換風格</span></div><div class="ux-tbl__row"><span>web-artifacts-builder</span><span>做出較複雜的 HTML／React 成品</span><span>互動原型</span></div><div class="ux-tbl__row"><span>webapp-testing</span><span>用 Playwright 驅動網頁，測試並截圖</span><span>改版後驗收</span></div><div class="ux-tbl__row"><span>brand-guidelines</span><span>套用品牌的色彩與字型規範</span><span>有品牌規範時</span></div></div><p class="ux-note">來源：github.com/anthropics/skills。安裝方式依你使用的 agent 而異，請看各工具文件。</p></div></div></div><div class="remember">這頁記住：Skill 不是魔法，是把好做法寫成可重複的流程。</div></section><section class="slide" data-label="推薦技能：Stitch 工作流"><p class="eyebrow">UI/UX · 65</p><p class="pagedot">65/71</p><h2 class="headline reveal">推薦技能：Stitch 工作流</h2><div class="lesson-tags"><span>課程進度：Part 5｜AI 做 UI</span><span>本頁主題：推薦 Skills（二）</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">stitch-skills：把 Stitch 的流程變成 agent 可用的技能。</p><ul class="lesson-points"><li class="reveal">來源：github.com/google-labs-code/stitch-skills，遵循 Agent Skills 開放格式。</li><li class="reveal">順序：enhance-prompt（補強提示詞）→ design-md（整理規範）→ stitch-loop（逐頁迭代）。</li><li class="reveal">已有程式碼時：extract-design-md 反推出規範。</li><li class="reveal">要確認每個技能的最新用法，先讀它的 SKILL.md。</li></ul></div><div class="visual-area reveal"><div class="ux-tbl ux-tbl--s" style="--cols:1.6fr 2.4fr"><div class="ux-tbl__row ux-tbl__row--head"><span>技能</span><span>用途</span></div><div class="ux-tbl__row"><span>enhance-prompt</span><span>把模糊需求改寫成詳細提示</span></div><div class="ux-tbl__row"><span>design-md</span><span>把畫面整理成 DESIGN.md</span></div><div class="ux-tbl__row"><span>stitch-loop</span><span>一頁一頁迭代生成多頁網站</span></div><div class="ux-tbl__row"><span>extract-design-md</span><span>從現有程式碼反推 DESIGN.md</span></div><div class="ux-tbl__row"><span>taste-design</span><span>產生避免千篇一律的設計規範</span></div></div><div class="code-pane"><div class="code-pane__hd"><span>安裝（範例）</span><span class="code-pane__tag">SHELL</span></div><pre>npx skills add https://github.com/google-labs-code/stitch-skills --skill design-md</pre></div></div></div><div class="remember">這頁記住：技能要先讀 SKILL.md，再放心用。</div></section><section class="slide" data-label="Figma"><p class="eyebrow">UI/UX · 66</p><p class="pagedot">66/71</p><h2 class="headline reveal">Figma</h2><div class="lesson-tags"><span>課程進度：Part 6｜工具與作業</span><span>本頁主題：推薦工具（一）</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">業界通用的協作設計工具。</p><ul class="lesson-points"><li class="reveal">瀏覽器與桌面都能用，多人即時協作、留言。</li><li class="reveal">Frame＋Auto Layout 排版；Components 與 Variants 做元件；Variables 管理色票、間距，就是設計 token。</li><li class="reveal">有免費 Starter 方案；Dev Mode 與進階功能為付費，方案常調整。</li><li class="reveal">提供 MCP server，可讓 agent 讀設計稿。</li></ul></div><div class="visual-area reveal"><div class="panel"><p class="panel__hd">適合</p><p>多人團隊、需要正式設計系統</p><p>與外部設計師、客戶交接與留言</p></div><div class="panel"><p class="panel__hd">不適合</p><p>只想快速出一頁原型：AI 工具更快</p><p>沒人維護元件庫：設計稿會很快過期</p></div><p class="ux-note">網址：figma.com。價格與功能以官網為準。</p></div></div><div class="remember">這頁記住：要協作與規範，選 Figma。</div></section><section class="slide" data-label="OpenDesign"><p class="eyebrow">UI/UX · 67</p><p class="pagedot">67/71</p><h2 class="headline reveal">OpenDesign</h2><div class="lesson-tags"><span>課程進度：Part 6｜工具與作業</span><span>本頁主題：推薦工具（二）</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">開源的設計工作台，搭配你自己的 AI 編碼代理。</p><ul class="lesson-points"><li class="reveal">開源（Apache-2.0），有桌面 App；免費版搭配本機代理或自己的 API Key，不需帳號。</li><li class="reveal">內建 150 多個開源設計系統，也能從網站、GitHub 或 Figma 檔建立。</li><li class="reveal">描述畫面後，代理把 HTML 原型寫進專案，可直接拖曳、改字、改色。</li><li class="reveal">匯出 HTML、PDF、PNG、PPTX；官網明寫不匯出 Figma。</li></ul></div><div class="visual-area reveal"><div class="panel"><p class="panel__hd">適合</p><p>想自己掌控資料與模型</p><p>已經在用 Claude Code、Codex、Cursor 等代理（支援 20 多種）</p></div><div class="panel"><p class="panel__hd">留意</p><p>用 API Key 只能生成，要改專案檔案需用本機代理</p><p>雲端託管模型為付費方案</p></div><p class="ux-note">網址：open-design.ai。</p></div></div><div class="remember">這頁記住：想要開源、可自架，選 OpenDesign。</div></section><section class="slide" data-label="Claude Design"><p class="eyebrow">UI/UX · 68</p><p class="pagedot">68/71</p><h2 class="headline reveal">Claude Design</h2><div class="lesson-tags"><span>課程進度：Part 6｜工具與作業</span><span>本頁主題：推薦工具（三）</span></div><div class="ch5-grid ux-grid" style="grid-template-columns:42% 58%"><div class="ch5-copy"><p class="mini-lead reveal">Anthropic 的對話式設計工具（需訂閱）。</p><ul class="lesson-points"><li class="reveal">2026/4/17 由 Anthropic Labs 推出，網址 claude.ai/design，研究預覽。</li><li class="reveal">Claude Pro、Max、Team、Enterprise 訂閱者可用；不另收費，用現有額度。</li><li class="reveal">用對話、行內留言、直接編輯，或 Claude 自動產生的滑桿調色彩與間距。</li><li class="reveal">會讀你的程式碼與設計檔建立設計系統，之後自動套用；可匯出 ZIP、PDF、PPTX、HTML，或交給 Claude Code。</li></ul></div><div class="visual-area reveal"><div class="panel"><p class="panel__hd">適合</p><p>已訂閱 Claude，想快速做原型、簡報、一頁式頁面</p><p>想把設計直接交給 Claude Code 實作</p></div><div class="panel"><p class="panel__hd">留意</p><p>屬研究預覽，功能與額度可能調整</p><p>沒有訂閱就無法使用</p><p>功能以官方公告為準</p></div></div></div><div class="remember">這頁記住：已訂 Claude 的人，快速原型的好選擇。</div></section><section class="slide" data-label="三個工具怎麼選"><p class="eyebrow">UI/UX · 69</p><p class="pagedot">69/71</p><h2 class="headline reveal">三個工具怎麼選</h2><div class="lesson-tags"><span>課程進度：Part 6｜工具與作業</span><span>本頁主題：比較與建議</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">沒有最好的工具，只有最適合你當下的情境。</p><div class="reveal"><div class="ux-tbl ux-tbl--s" style="--cols:.9fr 1.6fr 1.8fr 1.8fr"><div class="ux-tbl__row ux-tbl__row--head"><span></span><span>Figma</span><span>OpenDesign</span><span>Claude Design</span></div><div class="ux-tbl__row"><span>定位</span><span>協作設計平台</span><span>開源 AI 設計工作台</span><span>Anthropic 的對話式設計</span></div><div class="ux-tbl__row"><span>費用</span><span>免費方案＋付費</span><span>桌面版免費，雲端付費</span><span>需 Claude 付費訂閱</span></div><div class="ux-tbl__row"><span>強項</span><span>團隊協作、設計系統</span><span>自選代理、可自架</span><span>對話迭代、交給 Claude Code</span></div><div class="ux-tbl__row"><span>輸出</span><span>設計稿、Dev Mode</span><span>HTML、PDF、PNG、PPTX</span><span>ZIP、PDF、PPTX、HTML</span></div><div class="ux-tbl__row"><span>本課建議</span><span>多人協作時用</span><span>想免訂閱又能玩 AI</span><span>已訂閱就直接用</span></div></div><p class="ux-note">本課路線：Stitch 或 Claude Design 出第一版 → 寫 DESIGN.md → 用 Material 元件實作 → 需要協作再進 Figma。</p></div></div></div><div class="remember">這頁記住：先決定「要解決什麼」，再選工具。</div></section><section class="slide" data-label="作業：用規範與 AI 改一頁"><p class="eyebrow">UI/UX · 70</p><p class="pagedot">70/71</p><h2 class="headline reveal">作業：用規範與 AI 改一頁</h2><div class="lesson-tags"><span>課程進度：Part 6｜工具與作業</span><span>本頁主題：課後作業</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">挑你 MVP 的一頁，做一次完整的改版。</p><div class="reveal"><div class="ux-steps"><div class="ux-step"><span class="ux-step__n">1</span><b>挑一頁</b><span>自己 MVP 裡最重要的一頁</span></div><div class="ux-step"><span class="ux-step__n">2</span><b>寫 DESIGN.md</b><span>五個區塊，一頁內</span></div><div class="ux-step"><span class="ux-step__n">3</span><b>AI 改版</b><span>指名先讀 DESIGN.md</span></div><div class="ux-step"><span class="ux-step__n">4</span><b>Material 重做</b><span>表單、卡片、表格擇一</span></div><div class="ux-step"><span class="ux-step__n">5</span><b>說三處改善</b><span>各對應一條原則與頁碼</span></div></div><div class="panel"><p class="panel__hd">繳交</p><p>改版前後截圖、DESIGN.md、三句改善理由（每句寫出對應的原則）。</p><p>用了哪個工具、提示詞是什麼，也要附上。</p></div></div></div></div><div class="remember">這頁記住：不是「變漂亮」，是「說得出為什麼更好用」。</div></section><section class="slide" data-label="總結：三條線"><p class="eyebrow">UI/UX · 71</p><p class="pagedot">71/71</p><h2 class="headline reveal">總結：三條線</h2><div class="lesson-tags"><span>課程進度：Part 6｜工具與作業</span><span>本頁主題：課程回顧</span></div><div class="ch5-grid ux-grid no-visual"><div class="ch5-copy"><p class="mini-lead reveal">原則、元件、AI 工具，彼此接得起來。</p><div class="reveal"><div class="ux-three"><div class="panel"><p class="panel__hd">原則（01–39）</p><ul><li>一眼看懂、格式塔理論 Gestalt Theory</li><li>可讀、可操作、對比</li><li>表單、手機、等待、記憶</li></ul></div><div class="panel"><p class="panel__hd">元件（40–55）</p><ul><li>用場景選元件</li><li>Form field、Table、Dialog…</li><li>版本要與 Angular 對齊</li></ul></div><div class="panel"><p class="panel__hd">AI 與工具（56–69）</p><ul><li>Agent、Skills</li><li>DESIGN.md 統一風格</li><li>Stitch、Figma、OpenDesign、Claude Design</li></ul></div></div><p class="ux-note">下一步：把你的 MVP 套上這三條線，並在期末前完成改版。</p></div></div></div><div class="remember">這頁記住：原則決定好不好用，元件與 AI 決定做得多快。</div></section></main></div><a class="deck-backlink" href="../">← 回簡報總覽</a>
+<div class="progress" id="progress"></div><div class="counter" id="counter">1 / 71</div><script>/* ===========================================
+   SLIDE PRESENTATION CONTROLLER（CH5／CH6／CH9 共用）
+   由 make_ch5.py / make_ch6.py / make_ch9.py 讀入後內嵌到產出的 HTML。
+   要改行為請改本檔，不要改產出的簡報 HTML。
+   2026-10-17：移除圖解步驟動畫（逐步揭示／自動播放／下一步／重播／暫停），
+               圖解內容一次全部呈現；「深入說明」Dialog 保留。
+   =========================================== */
+class SlidePresentation{
+  constructor(){
+    this.slides=[...document.querySelectorAll('.slide')];
+    this.total=this.slides.length;
+    this.current=0;
+    this.stage=document.getElementById('deckStage');
+    this.progress=document.getElementById('progress');
+    this.counter=document.getElementById('counter');
+    this.scale();
+    addEventListener('resize',()=>this.scale());
+    this.nav();
+    /* 頁碼已由右下角換頁鈕顯示：頁尾內的「NN/總頁」「CHn · NN/總頁」不再重複 */
+    document.querySelectorAll('.footer > span').forEach(s=>{if(/^(CH\d+\s*·\s*)?\d+\/\d+$/.test(s.textContent.trim()))s.classList.add('pg-dup');});
+    this.initDiagrams();
+    this.show(0);
+  }
+  /* 固定 16:9：整個 stage 等比縮放並置中，不重排內容 */
+  scale(){
+    const f=Math.min(innerWidth/1920,innerHeight/1080),
+          x=(innerWidth-1920*f)/2,y=(innerHeight-1080*f)/2;
+    this.stage.style.transform=`translate(${x}px, ${y}px) scale(${f})`;
+  }
+  nav(){
+    document.addEventListener('keydown',e=>{
+      const open=document.querySelector('.diagram-stepper.is-dialog');
+      if(open){e.preventDefault();if(e.key==='Escape')open.classList.remove('is-dialog');return;}
+      if(e.target.closest('input,textarea,[contenteditable=true]'))return;
+      if(e.target.closest('button')&&(e.key===' '||e.key==='Enter'))return;
+      if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();this.show(this.current+1);}
+      if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();this.show(this.current-1);}
+      if(e.key==='Home')this.show(0);
+      if(e.key==='End')this.show(this.total-1);
+    });
+    /* 觸控滑動（左滑下一頁、右滑上一頁；Dialog 開啟時不換頁） */
+    let sx=0,sy=0;
+    document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+    document.addEventListener('touchend',e=>{
+      if(document.querySelector('.diagram-stepper.is-dialog'))return;
+      const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+      if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy))this.show(this.current+(dx<0?1:-1));
+    },{passive:true});
+    /* 右下角換頁鈕（放在舞台內，隨簡報縮放；有頁尾的頁面自動上移避開） */
+    const ico={prev:'M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z',next:'M8.6 5.4 10 4l8 8-8 8-1.4-1.4 6.6-6.6z'};
+    this.navPair=document.createElement('div');this.navPair.className='nav-pair';
+    [['prev','上一頁',-1],['next','下一頁',1]].forEach(([k,label,step])=>{
+      const b=document.createElement('button');
+      b.className='nav-btn';b.type='button';b.setAttribute('aria-label',label);
+      b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+ico[k]+'"/></svg>';
+      b.addEventListener('click',e=>{e.currentTarget.blur();this.show(this.current+step);});
+      this.navPair.appendChild(b);
+    });
+    this.navPair.insertBefore(this.counter,this.navPair.lastChild); /* 頁碼夾在兩鈕中間，避免舞台外的計數器蓋住按鈕 */
+    this.stage.appendChild(this.navPair);
+  }
+  show(i){
+    this.current=Math.max(0,Math.min(i,this.total-1));
+    this.slides.forEach((s,n)=>{s.classList.toggle('active',n===this.current);s.classList.toggle('visible',n===this.current);});
+    this.progress.style.width=((this.current+1)/this.total*100)+'%';
+    this.counter.textContent=(this.current+1)+' / '+this.total;
+    /* 有頁尾的頁面：換頁鈕移到頁尾右側文字的左邊（頁尾列中段是空的） */
+    if(this.navPair){const f=this.slides[this.current].querySelector('.footer > :last-child:not(.pg-dup)');
+      this.navPair.style.right=f?`calc(var(--pad-outer) + ${f.offsetWidth+32}px)`:'';}
+  }
+  /* ---------- 圖解：內容一次全部呈現（無步驟動畫） ---------- */
+  initDiagrams(){
+    document.querySelectorAll('.diagram-stepper').forEach(d=>{
+      const nodes=[...d.querySelectorAll('.flow-node,.dstep')];
+      nodes.forEach(n=>{n.classList.add('is-on');n.classList.remove('is-current');});
+      d.dataset.step=String(nodes.length);
+      const bind=(sel,fn)=>{const el=d.querySelector(sel);if(el)el.addEventListener('click',e=>{e.currentTarget.blur();fn();});};
+      bind('[data-diagram-action="more"]',()=>d.classList.add('is-dialog'));
+      bind('[data-diagram-action="close"]',()=>this.closeDialog(d));
+      const dlg=d.querySelector('.dgm-dialog');
+      if(dlg)dlg.addEventListener('click',e=>{if(e.target===dlg)this.closeDialog(d);});
+    });
+  }
+  closeDialog(d){ d.classList.remove('is-dialog'); }
+  /* 保留介面：匯出／列印流程會呼叫，現已無計時器 */
+  pauseAll(){}
+}
+const deck=new SlidePresentation();
+window.__deckPauseAll=()=>deck.pauseAll();
+</script></body></html>
