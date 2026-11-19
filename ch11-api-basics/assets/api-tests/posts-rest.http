@@ -1,0 +1,40 @@
+# RESTful 練習：JSONPlaceholder 的 /posts（寫入為模擬，資料不會真的保存）
+# 實測：2026-11-14，預期狀態碼寫在每個請求標題
+
+@api = https://jsonplaceholder.typicode.com
+
+### 列出全部文章 → 200（100 篇）
+GET {{api}}/posts
+
+### 讀第 1 篇 → 200
+GET {{api}}/posts/1
+
+### 新增 → 201（回傳新的 id）
+POST {{api}}/posts
+Content-Type: application/json
+
+{ "title": "下班借車心得", "body": "先看可借數再出門", "userId": 1 }
+
+### 整篇取代 → 200
+PUT {{api}}/posts/1
+Content-Type: application/json
+
+{ "id": 1, "title": "改過的標題", "body": "整篇取代", "userId": 1 }
+
+### 部分修改 → 200
+PATCH {{api}}/posts/1
+Content-Type: application/json
+
+{ "title": "只改標題" }
+
+### 刪除 → 200（這個服務回 200，不是 204）
+DELETE {{api}}/posts/1
+
+### 找不到這一筆 → 404
+GET {{api}}/posts/9999
+
+### 查無符合條件 → 200 與空陣列 []
+GET {{api}}/posts?userId=999
+
+### 分頁：第 4–6 篇 → 200
+GET {{api}}/posts?_page=2&_limit=3

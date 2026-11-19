@@ -1,0 +1,17 @@
+meta {
+  name: 查無結果200
+  type: http
+  seq: 4
+}
+
+get {
+  url: https://jsonplaceholder.typicode.com/posts?userId=999
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body: isArray
+  res.body.length: eq 0
+}

@@ -1,0 +1,34 @@
+# 親手看到各種狀態碼：httpbin 會回傳網址指定的狀態碼
+# 實測：2026-11-14，下列每一個都回傳指定的碼
+
+@bin = https://httpbin.org/status
+
+### 200 OK
+GET {{bin}}/200
+
+### 201 Created
+GET {{bin}}/201
+
+### 204 No Content（沒有內容）
+GET {{bin}}/204
+
+### 400 Bad Request
+GET {{bin}}/400
+
+### 401 Unauthorized（未認證）
+GET {{bin}}/401
+
+### 403 Forbidden
+GET {{bin}}/403
+
+### 404 Not Found
+GET {{bin}}/404
+
+### 429 Too Many Requests
+GET {{bin}}/429
+
+### 500 Internal Server Error
+GET {{bin}}/500
+
+### 503 Service Unavailable
+GET {{bin}}/503

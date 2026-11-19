@@ -1,0 +1,14 @@
+# VS Code「REST Client」擴充套件用：每個請求上方點 Send Request
+# 實測：2026-11-14（YouBike 200、1,824 筆；JSONPlaceholder POST 201）
+
+@host = https://tcgbusfs.blob.core.windows.net
+@path = /dotapp/youbike/v2/youbike_immediate.json
+
+### 站點列表
+GET {{host}}{{path}}
+
+### 練 POST（測試服務，不會真的保存）
+POST https://jsonplaceholder.typicode.com/posts
+Content-Type: application/json
+
+{ "title": "下班借車心得", "userId": 1 }

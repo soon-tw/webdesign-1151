@@ -1,0 +1,25 @@
+meta {
+  name: 站點列表
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/youbike_immediate.json
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body: isArray
+  res.body[0].sna: isDefined
+  res.responseTime: lt 5000
+}
+
+tests {
+  test("每一筆都有站點代號 sno", function () {
+    const missing = res.body.filter(s => !s.sno);
+    expect(missing.length).to.equal(0);
+  });
+}
