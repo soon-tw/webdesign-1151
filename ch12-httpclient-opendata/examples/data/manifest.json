@@ -1,0 +1,79 @@
+[
+  {
+    "title": "臺北市 YouBike 2.0 即時資訊（教學快照）",
+    "source": "https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json",
+    "catalog": "https://data.gov.tw/dataset/147580",
+    "license": "政府資料開放授權條款－第 1 版",
+    "note": "與即時 API 同形狀；只保留 8 個欄位。",
+    "file": "youbike.json",
+    "count": 1824,
+    "fetchedAt": "2026-11-14",
+    "sizeKB": 345.4
+  },
+  {
+    "title": "臺中市路外停車場燈號（教學快照）",
+    "source": "https://motoretag.taichung.gov.tw/DataAPI/api/ParkingAPIV2/Opendata",
+    "catalog": "https://data.gov.tw/dataset/83931",
+    "license": "政府資料開放授權條款－第 1 版",
+    "note": "燈號為「滿車率燈號」，資料集未說明 G／Y／R／B 的意義；教學假設 G 為尚有車位，B 視為未知。",
+    "file": "taichung-parking.json",
+    "count": 1425,
+    "fetchedAt": "2026-11-14",
+    "sizeKB": 252.3
+  },
+  {
+    "title": "臺中市觀光景點（教學快照）",
+    "source": "https://newdatacenter.taichung.gov.tw/api/v1/no-auth/resource.download?rid=a0beea05-63b0-45e3-b9d8-3b090f474ba6",
+    "catalog": "https://data.gov.tw/dataset/85008",
+    "license": "政府資料開放授權條款－第 1 版",
+    "note": "原始為 CSV，轉成物件陣列並保留中文欄名；剔除電話、網站、座標等不需要的欄位。",
+    "file": "taichung-spots.json",
+    "count": 449,
+    "fetchedAt": "2026-11-14",
+    "sizeKB": 606.5
+  },
+  {
+    "title": "臺中市公廁建檔資料（教學快照，太平、大里、東、北屯、北區）",
+    "source": "https://newdatacenter.taichung.gov.tw/api/v1/no-auth/resource.download?rid=e9bec432-5a2c-401b-9e51-20ffb3cc26f1",
+    "catalog": "https://data.gov.tw/dataset/84010",
+    "license": "政府資料開放授權條款－第 1 版",
+    "note": "原始 CSV 共 6073 筆，只收錄五區；鄉鎮名稱去除全形空白。",
+    "file": "taichung-toilets.json",
+    "count": 1454,
+    "fetchedAt": "2026-11-14",
+    "sizeKB": 301.0
+  },
+  {
+    "title": "上市個股日成交資訊（ETF 部分，教學快照）",
+    "source": "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
+    "catalog": "https://openapi.twse.com.tw/",
+    "license": "依臺灣證券交易所 OpenAPI 使用規範",
+    "note": "原始共 1389 筆，只留代號 00 開頭；數值皆為字串、日期為民國年，刻意保留原樣。非投資建議、資料非即時。",
+    "file": "etf-day.json",
+    "count": 246,
+    "fetchedAt": "2026-11-14",
+    "sizeKB": 57.8
+  },
+  {
+    "title": "基金基本資料彙總表（教學快照）",
+    "source": "https://openapi.twse.com.tw/v1/opendata/t187ap47_L",
+    "catalog": "https://openapi.twse.com.tw/",
+    "license": "依臺灣證券交易所 OpenAPI 使用規範",
+    "note": "剔除基金經理人、董事長、發言人、總機、電話、地址等欄位，只留 7 個欄位。",
+    "file": "etf-funds.json",
+    "count": 246,
+    "fetchedAt": "2026-11-14",
+    "sizeKB": 67.5
+  },
+  {
+    "title": "不動產實價登錄：臺中市預售屋（115 年第 2 季，教學快照）",
+    "source": "https://plvr.land.moi.gov.tw/DownloadSeason?season=115S2&type=zip&fileName=lvr_landcsv.zip",
+    "catalog": "https://plvr.land.moi.gov.tw/",
+    "license": "政府資料開放授權條款－第 1 版",
+    "note": "原始為季別 ZIP 內的 CSV（b_lvr_land_b.csv）；剔除門牌、棟及號、編號；數值與民國日期保留文字原樣。非估價。",
+    "file": "presale-taichung.json",
+    "count": 1051,
+    "fetchedAt": "2026-11-14",
+    "sizeKB": 263.9
+  }
+]
